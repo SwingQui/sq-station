@@ -11,5 +11,25 @@
 	"assets": {
 		"directory": "./dist/client",
 		"not_found_handling": "single-page-application"
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "STATION_D1SQL",
+			"database_name": "sq_station",
+			"database_id": "c208ca5e-1a73-40f3-9680-bf267378ea36"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "STATION_KV",
+			"id": "a87257dcb21c4b5d972d0a30debbb175",
+			"preview_id": "a87257dcb21c4b5d972d0a30debbb175"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "STATION_R2",
+			"bucket_name": "file-bucket"
+		}
+	]
 }

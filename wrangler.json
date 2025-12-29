@@ -11,5 +11,12 @@
 	"assets": {
 		"directory": "./dist/client",
 		"not_found_handling": "single-page-application"
-	}
+	},
+	"kv_namespaces": [
+		{
+			"binding": "KV_BINDING",
+			"id": "0db26ad794b242aea90aa08281a7dfa2",
+			"preview_id": "0db26ad794b242aea90aa08281a7dfa2"
+		}
+	]
 }

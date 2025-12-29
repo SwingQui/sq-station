@@ -39,6 +39,7 @@
 		"check": "tsc && vite build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
 		"dev": "vite",
+		"dev:remote": "wrangler dev --remote",
 		"lint": "eslint .",
 		"preview": "npm run build && vite preview"
 	},

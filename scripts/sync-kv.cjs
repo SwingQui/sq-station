@@ -29,9 +29,79 @@ function timestamp() {
 	return new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
 }
 
+// 从本地 KV 读取所有数据（wrangler dev 的实际存储）
+function readLocalKV() {
+	console.log("   从本地 KV 读取数据...");
+	const data = {};
+	try {
+		const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID}`, true);
+		if (keysOutput) {
+			const keys = JSON.parse(keysOutput);
+			console.log(`   找到 ${keys.length} 个 keys`);
+			for (const key of keys) {
+				try {
+					const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --text`, true);
+					if (value !== null) {
+						data[key.name] = value.trim();
+					}
+				} catch (e) {
+					console.log(`   ✗ ${key.name} (读取失败)`);
+				}
+			}
+		}
+	} catch (e) {
+		console.log("   ⚠ 本地 KV 读取失败");
+	}
+	return data;
+}
+
+// 写入本地 KV
+function writeLocalKV(data) {
+	for (const [key, value] of Object.entries(data)) {
+		try {
+			// 使用临时文件处理特殊字符
+			const tmpFile = path.join(process.cwd(), ".wrangler", "kv-temp.txt");
+			fs.writeFileSync(tmpFile, String(value));
+			exec(`npx wrangler kv key put "${key}" --path="${tmpFile}" --namespace-id=${NAMESPACE_ID}`, true);
+			fs.unlinkSync(tmpFile);
+		} catch (e) {
+			// 回退到直接写入
+			try {
+				const safeValue = String(value).replace(/"/g, '\\"').replace(/\n/g, '\\n');
+				exec(`npx wrangler kv key put "${key}" "${safeValue}" --namespace-id=${NAMESPACE_ID}`, true);
+			} catch (e2) {
+				console.log(`   ✗ ${key} (写入失败)`);
+			}
+		}
+	}
+}
+
 // 从远程导出到本地缓存
 async function importToLocal() {
-	console.log("\n📥 从远程 KV 导入数据到本地缓存...\n");
+	console.log("\n📥 从远程 KV 导入数据到本地...\n");
+
+	// 0️⃣ 先清理本地旧数据
+	console.log("0️⃣ 清理本地 KV 旧数据...");
+	try {
+		// 获取本地所有 keys
+		const localKeysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID}`, true);
+		if (localKeysOutput) {
+			const localKeys = JSON.parse(localKeysOutput);
+			if (localKeys.length > 0) {
+				// 删除本地所有 keys
+				for (const key of localKeys) {
+					try {
+						exec(`npx wrangler kv key delete "${key.name}" --namespace-id=${NAMESPACE_ID}`, true);
+					} catch (e) {}
+				}
+				console.log(`   ✓ 清理了 ${localKeys.length} 个旧 keys\n`);
+			} else {
+				console.log("   ✓ 本地无旧数据\n");
+			}
+		}
+	} catch (e) {
+		console.log("   ⚠ 清理失败，继续导入...\n");
+	}
 
 	// 获取远程所有 keys
 	console.log("1️⃣ 获取远程 keys 列表...");
@@ -55,7 +125,7 @@ async function importToLocal() {
 	for (const key of keys) {
 		try {
 			const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --remote --text`, true);
-			if (value) {
+			if (value !== null) {
 				data[key.name] = value.trim();
 				console.log(`   ✓ ${key.name}`);
 			}
@@ -64,21 +134,19 @@ async function importToLocal() {
 		}
 	}
 
+	if (Object.keys(data).length === 0) {
+		console.log("❌ 远程没有数据\n");
+		return;
+	}
+
 	// 保存到本地缓存文件
 	ensureDir(path.dirname(CACHE_FILE));
 	fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2));
-	console.log(`\n✅ 已缓存 ${Object.keys(data).length} 条数据到 ${CACHE_FILE}`);
+	console.log(`\n2️⃣ 已缓存 ${Object.keys(data).length} 条数据到 ${CACHE_FILE}`);
 
 	// 写入本地 KV (wrangler dev 会读取这些数据)
-	console.log("\n2️⃣ 写入本地 KV...");
-	for (const [key, value] of Object.entries(data)) {
-		try {
-			exec(`npx wrangler kv key put "${key}" "${value}" --namespace-id=${NAMESPACE_ID}`, true);
-			console.log(`   ✓ ${key}`);
-		} catch (e) {
-			console.log(`   ✗ ${key} (失败)`);
-		}
-	}
+	console.log("\n3️⃣ 写入本地 KV...");
+	writeLocalKV(data);
 	console.log("\n✅ 本地 KV 同步完成\n");
 }
 
@@ -99,7 +167,7 @@ async function exportToRemote() {
 			for (const key of keys) {
 				try {
 					const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --remote --text`, true);
-					if (value) {
+					if (value !== null) {
 						backupData[key.name] = value.trim();
 					}
 				} catch (e) {}
@@ -110,56 +178,61 @@ async function exportToRemote() {
 		} catch (e) {
 			console.log("   ⚠ 备份失败，继续导出...\n");
 		}
+	} else {
+		console.log("   ℹ 远程为空，无需备份\n");
 	}
 
-	// 2. 读取本地数据
-	console.log("2️⃣ 读取本地数据...");
-	let data = {};
-	if (fs.existsSync(CACHE_FILE)) {
+	// 2. 读取本地数据（优先从本地 KV，这是 wrangler dev 的真实数据）
+	console.log("2️⃣ 读取本地 KV 数据...");
+	let data = readLocalKV();
+
+	// 如果本地 KV 为空，尝试从缓存文件读取
+	if (Object.keys(data).length === 0 && fs.existsSync(CACHE_FILE)) {
+		console.log("   本地 KV 为空，从缓存文件读取...");
 		data = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-		console.log(`   从缓存读取 ${Object.keys(data).length} 条数据\n`);
-	} else {
-		// 从本地 KV 读取
-		const localKeysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID}`, true);
-		if (localKeysOutput) {
-			try {
-				const keys = JSON.parse(localKeysOutput);
-				for (const key of keys) {
-					try {
-						const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --text`, true);
-						if (value) {
-							data[key.name] = value.trim();
-						}
-					} catch (e) {}
-				}
-				console.log(`   从本地 KV 读取 ${Object.keys(data).length} 条数据\n`);
-			} catch (e) {}
-		}
 	}
 
 	if (Object.keys(data).length === 0) {
 		console.log("❌ 本地没有数据可导出\n");
 		return;
 	}
+	console.log(`   共 ${Object.keys(data).length} 条数据\n`);
 
-	// 3. 写入远程
+	// 3. 写入远程（使用临时文件确保正确转义）
 	console.log("3️⃣ 写入远程 KV...");
+	const tmpDir = path.join(process.cwd(), ".wrangler", "kv-tmp");
+	ensureDir(tmpDir);
+
+	let successCount = 0;
 	for (const [key, value] of Object.entries(data)) {
 		try {
-			exec(`npx wrangler kv key put "${key}" --path=${CACHE_FILE} --namespace-id=${NAMESPACE_ID} --remote`, true);
+			// 使用临时文件写入值（避免命令行转义问题）
+			const tmpFile = path.join(tmpDir, key.replace(/[^a-zA-Z0-9_-]/g, "_"));
+			fs.writeFileSync(tmpFile, String(value));
+
+			// 使用 --path 参数读取文件内容
+			exec(`npx wrangler kv key put "${key}" --path="${tmpFile}" --namespace-id=${NAMESPACE_ID} --remote`, true);
+			fs.unlinkSync(tmpFile);
 			console.log(`   ✓ ${key}`);
+			successCount++;
 		} catch (e) {
-			// 尝试直接写入
+			// 如果临时文件方式失败，尝试直接写入
 			try {
-				const safeValue = value.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+				const safeValue = String(value).replace(/"/g, '\\"').replace(/\n/g, '\\n');
 				exec(`npx wrangler kv key put "${key}" "${safeValue}" --namespace-id=${NAMESPACE_ID} --remote`, true);
-				console.log(`   ✓ ${key}`);
+				console.log(`   ✓ ${key} (直接写入)`);
+				successCount++;
 			} catch (e2) {
-				console.log(`   ✗ ${key} (失败)`);
+				console.log(`   ✗ ${key} (失败: ${e.message})`);
 			}
 		}
 	}
-	console.log("\n✅ 导出完成\n");
+	console.log(`\n✅ 导出完成，成功 ${successCount}/${Object.keys(data).length} 条\n`);
+
+	// 4. 同步更新缓存文件
+	ensureDir(path.dirname(CACHE_FILE));
+	fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2));
+	console.log(`📁 已更新缓存文件: ${CACHE_FILE}\n`);
 }
 
 // 启动前自动同步

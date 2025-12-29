@@ -1,3 +1,4 @@
+
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "sq-station",
@@ -18,5 +19,8 @@
 			"id": "0db26ad794b242aea90aa08281a7dfa2",
 			"preview_id": "0db26ad794b242aea90aa08281a7dfa2"
 		}
-	]
+	],
+	"dev": {
+		"port": 8787
+	}
 }

@@ -39,7 +39,10 @@
 		"check": "tsc && vite build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
 		"dev": "vite",
+		"dev:auto": "node scripts/dev-start.cjs",
 		"dev:remote": "wrangler dev --remote",
+		"kv:export": "node scripts/sync-kv.cjs export",
+		"kv:import": "node scripts/sync-kv.cjs import",
 		"lint": "eslint .",
 		"preview": "npm run build && vite preview"
 	},

@@ -20,6 +20,13 @@
 			"preview_id": "0db26ad794b242aea90aa08281a7dfa2"
 		}
 	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "sq_station",
+			"database_id": "c208ca5e-1a73-40f3-9680-bf267378ea36"
+		}
+	],
 	"dev": {
 		"port": 8787
 	}

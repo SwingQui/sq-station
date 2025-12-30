@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "./index.d";
+import d1Api from "./d1-api";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -46,5 +47,8 @@ app.post("/api/kv/sync", async (c) => {
 		data: results,
 	});
 });
+
+// 挂载 D1 权限系统 API
+app.route("/", d1Api);
 
 export default app;

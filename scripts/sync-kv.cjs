@@ -235,11 +235,6 @@ async function exportToRemote() {
 	console.log(`📁 已更新缓存文件: ${CACHE_FILE}\n`);
 }
 
-// 启动前自动同步
-async function autoSync() {
-	console.log("🔄 自动同步远程 KV 到本地...");
-	await importToLocal();
-}
 
 const command = process.argv[2];
 
@@ -247,11 +242,8 @@ if (command === "import") {
 	importToLocal();
 } else if (command === "export") {
 	exportToRemote();
-} else if (command === "auto") {
-	autoSync();
 } else {
 	console.log("用法:");
 	console.log("  node scripts/sync-kv.cjs import   # 从远程导入到本地");
 	console.log("  node scripts/sync-kv.cjs export   # 从本地导出到远程（会先备份）");
-	console.log("  node scripts/sync-kv.cjs auto     # 自动同步（供启动脚本调用）");
 }

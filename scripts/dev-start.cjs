@@ -13,17 +13,29 @@ console.log("1️⃣ 同步远程 KV 数据到本地缓存");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
 try {
-	execSync("node scripts/sync-kv.cjs auto", { stdio: "inherit" });
+	execSync("node scripts/sync-kv.cjs import", { stdio: "inherit" });
 } catch (e) {
-	console.log("⚠️ 同步失败，但继续启动...\n");
+	console.log("⚠️ KV 同步失败，但继续启动...\n");
 }
 
-// 2. 启动 Wrangler (使用本地 KV)
+// 2. 同步远程 D1 到本地
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-console.log("2️⃣ 启动 Wrangler 开发服务器 (端口 8787)");
+console.log("2️⃣ 同步远程 D1 数据到本地缓存");
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+try {
+	execSync("node scripts/sync-d1.cjs import", { stdio: "inherit" });
+} catch (e) {
+	console.log("⚠️ D1 同步失败，但继续启动...\n");
+}
+
+// 3. 启动 Wrangler (使用本地 KV 和 D1)
+console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+console.log("3️⃣ 启动 Wrangler 开发服务器 (端口 8787)");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 console.log("   本地 KV: .wrangler/state/v3/kv/");
-console.log("   远程 KV: 已同步到本地\n");
+console.log("   本地 D1: .wrangler/state/v3/d1/");
+console.log("   远程数据: 已同步到本地\n");
 
 const wrangler = spawn("npx", ["wrangler", "dev"], {
 	cwd: process.cwd(),

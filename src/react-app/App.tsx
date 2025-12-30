@@ -5,6 +5,7 @@ import SystemHome from "./pages/system/Menu";
 import SystemPage1 from "./pages/system/MenuPage1";
 import SystemPage2 from "./pages/system/MenuPage2";
 import TestKV from "./pages/system/TestKV";
+import TestSQL from "./pages/system/TestSQL";
 import UserManage from "./pages/system/UserManage";
 import RoleManage from "./pages/system/RoleManage";
 import MenuManage from "./pages/system/MenuManage";
@@ -18,6 +19,7 @@ function getPage() {
 		if (path === "/system/page1") return <SystemPage1 />;
 		if (path === "/system/page2") return <SystemPage2 />;
 		if (path === "/system/testKV") return <TestKV />;
+		if (path === "/system/testSQL") return <TestSQL />;
 		if (path === "/system/user") return <UserManage />;
 		if (path === "/system/role") return <RoleManage />;
 		if (path === "/system/menu") return <MenuManage />;

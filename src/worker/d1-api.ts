@@ -138,7 +138,7 @@ d1Api.get("/api/menus", async (c) => {
 	).all();
 
 	// 构建树形结构
-	const buildTree = (parentId: number = 0) => {
+	const buildTree = (parentId: number = 0): any[] => {
 		return results
 			.filter((m: any) => m.parent_id === parentId)
 			.map((m: any) => ({
@@ -307,7 +307,7 @@ d1Api.get("/api/user/:id/menus", async (c) => {
 	).bind(id).all();
 
 	// 构建树形结构
-	const buildTree = (parentId: number = 0) => {
+	const buildTree = (parentId: number = 0): any[] => {
 		return results
 			.filter((m: any) => m.parent_id === parentId)
 			.map((m: any) => ({

@@ -10,21 +10,14 @@ interface User {
 	created_at: string;
 }
 
-interface Role {
-	id: number;
-	role_name: string;
-}
-
 export default function UserManage() {
 	const [users, setUsers] = useState<User[]>([]);
-	const [roles, setRoles] = useState<Role[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showModal, setShowModal] = useState(false);
 
 	useEffect(() => {
 		fetchUsers();
-		fetchRoles();
 	}, []);
 
 	const fetchUsers = async () => {
@@ -36,16 +29,6 @@ export default function UserManage() {
 			console.error(e);
 		} finally {
 			setLoading(false);
-		}
-	};
-
-	const fetchRoles = async () => {
-		try {
-			const res = await fetch("/api/roles");
-			const data = await res.json();
-			setRoles(data.roles || []);
-		} catch (e) {
-			console.error(e);
 		}
 	};
 

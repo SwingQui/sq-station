@@ -104,7 +104,8 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_pat
 ((SELECT id FROM sys_menu WHERE route_path = '/system'), '用户管理', 'C', '/system/user', 'system/UserManage', 'User', 3, 'system:user:list', 1, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/system'), '角色管理', 'C', '/system/role', 'system/RoleManage', 'Role', 4, 'system:role:list', 1, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/system'), '菜单管理', 'C', '/system/menu', 'system/MenuManage', 'Menu', 5, 'system:menu:list', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), 'KV管理', 'C', '/system/testKV', 'system/TestKV', 'Database', 6, 'system:kv:view', 1, 1);
+((SELECT id FROM sys_menu WHERE route_path = '/system'), 'KV管理', 'C', '/system/testKV', 'system/TestKV', 'Database', 6, 'system:kv:view', 1, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system'), 'SQL查询', 'C', '/system/testSQL', 'system/TestSQL', 'Code', 7, 'system:sql:query', 1, 1);
 
 -- 用户角色关联
 INSERT OR IGNORE INTO sys_user_role (id, user_id, role_id) VALUES

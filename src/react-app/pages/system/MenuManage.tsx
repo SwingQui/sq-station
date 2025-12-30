@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface Menu {
 	id: number;
@@ -7,6 +7,10 @@ interface Menu {
 	menu_type: string;
 	route_path: string | null;
 	component_path: string | null;
+	redirect?: string | null;
+	query_param?: string | null;
+	is_frame?: number;
+	is_cache?: number;
 	icon: string | null;
 	sort_order: number;
 	permission: string | null;

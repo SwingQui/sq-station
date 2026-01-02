@@ -79,10 +79,13 @@ CREATE TABLE IF NOT EXISTS sys_role_menu (
 -- 初始化数据
 -- ====================================
 
--- 初始化管理员账号 (密码: admin123，实际应使用 bcrypt)
+-- 初始化管理员账号
+-- 密码已使用 PBKDF2-SHA256 加密（username 作为 salt）
+-- admin 密码: admin13672210421
+-- user 密码: user123
 INSERT OR IGNORE INTO sys_user (id, username, password, nickname, status) VALUES
-(1, 'admin', 'admin123', '管理员', 1),
-(2, 'user', 'user123', '普通用户', 1);
+(1, 'admin', 'admin$9e97f7ff5e604b010c3ab72e59c239044e12e227016291f55f2cebb022943a10', '管理员', 1),
+(2, 'user', 'user$a52197d73c0a6a5bec9a30fb0342759f1920ac154b0244376fa874f639338bec', '普通用户', 1);
 
 -- 初始化角色
 INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status) VALUES

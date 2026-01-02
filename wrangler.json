@@ -29,5 +29,8 @@
 	],
 	"dev": {
 		"port": 8787
+	},
+	"vars": {
+		"JWT_SECRET": "SwingQuiDTY1465477749-sq-station-jwt-secret-key-2026"
 	}
 }

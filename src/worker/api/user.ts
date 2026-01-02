@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "../index.d";
+import { hashPasswordWithUsername } from "../utils/password";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -28,9 +29,11 @@ app.post("/", async (c) => {
 		return c.json({ error: "用户名和密码不能为空" }, 400);
 	}
 	try {
+		// 加密密码
+		const hashedPassword = await hashPasswordWithUsername(password, username);
 		const result = await c.env.DB.prepare(
 			"INSERT INTO sys_user (username, password, nickname, email, phone, avatar, status, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-		).bind(username, password, nickname || null, email || null, phone || null, avatar || null, status ?? 1, remark || null).run();
+		).bind(username, hashedPassword, nickname || null, email || null, phone || null, avatar || null, status ?? 1, remark || null).run();
 		return c.json({ success: true, userId: result.meta.last_row_id });
 	} catch (e: any) {
 		return c.json({ error: e.message }, 400);
@@ -42,9 +45,18 @@ app.put("/:id", async (c) => {
 	const id = c.req.param("id");
 	const { username, password, nickname, email, phone, avatar, status, remark } = await c.req.json();
 	try {
-		await c.env.DB.prepare(
-			"UPDATE sys_user SET username = ?, password = ?, nickname = ?, email = ?, phone = ?, avatar = ?, status = ?, remark = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-		).bind(username, password, nickname || null, email || null, phone || null, avatar || null, status ?? 1, remark || null, id).run();
+		// 如果提供了密码，则加密并更新
+		if (password && password.trim()) {
+			const hashedPassword = await hashPasswordWithUsername(password, username);
+			await c.env.DB.prepare(
+				"UPDATE sys_user SET username = ?, password = ?, nickname = ?, email = ?, phone = ?, avatar = ?, status = ?, remark = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+			).bind(username, hashedPassword, nickname || null, email || null, phone || null, avatar || null, status ?? 1, remark || null, id).run();
+		} else {
+			// 不更新密码
+			await c.env.DB.prepare(
+				"UPDATE sys_user SET username = ?, nickname = ?, email = ?, phone = ?, avatar = ?, status = ?, remark = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+			).bind(username, nickname || null, email || null, phone || null, avatar || null, status ?? 1, remark || null, id).run();
+		}
 		return c.json({ success: true });
 	} catch (e: any) {
 		return c.json({ error: e.message }, 400);

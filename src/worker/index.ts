@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Env } from "./index.d";
+import { cors } from "hono/cors";
 import kvApi from "./api/kv";
 import userApi from "./api/user";
 import roleApi from "./api/role";
@@ -7,8 +8,16 @@ import menuApi from "./api/menu";
 import userRoleApi from "./api/user-role";
 import roleMenuApi from "./api/role-menu";
 import permissionApi from "./api/permission";
+import authApi from "./api/auth";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// CORS 配置（允许前端携带 Authorization header）
+app.use("/*", cors({
+	origin: "*",
+	allowHeaders: ["Content-Type", "Authorization"],
+	allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+}));
 
 app.get("/api/", (c) => c.json({ name: "Cloudflare" }));
 
@@ -58,6 +67,7 @@ app.post("/api/sql/query", async (c) => {
 });
 
 // 挂载 API
+app.route("/api/auth", authApi);
 app.route("/api/kv", kvApi);
 app.route("/api/user", userApi);
 app.route("/api/role", roleApi);

@@ -1,23 +1,7 @@
 import React, { useEffect, useState } from "react";
-
-interface Menu {
-	id: number;
-	parent_id: number;
-	menu_name: string;
-	menu_type: string;
-	route_path: string | null;
-	component_path: string | null;
-	redirect?: string | null;
-	query_param?: string | null;
-	is_frame?: number;
-	is_cache?: number;
-	icon: string | null;
-	sort_order: number;
-	permission: string | null;
-	menu_visible: number;
-	menu_status: number;
-	children?: Menu[];
-}
+import { menuService } from "../../services";
+import type { Menu } from "../../services";
+import PermissionButton from "../../components/PermissionButton";
 
 export default function MenuManage() {
 	const [menus, setMenus] = useState<Menu[]>([]);
@@ -32,10 +16,9 @@ export default function MenuManage() {
 
 	const fetchMenus = async () => {
 		try {
-			const res = await fetch("/api/menus");
-			const data = await res.json();
-			setMenus(data.menus || []);
-			// 构建父菜单选项（只包含目录类型）
+			const data = await menuService.list();
+			setMenus(data);
+			// 构建父菜单选项
 			const buildParentOptions = (menuList: Menu[]): Menu[] => {
 				const result: Menu[] = [];
 				for (const menu of menuList) {
@@ -46,7 +29,7 @@ export default function MenuManage() {
 				}
 				return result;
 			};
-			setParentOptions(buildParentOptions(data.menus || []));
+			setParentOptions(buildParentOptions(data));
 		} catch (e) {
 			console.error(e);
 		} finally {
@@ -57,7 +40,7 @@ export default function MenuManage() {
 	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
-		const menuData = {
+		const menuData: any = {
 			parent_id: Number(formData.get("parent_id") || 0),
 			menu_name: formData.get("menu_name"),
 			menu_type: formData.get("menu_type"),
@@ -75,19 +58,17 @@ export default function MenuManage() {
 		};
 
 		try {
-			const url = editingMenu ? `/api/menus/${editingMenu.id}` : "/api/menus";
-			const method = editingMenu ? "PUT" : "POST";
-			await fetch(url, {
-				method,
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(menuData),
-			});
+			if (editingMenu && editingMenu.id > 0) {
+				await menuService.update(editingMenu.id, menuData);
+			} else {
+				await menuService.create(menuData);
+			}
 			setShowModal(false);
 			setEditingMenu(null);
 			fetchMenus();
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("保存失败");
+			alert(e.message || "保存失败");
 		}
 	};
 
@@ -99,11 +80,11 @@ export default function MenuManage() {
 	const handleDelete = async (id: number) => {
 		if (!confirm("确定删除此菜单吗？")) return;
 		try {
-			await fetch(`/api/menus/${id}`, { method: "DELETE" });
+			await menuService.delete(id);
 			fetchMenus();
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("删除失败");
+			alert(e.message || "删除失败");
 		}
 	};
 
@@ -162,15 +143,15 @@ export default function MenuManage() {
 						</span>
 					</td>
 					<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-						<button onClick={() => handleEdit(menu)} style={{ padding: "4px 8px", marginRight: "4px", fontSize: "12px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+						<PermissionButton permission="system:menu:edit" onClick={() => handleEdit(menu)} style={{ padding: "4px 8px", marginRight: "4px", fontSize: "12px" }}>
 							编辑
-						</button>
-						<button onClick={() => handleAdd(menu.id)} style={{ padding: "4px 8px", marginRight: "4px", fontSize: "12px", background: "#52c41a", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+						</PermissionButton>
+						<PermissionButton permission="system:menu:add" onClick={() => handleAdd(menu.id)} style={{ padding: "4px 8px", marginRight: "4px", fontSize: "12px", background: "#52c41a" }}>
 							新增子菜单
-						</button>
-						<button onClick={() => handleDelete(menu.id)} style={{ padding: "4px 8px", fontSize: "12px", background: "#ff4d4f", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+						</PermissionButton>
+						<PermissionButton permission="system:menu:delete" onClick={() => handleDelete(menu.id)} style={{ padding: "4px 8px", fontSize: "12px" }}>
 							删除
-						</button>
+						</PermissionButton>
 					</td>
 				</tr>
 				{menu.children && renderMenuTree(menu.children, level + 1)}
@@ -182,9 +163,9 @@ export default function MenuManage() {
 		<div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
 				<h1>菜单管理</h1>
-				<button onClick={() => handleAdd(0)} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+				<PermissionButton permission="system:menu:add" onClick={() => handleAdd(0)}>
 					新增根菜单
-				</button>
+				</PermissionButton>
 			</div>
 
 			{loading ? (

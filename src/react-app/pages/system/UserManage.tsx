@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
-
-interface User {
-	id: number;
-	username: string;
-	nickname: string | null;
-	email: string | null;
-	phone: string | null;
-	status: number;
-	created_at: string;
-}
+import { userService } from "../../services";
+import type { User } from "../../services";
+import PermissionButton from "../../components/PermissionButton";
 
 export default function UserManage() {
 	const [users, setUsers] = useState<User[]>([]);
@@ -22,11 +15,11 @@ export default function UserManage() {
 
 	const fetchUsers = async () => {
 		try {
-			const res = await fetch("/api/users");
-			const data = await res.json();
-			setUsers(data.users || []);
+			const data = await userService.list();
+			setUsers(data);
 		} catch (e) {
 			console.error(e);
+			alert("加载失败");
 		} finally {
 			setLoading(false);
 		}
@@ -35,7 +28,7 @@ export default function UserManage() {
 	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
-		const userData = {
+		const userData: any = {
 			username: formData.get("username"),
 			password: formData.get("password"),
 			nickname: formData.get("nickname"),
@@ -45,19 +38,17 @@ export default function UserManage() {
 		};
 
 		try {
-			const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
-			const method = editingUser ? "PUT" : "POST";
-			await fetch(url, {
-				method,
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(userData),
-			});
+			if (editingUser) {
+				await userService.update(editingUser.id, userData);
+			} else {
+				await userService.create(userData);
+			}
 			setShowModal(false);
 			setEditingUser(null);
 			fetchUsers();
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("保存失败");
+			alert(e.message || "保存失败");
 		}
 	};
 
@@ -69,11 +60,11 @@ export default function UserManage() {
 	const handleDelete = async (id: number) => {
 		if (!confirm("确定删除此用户吗？")) return;
 		try {
-			await fetch(`/api/users/${id}`, { method: "DELETE" });
+			await userService.delete(id);
 			fetchUsers();
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("删除失败");
+			alert(e.message || "删除失败");
 		}
 	};
 
@@ -86,9 +77,9 @@ export default function UserManage() {
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
 				<h1>用户管理</h1>
-				<button onClick={handleAdd} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+				<PermissionButton permission="system:user:add" onClick={handleAdd}>
 					新增用户
-				</button>
+				</PermissionButton>
 			</div>
 
 			{loading ? (
@@ -122,12 +113,12 @@ export default function UserManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(user.created_at).toLocaleString("zh-CN")}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<button onClick={() => handleEdit(user)} style={{ padding: "4px 12px", marginRight: "8px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+									<PermissionButton permission="system:user:edit" onClick={() => handleEdit(user)} style={{ padding: "4px 12px", marginRight: "8px" }}>
 										编辑
-									</button>
-									<button onClick={() => handleDelete(user.id)} style={{ padding: "4px 12px", background: "#ff4d4f", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+									</PermissionButton>
+									<PermissionButton permission="system:user:delete" onClick={() => handleDelete(user.id)} style={{ padding: "4px 12px" }}>
 										删除
-									</button>
+									</PermissionButton>
 								</td>
 							</tr>
 						))}

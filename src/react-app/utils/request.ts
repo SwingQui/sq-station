@@ -1,9 +1,11 @@
 /**
  * HTTP 请求封装
  * 自动注入 token，统一错误处理
+ * 处理 {code, data, msg} 格式的API响应
  */
 
 import { getToken, logout } from "./auth";
+import { navigate } from "./router";
 
 export interface RequestOptions {
 	method?: "GET" | "POST" | "PUT" | "DELETE";
@@ -13,7 +15,17 @@ export interface RequestOptions {
 }
 
 /**
- * 统一请求函数
+ * API 响应格式
+ */
+export interface ApiResult<T = any> {
+	code: number;
+	data: T;
+	msg: string;
+}
+
+/**
+ * 统一请求函数（原始版本，不防抖）
+ * 自动处理 {code, data, msg} 格式
  */
 export async function request<T = any>(url: string, options: RequestOptions = {}): Promise<T> {
 	const {
@@ -61,20 +73,21 @@ export async function request<T = any>(url: string, options: RequestOptions = {}
 		// 处理 401 未授权
 		if (response.status === 401) {
 			logout();
-			// 跳转到登录页
-			window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+			// 使用 SPA 导航跳转到登录页
+			navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, true);
 			throw new Error("未登录或登录已过期");
 		}
 
 		// 解析响应
-		const data = await response.json();
+		const result: ApiResult<T> = await response.json();
 
-		// 检查业务错误
-		if (!response.ok) {
-			throw new Error(data.error || data.message || "请求失败");
+		// 检查业务状态码
+		if (result.code !== 200) {
+			throw new Error(result.msg || "请求失败");
 		}
 
-		return data;
+		// 返回 data 部分
+		return result.data;
 	} catch (error: any) {
 		if (error.message === "Failed to fetch") {
 			throw new Error("网络连接失败，请检查网络");
@@ -83,30 +96,42 @@ export async function request<T = any>(url: string, options: RequestOptions = {}
 	}
 }
 
+// ==================== 导出原始请求函数 ====================
+export { request as rawRequest };
+
 /**
- * GET 请求
+ * GET 请求（原始版本，不防抖）
  */
 export function get<T = any>(url: string, params?: Record<string, string>): Promise<T> {
 	return request<T>(url, { method: "GET", params });
 }
 
 /**
- * POST 请求
+ * POST 请求（原始版本，不防抖）
  */
 export function post<T = any>(url: string, body?: any): Promise<T> {
 	return request<T>(url, { method: "POST", body });
 }
 
 /**
- * PUT 请求
+ * PUT 请求（原始版本，不防抖）
  */
 export function put<T = any>(url: string, body?: any): Promise<T> {
 	return request<T>(url, { method: "PUT", body });
 }
 
 /**
- * DELETE 请求
+ * DELETE 请求（原始版本，不防抖）
  */
 export function del<T = any>(url: string): Promise<T> {
 	return request<T>(url, { method: "DELETE" });
 }
+
+// ==================== 导出防抖版本（默认使用） ====================
+export {
+	debouncedRequest as requestWithDebounce,
+	debouncedGet as getWithDebounce,
+	debouncedPost as postWithDebounce,
+	debouncedPut as putWithDebounce,
+	debouncedDel as delWithDebounce,
+} from "./debounceRequest";

@@ -5,6 +5,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { AuthUser, LoginResponse } from "../utils/auth";
+import { navigate } from "../utils/router";
 
 interface AuthContextType {
 	user: AuthUser | null;
@@ -78,8 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		localStorage.removeItem("auth_menus");
 		setUser(null);
 
-		// 跳转到登录页
-		window.location.href = "/login";
+		// 使用 SPA 导航跳转到登录页
+		navigate("/login", true);
 	};
 
 	// 刷新用户信息

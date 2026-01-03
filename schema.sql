@@ -123,3 +123,32 @@ SELECT 1, id FROM sys_menu;
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
 (2, (SELECT id FROM sys_menu WHERE route_path = '/')),
 (2, (SELECT id FROM sys_menu WHERE route_path = '/page1'));
+
+-- ====================================
+-- 按钮级权限
+-- ====================================
+-- 用户管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/system/user'), '新增用户', 'F', 'system:user:add', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/user'), '编辑用户', 'F', 'system:user:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/user'), '删除用户', 'F', 'system:user:delete', 3, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/user'), '分配角色', 'F', 'system:user:assignRoles', 4, 0, 1);
+
+-- 角色管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/system/role'), '新增角色', 'F', 'system:role:add', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/role'), '编辑角色', 'F', 'system:role:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/role'), '删除角色', 'F', 'system:role:delete', 3, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/role'), '分配菜单', 'F', 'system:role:assignMenus', 4, 0, 1);
+
+-- 菜单管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/system/menu'), '新增菜单', 'F', 'system:menu:add', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/menu'), '编辑菜单', 'F', 'system:menu:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/menu'), '删除菜单', 'F', 'system:menu:delete', 3, 0, 1);
+
+-- 确保超级管理员拥有所有权限（包括新添加的按钮权限）
+INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT 1, id FROM sys_menu WHERE NOT EXISTS (
+	SELECT 1 FROM sys_role_menu WHERE role_id = 1 AND menu_id = sys_menu.id
+);

@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { navigate } from "../utils/router";
 
 export default function Login() {
 	const { login, isAuthenticated } = useAuth();
@@ -18,7 +19,7 @@ export default function Login() {
 		if (isAuthenticated) {
 			const params = new URLSearchParams(window.location.search);
 			const redirect = params.get("redirect") || "/system";
-			window.location.href = redirect;
+			navigate(redirect, true); // replace 避免返回到登录页
 		}
 	}, [isAuthenticated]);
 

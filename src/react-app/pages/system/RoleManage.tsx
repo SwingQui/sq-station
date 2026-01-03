@@ -1,21 +1,7 @@
 import { useEffect, useState } from "react";
-
-interface Role {
-	id: number;
-	role_name: string;
-	role_key: string;
-	sort_order: number;
-	status: number;
-	remark: string | null;
-	created_at: string;
-}
-
-interface Menu {
-	id: number;
-	menu_name: string;
-	menu_type: string;
-	children?: Menu[];
-}
+import { roleService, menuService } from "../../services";
+import type { Role, Menu } from "../../services";
+import PermissionButton from "../../components/PermissionButton";
 
 export default function RoleManage() {
 	const [roles, setRoles] = useState<Role[]>([]);
@@ -34,9 +20,8 @@ export default function RoleManage() {
 
 	const fetchRoles = async () => {
 		try {
-			const res = await fetch("/api/roles");
-			const data = await res.json();
-			setRoles(data.roles || []);
+			const data = await roleService.list();
+			setRoles(data);
 		} catch (e) {
 			console.error(e);
 		} finally {
@@ -46,9 +31,8 @@ export default function RoleManage() {
 
 	const fetchMenus = async () => {
 		try {
-			const res = await fetch("/api/menus");
-			const data = await res.json();
-			setMenus(data.menus || []);
+			const data = await menuService.list();
+			setMenus(data);
 		} catch (e) {
 			console.error(e);
 		}
@@ -57,7 +41,7 @@ export default function RoleManage() {
 	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		const formData = new FormData(e.currentTarget);
-		const roleData = {
+		const roleData: any = {
 			role_name: formData.get("role_name"),
 			role_key: formData.get("role_key"),
 			sort_order: Number(formData.get("sort_order") || 0),
@@ -66,19 +50,17 @@ export default function RoleManage() {
 		};
 
 		try {
-			const url = editingRole ? `/api/roles/${editingRole.id}` : "/api/roles";
-			const method = editingRole ? "PUT" : "POST";
-			await fetch(url, {
-				method,
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(roleData),
-			});
+			if (editingRole) {
+				await roleService.update(editingRole.id, roleData);
+			} else {
+				await roleService.create(roleData);
+			}
 			setShowModal(false);
 			setEditingRole(null);
 			fetchRoles();
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("保存失败");
+			alert(e.message || "保存失败");
 		}
 	};
 
@@ -90,11 +72,11 @@ export default function RoleManage() {
 	const handleDelete = async (id: number) => {
 		if (!confirm("确定删除此角色吗？")) return;
 		try {
-			await fetch(`/api/roles/${id}`, { method: "DELETE" });
+			await roleService.delete(id);
 			fetchRoles();
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("删除失败");
+			alert(e.message || "删除失败");
 		}
 	};
 
@@ -105,32 +87,27 @@ export default function RoleManage() {
 
 	const handleMenuAssign = async (role: Role) => {
 		setSelectedRole(role);
-		// 获取角色已分配的菜单
 		try {
-			const res = await fetch(`/api/roles/${role.id}/menus`);
-			const data = await res.json();
-			const menuIds = data.menus.map((m: Menu) => m.id);
+			const data = await roleService.getMenus(role.id);
+			const menuIds = data.map((m: Menu) => m.id);
 			setSelectedMenus(menuIds);
 			setShowMenuModal(true);
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
+			alert(e.message || "获取菜单失败");
 		}
 	};
 
 	const handleSaveMenus = async () => {
 		if (!selectedRole) return;
 		try {
-			await fetch(`/api/roles/${selectedRole.id}/menus`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ menuIds: selectedMenus }),
-			});
+			await roleService.assignMenus(selectedRole.id, selectedMenus);
 			setShowMenuModal(false);
 			setSelectedRole(null);
 			alert("菜单分配成功");
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e);
-			alert("保存失败");
+			alert(e.message || "保存失败");
 		}
 	};
 
@@ -163,9 +140,9 @@ export default function RoleManage() {
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
 				<h1>角色管理</h1>
-				<button onClick={handleAdd} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+				<PermissionButton permission="system:role:add" onClick={handleAdd}>
 					新增角色
-				</button>
+				</PermissionButton>
 			</div>
 
 			{loading ? (
@@ -199,15 +176,15 @@ export default function RoleManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(role.created_at).toLocaleString("zh-CN")}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<button onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "8px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+									<PermissionButton permission="system:role:edit" onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "8px" }}>
 										编辑
-									</button>
-									<button onClick={() => handleMenuAssign(role)} style={{ padding: "4px 12px", marginRight: "8px", background: "#52c41a", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+									</PermissionButton>
+									<PermissionButton permission="system:role:assignMenus" onClick={() => handleMenuAssign(role)} style={{ padding: "4px 12px", marginRight: "8px", background: "#52c41a" }}>
 										菜单
-									</button>
-									<button onClick={() => handleDelete(role.id)} style={{ padding: "4px 12px", background: "#ff4d4f", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+									</PermissionButton>
+									<PermissionButton permission="system:role:delete" onClick={() => handleDelete(role.id)} style={{ padding: "4px 12px" }}>
 										删除
-									</button>
+									</PermissionButton>
 								</td>
 							</tr>
 						))}

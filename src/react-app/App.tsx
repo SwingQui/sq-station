@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./contexts/AuthContext";
+import { onRouteChange, navigate } from "./utils/router";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Page1 from "./pages/Page1";
@@ -61,33 +62,47 @@ function App() {
 
 	// 监听路由变化
 	useEffect(() => {
-		const handlePopState = () => setPath(window.location.pathname);
+		// 使用路由工具监听器
+		const unsubscribe = onRouteChange((newPath) => {
+			setPath(newPath);
+			// 滚动到顶部
+			window.scrollTo(0, 0);
+		});
 
-		// 拦截链接点击
+		// 监听浏览器后退/前进
+		const handlePopState = () => {
+			setPath(window.location.pathname);
+		};
+
+		window.addEventListener("popstate", handlePopState);
+
+		return () => {
+			unsubscribe();
+			window.removeEventListener("popstate", handlePopState);
+		};
+	}, []);
+
+	// 拦截链接点击
+	useEffect(() => {
 		const handleClick = (e: MouseEvent) => {
 			const target = (e.target as HTMLElement).closest("a");
 			if (target && target.getAttribute("href")?.startsWith("/")) {
 				e.preventDefault();
 				const href = target.getAttribute("href")!;
-				window.history.pushState({}, "", href);
-				setPath(href);
+				navigate(href);
 			}
 		};
 
-		window.addEventListener("popstate", handlePopState);
 		document.addEventListener("click", handleClick);
-
 		return () => {
-			window.removeEventListener("popstate", handlePopState);
 			document.removeEventListener("click", handleClick);
 		};
 	}, []);
 
-	// 检查后台路由认证
+	// 检查后台路由认证 - 使用 SPA 导航
 	if (path.startsWith("/system") && !isLoading && !isAuthenticated) {
-		// 保存原路径并跳转到登录
 		const redirect = encodeURIComponent(path);
-		window.location.href = `/login?redirect=${redirect}`;
+		navigate(`/login?redirect=${redirect}`, true);
 		return null;
 	}
 

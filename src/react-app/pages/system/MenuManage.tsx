@@ -161,13 +161,13 @@ export default function MenuManage() {
 		{
 			title: "ID",
 			dataIndex: "id",
-			width: 60,
+			width: 48,
 			align: "center" as const,
 		},
 		{
 			title: "菜单名称",
 			dataIndex: "menu_name",
-			width: 250,
+			width: 150,
 			render: (text: string, record: TableRow) => {
 				const level = getMenuLevel(record, menus);
 				const prefix = "├ ".repeat(level);
@@ -177,7 +177,7 @@ export default function MenuManage() {
 		{
 			title: "类型",
 			dataIndex: "menu_type",
-			width: 100,
+			width: 48,
 			align: "center" as const,
 			render: (type: string) => {
 				const config: Record<string, { color: string; text: string }> = {
@@ -192,16 +192,59 @@ export default function MenuManage() {
 		{
 			title: "路由路径",
 			dataIndex: "route_path",
-			width: 180,
+			width: 150,
 			align: "center" as const,
-			render: (path: string | null) => path ? <code>{path}</code> : "-",
+			render: (path: string | null) => {
+				if (!path) return "-";
+				return (
+					<code
+						style={{
+							cursor: "pointer",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							display: "block",
+							maxWidth: "150px",
+						}}
+						title={path}
+						onClick={() => {
+							navigator.clipboard.writeText(path);
+							message.success("已复制: " + path);
+						}}
+					>
+						{path}
+					</code>
+				);
+			},
 		},
 		{
 			title: "组件路径",
 			dataIndex: "component_path",
-			width: 200,
+			width: 150,
 			align: "center" as const,
-			render: (path: string | null) => path ? <code>{`/${path}`}</code> : "-",
+			render: (path: string | null) => {
+				if (!path) return "-";
+				const fullPath = `/${path}`;
+				return (
+					<code
+						style={{
+							cursor: "pointer",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							display: "block",
+							maxWidth: "150px",
+						}}
+						title={fullPath}
+						onClick={() => {
+							navigator.clipboard.writeText(fullPath);
+							message.success("已复制: " + fullPath);
+						}}
+					>
+						{fullPath}
+					</code>
+				);
+			},
 		},
 		{
 			title: "图标",
@@ -211,15 +254,43 @@ export default function MenuManage() {
 			render: (icon: string | null) => icon ? <Icon name={icon} /> : "-",
 		},
 		{
+			title: "权限",
+			dataIndex: "permission",
+			width: 150,
+			align: "center" as const,
+			render: (permission: string | null) => {
+				if (!permission) return "-";
+				return (
+					<code
+						style={{
+							cursor: "pointer",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							display: "block",
+							maxWidth: "150px",
+						}}
+						title={permission}
+						onClick={() => {
+							navigator.clipboard.writeText(permission);
+							message.success("已复制: " + permission);
+						}}
+					>
+						{permission}
+					</code>
+				);
+			},
+		},
+		{
 			title: "排序",
 			dataIndex: "sort_order",
-			width: 80,
+			width: 48,
 			align: "center" as const,
 		},
 		{
 			title: "状态",
 			dataIndex: "menu_status",
-			width: 100,
+			width: 48,
 			align: "center" as const,
 			render: (status: number) => (
 				<Tag color={status ? "success" : "error"}>
@@ -275,7 +346,7 @@ export default function MenuManage() {
 				defaultExpandAllRows
 				size="small"
 				bordered
-				scroll={{ x: 1200 }}
+				scroll={{ x: 1090 }}
 			/>
 
 			<Modal

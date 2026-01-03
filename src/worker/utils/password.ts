@@ -72,7 +72,7 @@ export async function hashPasswordWithUsername(password: string, username: strin
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
 	// 检查是否为哈希密码（包含 $ 分隔符）
 	if (hashedPassword.includes('$')) {
-		const [salt, _hash] = hashedPassword.split('$');
+		const [salt] = hashedPassword.split('$');
 		const computedHash = await hashPassword(password, salt);
 		return computedHash === hashedPassword;
 	}

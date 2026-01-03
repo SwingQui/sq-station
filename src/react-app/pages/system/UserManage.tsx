@@ -75,8 +75,7 @@ export default function UserManage() {
 
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-				<h1>用户管理</h1>
+			<div style={{ marginBottom: "20px" }}>
 				<PermissionButton permission="system:user:add" onClick={handleAdd}>
 					新增用户
 				</PermissionButton>

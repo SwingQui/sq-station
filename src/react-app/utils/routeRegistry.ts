@@ -1,34 +1,55 @@
 /**
- * 路由注册表
- * 将组件路径映射到实际组件
+ * 自动路由注册表
+ * 使用 Vite 的 import.meta.glob 自动发现组件
+ * 无需手动注册，创建组件文件即可自动加载
  */
 
-// 组件映射表
-const componentRegistry: Record<string, () => Promise<{ default: React.ComponentType }>> = {
-	// 前台页面
-	"Home": () => import("../pages/Home"),
-	"Page1": () => import("../pages/Page1"),
-	"Page2": () => import("../pages/Page2"),
+import type { ComponentType } from "react";
 
-	// 系统管理页面
-	"system/Menu": () => import("../pages/system/Menu"),
-	"system/MenuPage1": () => import("../pages/system/MenuPage1"),
-	"system/MenuPage2": () => import("../pages/system/MenuPage2"),
-	"system/TestKV": () => import("../pages/system/TestKV"),
-	"system/TestSQL": () => import("../pages/system/TestSQL"),
-	"system/UserManage": () => import("../pages/system/UserManage"),
-	"system/RoleManage": () => import("../pages/system/RoleManage"),
-	"system/MenuManage": () => import("../pages/system/MenuManage"),
-};
-
-// 组件缓存
-const componentCache: Record<string, React.ComponentType> = {};
+// 自动扫描所有页面组件
+const componentModules = import.meta.glob('../pages/**/*.tsx');
 
 /**
- * 根据组件路径动态加载组件
+ * 根据文件路径生成组件路径
+ * ../pages/Home.tsx -> Home
+ * ../pages/system/UserManage.tsx -> system/UserManage
  */
-export async function loadComponent(componentPath: string): Promise<React.ComponentType | null> {
-	// 如果已缓存，直接返回
+function getComponentPath(filePath: string): string {
+	const relativePath = filePath.replace('../pages/', '').replace('.tsx', '');
+	return relativePath;
+}
+
+/**
+ * 生成自动注册表
+ */
+function generateRegistry(): Record<string, () => Promise<{ default: ComponentType }>> {
+	const registry: Record<string, () => Promise<{ default: ComponentType }>> = {};
+
+	Object.entries(componentModules).forEach(([filePath, loader]) => {
+		// 跳过 index 文件和以 _ 开头的文件
+		const fileName = filePath.split('/').pop() || '';
+		if (fileName.startsWith('_') || fileName === 'index.tsx') {
+			return;
+		}
+
+		const componentPath = getComponentPath(filePath);
+		registry[componentPath] = loader as () => Promise<{ default: ComponentType }>;
+	});
+
+	return registry;
+}
+
+// 自动生成注册表
+const componentRegistry = generateRegistry();
+
+// 组件缓存
+const componentCache: Record<string, ComponentType> = {};
+
+/**
+ * 加载组件
+ */
+export async function loadComponent(componentPath: string): Promise<ComponentType | null> {
+	// 检查缓存
 	if (componentCache[componentPath]) {
 		return componentCache[componentPath];
 	}
@@ -37,6 +58,7 @@ export async function loadComponent(componentPath: string): Promise<React.Compon
 	const loader = componentRegistry[componentPath];
 	if (!loader) {
 		console.warn(`Component not found: ${componentPath}`);
+		console.warn('Available components:', Object.keys(componentRegistry));
 		return null;
 	}
 
@@ -53,8 +75,39 @@ export async function loadComponent(componentPath: string): Promise<React.Compon
 }
 
 /**
- * 注册新组件
+ * 获取所有已注册的组件路径
  */
-export function registerComponent(path: string, loader: () => Promise<{ default: React.ComponentType }>) {
-	componentRegistry[path] = loader;
+export function getAllRegisteredPaths(): string[] {
+	return Object.keys(componentRegistry).sort();
+}
+
+/**
+ * 检查组件是否已注册
+ */
+export function hasComponent(path: string): boolean {
+	return path in componentRegistry;
+}
+
+/**
+ * 清除组件缓存
+ */
+export function clearComponentCache(): void {
+	for (const key in componentCache) {
+		delete componentCache[key];
+	}
+}
+
+/**
+ * 清除指定组件的缓存
+ */
+export function clearComponentCacheItem(path: string): void {
+	delete componentCache[path];
+}
+
+/**
+ * 开发环境：验证组件映射
+ */
+if (import.meta.env.DEV) {
+	console.log('[RouteRegistry] Auto-registered components:', Object.keys(componentRegistry).length);
+	console.log('[RouteRegistry] Available paths:', Object.keys(componentRegistry));
 }

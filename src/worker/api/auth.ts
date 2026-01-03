@@ -4,12 +4,16 @@
  */
 
 import { Hono } from "hono";
-import type { Env } from "../index.d";
-import { signToken, verifyToken } from "../utils/jwt";
+import type { Env, Variables } from "../index.d";
+import { signToken } from "../utils/jwt";
 import { verifyPasswordWithUsername } from "../utils/password";
 import { success, fail, badRequest, unauthorized, notFound } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { buildMenuTree } from "../utils/tree";
+import { handleError } from "../utils/response";
+import type { SysMenu } from "../types/database";
 
-const authApi = new Hono<{ Bindings: Env }>();
+const authApi = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 /**
  * 登录接口
@@ -55,7 +59,8 @@ authApi.post("/login", async (c) => {
 				userId: userResult.id as number,
 				username: userResult.username as string,
 			},
-			c.env.JWT_SECRET || "default-secret-key"
+			c.env.JWT_SECRET || "default-secret-key",
+			c.env.JWT_EXPIRES_IN || "24 * 60 * 60"
 		);
 
 		// 返回用户信息和 token
@@ -68,8 +73,8 @@ authApi.post("/login", async (c) => {
 				avatar: userResult.avatar,
 			},
 		}, "登录成功"));
-	} catch (e: any) {
-		return c.json(fail(500, e.message));
+	} catch (e: unknown) {
+		return c.json(fail(500, handleError(e, "登录失败")));
 	}
 });
 
@@ -87,117 +92,112 @@ authApi.post("/logout", (c) => {
 /**
  * 获取当前用户信息（包含权限和菜单）
  * GET /api/auth/me
+ * 需要认证（由中间件保护）
  */
-authApi.get("/me", async (c) => {
+authApi.get("/me", authMiddleware, async (c) => {
 	try {
-		// 从 Authorization header 获取 token
-		const authHeader = c.req.header("Authorization");
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		// 从上下文获取当前用户（由 authMiddleware 注入）
+		const currentUser = c.get("currentUser");
+		if (!currentUser) {
 			return c.json(unauthorized("未登录"));
 		}
 
-		const token = authHeader.substring(7);
-
-		// 验证 token
-		const payload = await verifyToken(token, c.env.JWT_SECRET || "default-secret-key");
-		if (!payload) {
-			return c.json(unauthorized("Token 无效或已过期"));
-		}
+		const userId = currentUser.userId;
 
 		// 查询用户信息
 		const userResult = await c.env.DB.prepare(
 			"SELECT id, username, nickname, avatar, email, phone FROM sys_user WHERE id = ? AND status = 1"
-		).bind(payload.userId).first();
+		).bind(userId).first();
 
 		if (!userResult) {
 			return c.json(notFound("用户不存在"));
 		}
 
-		// 查询用户权限
-		const permissionsResult = await c.env.DB.prepare(`
-			SELECT DISTINCT m.permission
-			FROM sys_menu m
-			INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
-			INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-			WHERE ur.user_id = ? AND m.permission IS NOT NULL AND m.permission != ''
-		`).bind(payload.userId).all();
+		// 检查是否为超级管理员
+		const isAdmin = userId === 1 || userResult.username === "admin";
 
-		const permissions = permissionsResult.results.map((r: any) => r.permission);
+		let permissions: string[];
+		let menuTree: SysMenu[];
 
-		// 查询用户菜单（树形结构）
-		const menusResult = await c.env.DB.prepare(`
-			SELECT m.*
-			FROM sys_menu m
-			INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
-			INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-			WHERE ur.user_id = ? AND m.menu_status = 1
-			ORDER BY m.sort_order ASC
-		`).bind(payload.userId).all();
+		if (isAdmin) {
+			// 超级管理员获取所有权限和菜单
+			const allPermissionsResult = await c.env.DB.prepare(`
+				SELECT DISTINCT permission
+				FROM sys_menu
+				WHERE permission IS NOT NULL AND permission != ''
+			`).all();
 
-		// 构建菜单树
-		const menuTree = buildMenuTree(menusResult.results as any[]);
+			permissions = allPermissionsResult.results.map((r) => r.permission as string);
+
+			const allMenusResult = await c.env.DB.prepare(`
+				SELECT *
+				FROM sys_menu
+				WHERE menu_status = 1
+				ORDER BY sort_order ASC
+			`).all();
+
+			menuTree = buildMenuTree(allMenusResult.results as unknown as SysMenu[]);
+		} else {
+			// 普通用户按角色查询
+			const permissionsResult = await c.env.DB.prepare(`
+				SELECT DISTINCT m.permission
+				FROM sys_menu m
+				INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+				INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+				WHERE ur.user_id = ? AND m.permission IS NOT NULL AND m.permission != ''
+			`).bind(userId).all();
+
+			permissions = permissionsResult.results.map((r) => r.permission as string);
+
+			const menusResult = await c.env.DB.prepare(`
+				SELECT m.*
+				FROM sys_menu m
+				INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+				INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+				WHERE ur.user_id = ? AND m.menu_status = 1
+				ORDER BY m.sort_order ASC
+			`).bind(userId).all();
+
+			menuTree = buildMenuTree(menusResult.results as unknown as SysMenu[]);
+		}
 
 		return c.json(success({
 			user: userResult,
 			permissions,
 			menus: menuTree,
 		}));
-	} catch (e: any) {
-		return c.json(fail(500, e.message));
+	} catch (e: unknown) {
+		return c.json(fail(500, handleError(e, "获取用户信息失败")));
 	}
 });
 
 /**
  * 刷新 Token
  * POST /api/auth/refresh
+ * 需要认证（由中间件保护）
  */
-authApi.post("/refresh", async (c) => {
+authApi.post("/refresh", authMiddleware, async (c) => {
 	try {
-		const authHeader = c.req.header("Authorization");
-		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+		// 从上下文获取当前用户（由 authMiddleware 注入）
+		const currentUser = c.get("currentUser");
+		if (!currentUser) {
 			return c.json(unauthorized("未登录"));
-		}
-
-		const token = authHeader.substring(7);
-
-		// 验证当前 token
-		const payload = await verifyToken(token, c.env.JWT_SECRET || "default-secret-key");
-		if (!payload) {
-			return c.json(unauthorized("Token 无效或已过期"));
 		}
 
 		// 生成新 token
 		const newToken = await signToken(
 			{
-				userId: payload.userId,
-				username: payload.username,
+				userId: currentUser.userId,
+				username: currentUser.username,
 			},
-			c.env.JWT_SECRET || "default-secret-key"
+			c.env.JWT_SECRET || "default-secret-key",
+			c.env.JWT_EXPIRES_IN || "24 * 60 * 60"
 		);
 
 		return c.json(success({ token: newToken }, "刷新成功"));
-	} catch (e: any) {
-		return c.json(fail(500, e.message));
+	} catch (e: unknown) {
+		return c.json(fail(500, handleError(e, "刷新 Token 失败")));
 	}
 });
-
-/**
- * 构建菜单树
- */
-function buildMenuTree(menus: any[], parentId: number = 0): any[] {
-	const result: any[] = [];
-
-	for (const menu of menus) {
-		if (menu.parent_id === parentId) {
-			const children = buildMenuTree(menus, menu.id);
-			if (children.length > 0) {
-				menu.children = children;
-			}
-			result.push(menu);
-		}
-	}
-
-	return result;
-}
 
 export default authApi;

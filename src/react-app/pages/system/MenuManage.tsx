@@ -161,8 +161,7 @@ export default function MenuManage() {
 
 	return (
 		<div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
-			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-				<h1>菜单管理</h1>
+			<div style={{ marginBottom: "20px" }}>
 				<PermissionButton permission="system:menu:add" onClick={() => handleAdd(0)}>
 					新增根菜单
 				</PermissionButton>

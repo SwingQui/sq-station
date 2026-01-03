@@ -1,11 +1,13 @@
 /**
  * 后台主布局组件
- * 左侧边栏 + 右侧内容区
+ * 左侧边栏 + 右侧内容区（Header、TagsView、Breadcrumb、主内容）
  */
 
 import React, { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import TagsView from "../components/TagsView";
+import Breadcrumb from "../components/Breadcrumb";
 
 interface AdminLayoutProps {
 	children: React.ReactNode;
@@ -28,6 +30,12 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 		transition: "margin-left 0.3s",
 	};
 
+	const mainContentStyle: React.CSSProperties = {
+		flex: 1,
+		overflow: "auto",
+		background: "#f5f5f5",
+	};
+
 	return (
 		<div style={layoutStyle}>
 			{/* 左侧边栏 */}
@@ -38,14 +46,22 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 				{/* 顶部导航 */}
 				<Header onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
+				{/* 标签页导航 */}
+				<TagsView />
+
+				{/* 面包屑导航 */}
+				<Breadcrumb />
+
 				{/* 主内容 */}
-				<div style={{ padding: "20px", flex: 1, overflow: "auto" }}>
-					{title && (
-						<h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px", color: "#333" }}>
-							{title}
-						</h2>
-					)}
-					{children}
+				<div style={mainContentStyle}>
+					<div style={{ padding: "20px" }}>
+						{title && (
+							<h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px", color: "#333" }}>
+								{title}
+							</h2>
+						)}
+						{children}
+					</div>
 				</div>
 			</div>
 		</div>

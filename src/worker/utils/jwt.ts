@@ -33,6 +33,22 @@ function base64UrlDecode(str: string): string {
 }
 
 /**
+ * 解析过期时间表达式（如 "24 * 60 * 60"）
+ * 使用安全的 Function 构造器计算
+ */
+function parseExpiresIn(value: string): number {
+	try {
+		// 只允许数字、空格、乘号和括号
+		if (!/^[\d\s\*]+$/.test(value)) {
+			return 86400; // 默认 24 小时
+		}
+		return new Function('return ' + value)() as number;
+	} catch {
+		return 86400;
+	}
+}
+
+/**
  * 生成 HMAC-SHA256 签名
  */
 async function signHmac(data: string, secret: string): Promise<string> {
@@ -69,9 +85,10 @@ async function verifyHmac(data: string, signature: string, secret: string): Prom
 /**
  * 生成 JWT Token
  */
-export async function signToken(payload: Omit<JWTPayload, 'iat' | 'exp'>, secret: string): Promise<string> {
+export async function signToken(payload: Omit<JWTPayload, 'iat' | 'exp'>, secret: string, expiresIn?: string): Promise<string> {
 	const now = Math.floor(Date.now() / 1000);
-	const exp = now + (7 * 24 * 60 * 60); // 7天过期
+	const expiresInSeconds = expiresIn ? parseExpiresIn(expiresIn) : 24 * 60 * 60; // 默认 24 小时
+	const exp = now + expiresInSeconds;
 
 	const fullPayload: JWTPayload = {
 		...payload,

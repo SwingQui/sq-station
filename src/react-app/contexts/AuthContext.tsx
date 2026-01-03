@@ -6,6 +6,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { AuthUser } from "../utils/auth";
 import { navigate } from "../utils/router";
+import { clearMenuIndexCache } from "../utils/routeMatcher";
 
 interface AuthContextType {
 	user: AuthUser | null;
@@ -14,6 +15,7 @@ interface AuthContextType {
 	login: (username: string, password: string) => Promise<void>;
 	logout: () => void;
 	refreshUser: () => Promise<void>;
+	refreshMenus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -84,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			if (meResult.code === 200 && meResult.data) {
 				localStorage.setItem("auth_permissions", JSON.stringify(meResult.data.permissions || []));
 				localStorage.setItem("auth_menus", JSON.stringify(meResult.data.menus || []));
+				// 清除菜单索引缓存，以便重新构建
+				clearMenuIndexCache();
 			}
 		}
 
@@ -131,8 +135,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		localStorage.setItem("auth_user", JSON.stringify(user));
 		localStorage.setItem("auth_permissions", JSON.stringify(permissions || []));
 		localStorage.setItem("auth_menus", JSON.stringify(menus || []));
+		// 清除菜单索引缓存，以便重新构建
+		clearMenuIndexCache();
 
 		setUser(user);
+	};
+
+	// 刷新菜单（数据库更新后调用）
+	const refreshMenus = async () => {
+		const token = localStorage.getItem("auth_token");
+		if (!token) return;
+
+		const response = await fetch("/api/auth/me", {
+			headers: { "Authorization": `Bearer ${token}` },
+		});
+
+		if (response.ok) {
+			const result = await response.json();
+			if (result.code === 200 && result.data) {
+				localStorage.setItem("auth_permissions", JSON.stringify(result.data.permissions || []));
+				localStorage.setItem("auth_menus", JSON.stringify(result.data.menus || []));
+				// 清除菜单索引缓存
+				clearMenuIndexCache();
+			}
+		}
 	};
 
 	const value: AuthContextType = {
@@ -142,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		login,
 		logout,
 		refreshUser,
+		refreshMenus,
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

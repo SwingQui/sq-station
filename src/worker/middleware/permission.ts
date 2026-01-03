@@ -4,14 +4,14 @@
  */
 
 import type { Context, Next } from "hono";
-import type { AuthUser } from "./auth";
+import type { Env, Variables, AuthUser } from "../index.d";
 
 /**
  * 权限检查中间件工厂函数
  * @param permission 需要的权限标识
  */
 export const requirePermission = (permission: string) => {
-	return async (c: Context, next: Next) => {
+	return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
 
 		if (!currentUser) {
@@ -40,7 +40,7 @@ export const requirePermission = (permission: string) => {
  * @param permissions 权限标识数组
  */
 export const requireAnyPermission = (permissions: string[]) => {
-	return async (c: Context, next: Next) => {
+	return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
 
 		if (!currentUser) {
@@ -70,7 +70,7 @@ export const requireAnyPermission = (permissions: string[]) => {
  * @param roleKey 角色标识（如 admin, user）
  */
 export const requireRole = (roleKey: string) => {
-	return async (c: Context, next: Next) => {
+	return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
 
 		if (!currentUser) {

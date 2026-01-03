@@ -185,3 +185,62 @@ export function isTokenExpired(token: string): boolean {
 	const now = Math.floor(Date.now() / 1000);
 	return payload.exp < now;
 }
+
+/**
+ * 菜单项接口（与 routeMatcher.ts 保持一致）
+ */
+export interface MenuItem {
+	id: number;
+	parent_id: number;
+	menu_name: string;
+	menu_type: string;
+	route_path: string | null;
+	component_path: string | null;
+	permission: string | null;
+	icon?: string;
+	sort_order: number;
+	menu_status: number;
+	menu_visible: number;
+	children?: MenuItem[];
+	[key: string]: unknown;
+}
+
+/**
+ * 查找菜单（扁平化查找）
+ */
+export function findMenuByPath(path: string): MenuItem | null {
+	const menus = getMenus();
+
+	function search(items: MenuItem[]): MenuItem | null {
+		for (const item of items) {
+			// 检查当前项
+			if (item.route_path === path && item.menu_type === "C") {
+				return item;
+			}
+			// 递归检查子项
+			if (item.children && item.children.length > 0) {
+				const found = search(item.children);
+				if (found) return found;
+			}
+		}
+		return null;
+	}
+
+	return search(menus);
+}
+
+/**
+ * 检查路由权限
+ */
+export function hasRoutePermission(path: string): boolean {
+	const menu = findMenuByPath(path);
+
+	// 未知路由，拒绝访问
+	if (!menu) return false;
+
+	// 没有权限要求，允许访问
+	if (!menu.permission) return true;
+
+	// 检查用户是否有该权限
+	return hasPermission(menu.permission);
+}

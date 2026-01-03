@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { Env } from "./index.d";
+import type { Env, Variables } from "./index.d";
 import { cors } from "hono/cors";
 import kvApi from "./api/kv";
 import userApi from "./api/user";
@@ -10,8 +10,9 @@ import roleMenuApi from "./api/role-menu";
 import permissionApi from "./api/permission";
 import authApi from "./api/auth";
 import { success, fail, badRequest } from "./utils/response";
+import { createAuthRouter } from "./utils/auth-helper";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // CORS 配置（允许前端携带 Authorization header）
 app.use("/*", cors({
@@ -20,10 +21,45 @@ app.use("/*", cors({
 	allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 }));
 
+// 处理 CORS 预检请求（OPTIONS）
+// 必须在所有路由之前显式处理，避免请求体被多次读取
+app.options("/*", () => {
+	return new Response(null, {
+		status: 204,  // No Content
+		headers: {
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+			"Access-Control-Allow-Headers": "Content-Type, Authorization",
+			"Access-Control-Max-Age": "86400",  // 24 小时缓存预检结果
+		},
+	});
+});
+
 app.get("/api/", (c) => c.json(success({ name: "Cloudflare" })));
 
-// SQL 执行工具 API (支持所有 SQL 操作)
-app.post("/api/sql/query", async (c) => {
+// 创建统一的 API 路由器（authMiddleware 内部有白名单，login 等公开路由会通过白名单）
+const apiRouter = createAuthRouter();
+
+// 挂载 auth API（包含 login、logout 等公开路由）
+apiRouter.route("/auth", authApi);
+
+// 挂载受保护的 API
+apiRouter.route("/kv", kvApi);
+apiRouter.route("/users", userApi);
+apiRouter.route("/roles", roleApi);
+apiRouter.route("/menus", menuApi);
+apiRouter.route("/users", userRoleApi);  // /api/users/:id/roles
+apiRouter.route("/roles", roleMenuApi);  // /api/roles/:id/menus
+apiRouter.route("/user", permissionApi);  // /api/user/:id/menus, /api/user/:id/permissions
+
+// SQL 执行工具 API (支持所有 SQL 操作) - 需要认证+管理员权限
+apiRouter.post("/sql/query", async (c) => {
+	// 检查是否为超级管理员
+	const currentUser = c.get("currentUser");
+	if (!currentUser || (currentUser.userId !== 1 && currentUser.username !== "admin")) {
+		return c.json(fail(403, "权限不足：仅超级管理员可执行 SQL 查询"), 403);
+	}
+
 	try {
 		const { sql } = await c.req.json();
 		if (!sql || typeof sql !== "string") {
@@ -62,15 +98,20 @@ app.post("/api/sql/query", async (c) => {
 	}
 });
 
-// 挂载 API - 使用复数REST规范避免路由冲突
-app.route("/api/auth", authApi);
-app.route("/api/kv", kvApi);
-app.route("/api/users", userApi);
-app.route("/api/roles", roleApi);
-app.route("/api/menus", menuApi);
-app.route("/api/users", userRoleApi);  // /api/users/:id/roles
-app.route("/api/roles", roleMenuApi);  // /api/roles/:id/menus
-// permissionApi 保持 /api/user 前缀（用于查询用户权限，区分于管理接口）
-app.route("/api/user", permissionApi);  // /api/user/:id/menus, /api/user/:id/permissions
+// 将所有 API 路由统一挂载到主应用
+app.route("/api", apiRouter);
+
+// ==================== 本地开发支持 ====================
+
+// 根路径健康检查（用于测试 Worker 是否正常运行）
+app.get("/", (c) => {
+	return c.json(success({
+		status: "ok",
+		timestamp: new Date().toISOString(),
+		worker: "sq-station",
+	}));
+});
+
+// ==================== 开发环境支持结束 ====================
 
 export default app;

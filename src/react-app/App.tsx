@@ -1,80 +1,173 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuth } from "./contexts/AuthContext";
+import { useTagsView } from "./contexts/TagsViewContext";
 import { onRouteChange, navigate } from "./utils/router";
-import Login from "./pages/Login";
-import Home from "./pages/Home";
-import Page1 from "./pages/Page1";
-import Page2 from "./pages/Page2";
-import SystemHome from "./pages/system/Menu";
-import SystemPage1 from "./pages/system/MenuPage1";
-import SystemPage2 from "./pages/system/MenuPage2";
-import TestKV from "./pages/system/TestKV";
-import TestSQL from "./pages/system/TestSQL";
-import UserManage from "./pages/system/UserManage";
-import RoleManage from "./pages/system/RoleManage";
-import MenuManage from "./pages/system/MenuManage";
+import { getMenus, MenuItem } from "./utils/auth";
+import { matchRoute } from "./utils/routeMatcher";
+import { TagsViewProvider } from "./contexts/TagsViewContext";
 import AdminLayout from "./layouts/AdminLayout";
 
-// 页面标题映射
-const pageTitles: Record<string, string> = {
-	"/system": "系统首页",
-	"/system/page1": "页面一",
-	"/system/page2": "页面二",
-	"/system/testKV": "KV管理",
-	"/system/testSQL": "SQL查询",
-	"/system/user": "用户管理",
-	"/system/role": "角色管理",
-	"/system/menu": "菜单管理",
-};
+const Login = lazy(() => import("./pages/Login"));
+const Forbidden = lazy(() => import("./pages/Forbidden"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
-function getPage() {
-	const path = window.location.pathname;
+/**
+ * 获取页面标题（从菜单数据中获取）
+ */
+function getPageTitle(path: string): string {
+	const menus = getMenus();
 
-	// 登录页面
-	if (path === "/login") return <Login />;
-
-	// 后台路由 /system/* - 需要认证
-	if (path.startsWith("/system")) {
-		let content: React.ReactNode;
-		if (path === "/system" || path === "/system/") content = <SystemHome />;
-		else if (path === "/system/page1") content = <SystemPage1 />;
-		else if (path === "/system/page2") content = <SystemPage2 />;
-		else if (path === "/system/testKV") content = <TestKV />;
-		else if (path === "/system/testSQL") content = <TestSQL />;
-		else if (path === "/system/user") content = <UserManage />;
-		else if (path === "/system/role") content = <RoleManage />;
-		else if (path === "/system/menu") content = <MenuManage />;
-		else content = <SystemHome />;
-
-		// 包裹在 AdminLayout 中
-		return <AdminLayout title={pageTitles[path]}>{content}</AdminLayout>;
+	function search(items: MenuItem[]): string | null {
+		for (const item of items) {
+			if (item.route_path === path && item.menu_type === "C") {
+				return item.menu_name;
+			}
+			if (item.children && item.children.length > 0) {
+				const found = search(item.children);
+				if (found) return found;
+			}
+		}
+		return null;
 	}
 
-	// 前台路由
-	if (path === "/page1") return <Page1 />;
-	if (path === "/page2") return <Page2 />;
-	return <Home />;
+	return search(menus) || "系统页面";
 }
 
-function App() {
+/**
+ * 动态页面加载器
+ */
+function DynamicPage({ path }: { path: string }) {
+	const [component, setComponent] = useState<React.ComponentType | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<"not-found" | "forbidden" | null>(null);
+
+	useEffect(() => {
+		async function loadPage() {
+			setLoading(true);
+			setError(null);
+
+			try {
+				const routeMatch = await matchRoute(path);
+
+				if (!routeMatch.menuInfo) {
+					setError("not-found");
+					setLoading(false);
+					return;
+				}
+
+				if (!routeMatch.hasPermission) {
+					setError("forbidden");
+					setLoading(false);
+					return;
+				}
+
+				if (routeMatch.component) {
+					setComponent(() => routeMatch.component);
+				} else {
+					setError("not-found");
+				}
+			} catch (e) {
+				console.error("加载页面失败:", e);
+				setError("not-found");
+			} finally {
+				setLoading(false);
+			}
+		}
+
+		loadPage();
+	}, [path]);
+
+	if (loading) {
+		return (
+			<div style={{
+				display: "flex",
+				justifyContent: "center",
+				alignItems: "center",
+				height: "100vh",
+				fontSize: "16px",
+				color: "#666",
+			}}>
+				加载中...
+			</div>
+		);
+	}
+
+	if (error === "forbidden") {
+		return <Forbidden />;
+	}
+
+	if (error === "not-found") {
+		return <NotFound />;
+	}
+
+	if (component) {
+		const Component = component;
+		return <Component />;
+	}
+
+	return <NotFound />;
+}
+
+/**
+ * 获取页面内容
+ */
+function getPageContent(path: string) {
+	// 登录页特殊处理
+	if (path === "/login") {
+		return <Login />;
+	}
+
+	// 动态加载页面
+	return <DynamicPage path={path} />;
+}
+
+/**
+ * 主应用内容
+ */
+function AppContent() {
 	const { isAuthenticated, isLoading } = useAuth();
+	const { addTab, setActiveTab } = useTagsView();
 	const [path, setPath] = useState(window.location.pathname);
 
 	// 监听路由变化
 	useEffect(() => {
-		// 使用路由工具监听器
 		const unsubscribe = onRouteChange((newPath) => {
 			setPath(newPath);
-			// 滚动到顶部
 			window.scrollTo(0, 0);
+
+			// 添加标签页
+			if (newPath.startsWith("/system") && newPath !== "/login") {
+				const title = getPageTitle(newPath);
+				addTab({
+					key: newPath,
+					title,
+					closable: newPath !== "/system",
+				});
+				setActiveTab(newPath);
+			}
 		});
 
 		// 监听浏览器后退/前进
 		const handlePopState = () => {
-			setPath(window.location.pathname);
+			const newPath = window.location.pathname;
+			setPath(newPath);
+
+			if (newPath.startsWith("/system")) {
+				setActiveTab(newPath);
+			}
 		};
 
 		window.addEventListener("popstate", handlePopState);
+
+		// 初始化：添加当前路由的标签
+		if (path.startsWith("/system") && path !== "/login") {
+			const title = getPageTitle(path);
+			addTab({
+				key: path,
+				title,
+				closable: path !== "/system",
+			});
+		}
 
 		return () => {
 			unsubscribe();
@@ -99,14 +192,37 @@ function App() {
 		};
 	}, []);
 
-	// 检查后台路由认证 - 使用 SPA 导航
-	if (path.startsWith("/system") && !isLoading && !isAuthenticated) {
+	// 检查后台路由认证
+	if (path.startsWith("/system") && path !== "/login" && !isLoading && !isAuthenticated) {
 		const redirect = encodeURIComponent(path);
 		navigate(`/login?redirect=${redirect}`, true);
 		return null;
 	}
 
-	return getPage();
+	// 获取页面内容
+	const content = getPageContent(path);
+
+	// 后台路由包裹 AdminLayout
+	if (path.startsWith("/system") && path !== "/login") {
+		return (
+			<Suspense fallback={<div style={{ padding: "20px" }}>加载中...</div>}>
+				<AdminLayout>{content}</AdminLayout>
+			</Suspense>
+		);
+	}
+
+	return <Suspense fallback={<div style={{ padding: "20px" }}>加载中...</div>}>{content}</Suspense>;
+}
+
+/**
+ * 应用根组件
+ */
+function App() {
+	return (
+		<TagsViewProvider>
+			<AppContent />
+		</TagsViewProvider>
+	);
 }
 
 export default App;

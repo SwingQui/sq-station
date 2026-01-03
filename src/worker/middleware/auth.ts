@@ -4,23 +4,31 @@
  */
 
 import type { Context, Next } from "hono";
+import type { Env, Variables, AuthUser } from "../index.d";
 import { verifyToken } from "../utils/jwt";
-
-export interface AuthUser {
-	userId: number;
-	username: string;
-}
+import { unauthorized } from "../utils/response";
 
 /**
  * 认证中间件
  * 验证请求头中的 JWT token
  */
-export const authMiddleware = async (c: Context, next: Next) => {
+export const authMiddleware = async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
+	// 公开路径白名单（不需要认证的路径）
+	const publicPaths = [
+		"/api/auth/login",
+		"/api/auth/logout",
+	];
+
+	// 如果是公开路径，直接跳过认证
+	if (publicPaths.includes(c.req.path)) {
+		return next();
+	}
+
 	const authHeader = c.req.header("Authorization");
 
 	// 没有 Authorization header
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
-		return c.json({ error: "未登录" }, 401);
+		return c.json(unauthorized("未登录"), 401);
 	}
 
 	const token = authHeader.substring(7);
@@ -29,7 +37,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
 	const payload = await verifyToken(token, c.env.JWT_SECRET || "default-secret-key");
 
 	if (!payload) {
-		return c.json({ error: "Token 无效或已过期" }, 401);
+		return c.json(unauthorized("Token 无效或已过期"), 401);
 	}
 
 	// 将用户信息附加到上下文
@@ -45,7 +53,7 @@ export const authMiddleware = async (c: Context, next: Next) => {
  * 可选认证中间件
  * 如果有 token 则验证，没有则跳过
  */
-export const optionalAuthMiddleware = async (c: Context, next: Next) => {
+export const optionalAuthMiddleware = async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 	const authHeader = c.req.header("Authorization");
 
 	if (authHeader && authHeader.startsWith("Bearer ")) {

@@ -138,8 +138,7 @@ export default function RoleManage() {
 
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-				<h1>角色管理</h1>
+			<div style={{ marginBottom: "20px" }}>
 				<PermissionButton permission="system:role:add" onClick={handleAdd}>
 					新增角色
 				</PermissionButton>

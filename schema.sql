@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
   user_id INTEGER NOT NULL,
   role_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, role_id)
 );
 
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS sys_role_menu (
   role_id INTEGER NOT NULL,
   menu_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(role_id, menu_id)
 );
 
@@ -92,23 +94,34 @@ INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status) VAL
 (1, '超级管理员', 'admin', 1, 1),
 (2, '普通用户', 'user', 2, 1);
 
--- 初始化菜单 (基于现有页面结构)
-INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
--- 根目录
-(0, '首页', 'C', '/', 'Home', 'Home', 1, 'home:view', 1, 1),
-(0, '页面一', 'C', '/page1', 'Page1', 'Page1', 2, 'page1:view', 1, 1),
-(0, '页面二', 'C', '/page2', 'Page2', 'Page2', 3, 'page2:view', 1, 1),
+-- ====================================
+-- 初始化菜单 (参考若依设计)
+-- ====================================
 
--- 系统管理目录
-(0, '系统管理', 'M', '/system', NULL, 'Setting', 100, NULL, 1, 1),
+-- 系统首页（Dashboard）- 第一位
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+(0, '系统首页', 'C', '/system', 'system/Menu', 'home', 1, 'system:dashboard', 1, 1);
+
+-- 内容管理目录（第二位）
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
+(0, '内容管理', 'M', NULL, 'content', 2, 1, 1);
+
+-- 内容管理子菜单（前台页面）
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '内容管理' AND menu_type = 'M'), '首页', 'C', '/', 'Home', 'home', 1, 'home:view', 1, 1);
+
+-- 系统管理目录（第三位）
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
+(0, '系统管理', 'M', NULL, 'setting', 3, 1, 1);
+
 -- 系统管理子菜单
-((SELECT id FROM sys_menu WHERE route_path = '/system'), '页面一', 'C', '/system/page1', 'system/MenuPage1', 'Page1', 1, 'system:page1:view', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), '页面二', 'C', '/system/page2', 'system/MenuPage2', 'Page2', 2, 'system:page2:view', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), '用户管理', 'C', '/system/user', 'system/UserManage', 'User', 3, 'system:user:list', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), '角色管理', 'C', '/system/role', 'system/RoleManage', 'Role', 4, 'system:role:list', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), '菜单管理', 'C', '/system/menu', 'system/MenuManage', 'Menu', 5, 'system:menu:list', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), 'KV管理', 'C', '/system/testKV', 'system/TestKV', 'Database', 6, 'system:kv:view', 1, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/system'), 'SQL查询', 'C', '/system/testSQL', 'system/TestSQL', 'Code', 7, 'system:sql:query', 1, 1);
+-- 获取系统管理目录的ID用于子菜单的 parent_id
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '用户管理', 'C', '/system/user', 'system/UserManage', 'user', 1, 'system:user:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '角色管理', 'C', '/system/role', 'system/RoleManage', 'role', 2, 'system:role:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '菜单管理', 'C', '/system/menu', 'system/MenuManage', 'menu', 3, 'system:menu:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), 'KV管理', 'C', '/system/testKV', 'system/TestKV', 'database', 4, 'system:kv:view', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '表查询', 'C', '/system/sqlSearch', 'system/SQLSearch', 'database', 5, 'system:sqlSearch', 1, 1);
 
 -- 用户角色关联
 INSERT OR IGNORE INTO sys_user_role (id, user_id, role_id) VALUES
@@ -119,10 +132,11 @@ INSERT OR IGNORE INTO sys_user_role (id, user_id, role_id) VALUES
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)
 SELECT 1, id FROM sys_menu;
 
--- 角色菜单关联 (普通用户只能访问首页和页面一)
+-- 角色菜单关联 (普通用户只能访问内容管理下的页面)
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
-(2, (SELECT id FROM sys_menu WHERE route_path = '/')),
-(2, (SELECT id FROM sys_menu WHERE route_path = '/page1'));
+(2, (SELECT id FROM sys_menu WHERE menu_name = '内容管理' AND menu_type = 'M')),  -- 内容管理目录
+(2, (SELECT id FROM sys_menu WHERE route_path = '/')),                          -- 首页
+(2, (SELECT id FROM sys_menu WHERE route_path = '/system'));                    -- 系统首页
 
 -- ====================================
 -- 按钮级权限

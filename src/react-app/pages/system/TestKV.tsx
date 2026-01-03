@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { get, put, del } from "../../utils/request";
 
 interface KVKey {
 	name: string;
@@ -17,9 +18,9 @@ export default function TestKV() {
 	const loadKeys = async () => {
 		setLoading(true);
 		try {
-			const res = await fetch("/api/kv");
-			const data = await res.json();
-			setKeys(data.keys || []);
+			// get 函数自动处理 token 和响应格式，直接返回 data
+			const data = await get("/api/kv");
+			setKeys(data || []);
 		} catch (e) {
 			console.error("加载失败", e);
 		}
@@ -29,8 +30,7 @@ export default function TestKV() {
 	// 获取单个值
 	const loadValue = async (key: string) => {
 		try {
-			const res = await fetch(`/api/kv/${encodeURIComponent(key)}`);
-			const data = await res.json();
+			const data = await get(`/api/kv/${encodeURIComponent(key)}`);
 			setSelectedKey(key);
 			setSelectedValue(data.value || "");
 		} catch (e) {
@@ -42,11 +42,7 @@ export default function TestKV() {
 	const saveValue = async () => {
 		if (!keyInput.trim()) return;
 		try {
-			await fetch(`/api/kv/${encodeURIComponent(keyInput)}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ value: valueInput }),
-			});
+			await put(`/api/kv/${encodeURIComponent(keyInput)}`, { value: valueInput });
 			setKeyInput("");
 			setValueInput("");
 			loadKeys();
@@ -58,7 +54,7 @@ export default function TestKV() {
 	// 删除
 	const deleteKey = async (key: string) => {
 		try {
-			await fetch(`/api/kv/${encodeURIComponent(key)}`, { method: "DELETE" });
+			await del(`/api/kv/${encodeURIComponent(key)}`);
 			if (selectedKey === key) {
 				setSelectedKey(null);
 				setSelectedValue("");
@@ -73,28 +69,22 @@ export default function TestKV() {
 	const updateCurrentValue = async () => {
 		if (!selectedKey) return;
 		try {
-			await fetch(`/api/kv/${encodeURIComponent(selectedKey)}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ value: selectedValue }),
-			});
+			await put(`/api/kv/${encodeURIComponent(selectedKey)}`, { value: selectedValue });
 			loadKeys();
 		} catch (e) {
 			console.error("更新失败", e);
 		}
 	};
 
+	// 组件挂载时加载数据
 	useEffect(() => {
+		// 使用 loadKeys() 而不是直接 fetch，因为 loadKeys() 使用了带认证的 get() 工具
 		loadKeys();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	return (
 		<div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
-			<h1>KV 管理</h1>
-			<nav style={{ marginBottom: "20px" }}>
-				<a href="/menu">返回后台</a>
-			</nav>
-
 			{/* 新增 */}
 			<div style={{ marginBottom: "30px", padding: "15px", background: "#f5f5f5", borderRadius: "8px" }}>
 				<h3>新增/修改 KV</h3>

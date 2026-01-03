@@ -3,7 +3,8 @@
  * 管理已打开的页面标签
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from "react";
+import { navigate } from "../utils/router";
 
 export interface Tab {
 	key: string;      // 路由路径，如 "/system/user"
@@ -28,6 +29,7 @@ export function TagsViewProvider({ children }: { children: ReactNode }) {
 		{ key: "/system", title: "系统首页", closable: false },
 	]);
 	const [activeTab, setActiveTabState] = useState("/system");
+	const pendingNavigationRef = useRef<string | null>(null);
 
 	// 添加标签页
 	const addTab = useCallback((tab: Tab) => {
@@ -47,7 +49,9 @@ export function TagsViewProvider({ children }: { children: ReactNode }) {
 			const newTabs = prev.filter((t) => t.key !== key);
 			// 如果删除的是当前活动标签，切换到最后一个标签
 			if (activeTab === key && newTabs.length > 0) {
-				setActiveTabState(newTabs[newTabs.length - 1].key);
+				const newActiveTab = newTabs[newTabs.length - 1].key;
+				setActiveTabState(newActiveTab);
+				pendingNavigationRef.current = newActiveTab;
 			}
 			return newTabs;
 		});
@@ -69,6 +73,14 @@ export function TagsViewProvider({ children }: { children: ReactNode }) {
 		setTabs((prev) => prev.filter((t) => !t.closable));
 		setActiveTabState("/system");
 	}, []);
+
+	// 延迟处理导航，避免在渲染过程中触发其他组件的状态更新
+	useEffect(() => {
+		if (pendingNavigationRef.current) {
+			navigate(pendingNavigationRef.current, true);
+			pendingNavigationRef.current = null;
+		}
+	}, [tabs, activeTab]);
 
 	const value: TagsViewContextType = {
 		tabs,

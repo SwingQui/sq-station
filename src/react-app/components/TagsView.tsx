@@ -12,8 +12,10 @@ export default function TagsView() {
 	const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabKey: string } | null>(null);
 
 	const handleTabClick = (key: string) => {
-		setActiveTab(key);
-		navigate(key, true);
+		if (key !== activeTab) {
+			setActiveTab(key);
+			navigate(key, true);
+		}
 	};
 
 	const handleClose = (e: React.MouseEvent, key: string) => {

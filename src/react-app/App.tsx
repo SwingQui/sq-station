@@ -3,7 +3,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useTagsView } from "./contexts/TagsViewContext";
 import { onRouteChange, navigate } from "./utils/router";
 import { getMenus, MenuItem } from "./utils/auth";
-import { matchRoute } from "./utils/routeMatcher";
+import { matchRoute, isSystemRoute } from "./utils/routeMatcher";
 import { TagsViewProvider } from "./contexts/TagsViewContext";
 import AdminLayout from "./layouts/AdminLayout";
 
@@ -37,6 +37,9 @@ function getPageTitle(path: string): string {
  * 动态页面加载器
  */
 function DynamicPage({ path }: { path: string }) {
+	// 去除查询参数
+	const cleanPath = path.split('?')[0];
+
 	const [component, setComponent] = useState<React.ComponentType | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<"not-found" | "forbidden" | null>(null);
@@ -47,7 +50,7 @@ function DynamicPage({ path }: { path: string }) {
 			setError(null);
 
 			try {
-				const routeMatch = await matchRoute(path);
+				const routeMatch = await matchRoute(cleanPath);
 
 				if (!routeMatch.menuInfo) {
 					setError("not-found");
@@ -75,7 +78,7 @@ function DynamicPage({ path }: { path: string }) {
 		}
 
 		loadPage();
-	}, [path]);
+	}, [cleanPath]);
 
 	if (loading) {
 		return (
@@ -117,7 +120,12 @@ function getPageContent(path: string) {
 		return <Login />;
 	}
 
-	// 动态加载页面
+	// 根路径：通过 DynamicPage 加载
+	if (path === "/") {
+		return <DynamicPage path={path} />;
+	}
+
+	// 其他路径动态加载
 	return <DynamicPage path={path} />;
 }
 
@@ -192,11 +200,18 @@ function AppContent() {
 		};
 	}, []);
 
+	// 系统路由（/login、/）直接渲染，不需要认证检查
+	if (isSystemRoute(path)) {
+		const content = getPageContent(path);
+		return <Suspense fallback={<div style={{ padding: "20px" }}>加载中...</div>}>{content}</Suspense>;
+	}
+
 	// 检查后台路由认证
 	if (path.startsWith("/system") && path !== "/login" && !isLoading && !isAuthenticated) {
 		const redirect = encodeURIComponent(path);
 		navigate(`/login?redirect=${redirect}`, true);
-		return null;
+		// 返回 loading 状态，等待路由更新
+		return <div style={{ padding: "20px" }}>跳转中...</div>;
 	}
 
 	// 获取页面内容

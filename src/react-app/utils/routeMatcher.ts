@@ -37,6 +37,22 @@ export interface RouteMatch {
 }
 
 /**
+ * 系统级路由（不需要认证，不需要数据库配置）
+ */
+const SYSTEM_ROUTES: Record<string, () => Promise<{ default: React.ComponentType }>> = {
+	"/login": () => import("../pages/Login"),
+	"/": () => import("../pages/Home"),
+};
+
+/**
+ * 判断是否为系统路由
+ */
+export function isSystemRoute(path: string): boolean {
+	const cleanPath = path.split('?')[0];
+	return SYSTEM_ROUTES.hasOwnProperty(cleanPath);
+}
+
+/**
  * 菜单扁平化索引缓存
  */
 let menuFlatIndex: Map<string, MenuItem> | null = null;
@@ -123,12 +139,17 @@ export function requiresAuth(path: string): boolean {
  * 异步匹配路由并加载组件
  */
 export async function matchRoute(path: string): Promise<RouteMatch> {
-	// 登录页特殊处理
-	if (path === "/login") {
-		const { default: Login } = await import("../pages/Login");
+	// 去除查询参数，只保留路径部分
+	const cleanPath = path.split('?')[0];
+
+	// 优先处理系统路由
+	if (SYSTEM_ROUTES[cleanPath]) {
+		const { default: component } = await SYSTEM_ROUTES[cleanPath]();
 		return {
-			component: Login,
-			menuInfo: null,
+			component,
+			menuInfo: {
+				menu_name: cleanPath === "/login" ? "登录" : "首页",
+			} as MenuItem,
 			hasPermission: true,
 			requiresAuth: false,
 			isLoading: false,
@@ -136,7 +157,7 @@ export async function matchRoute(path: string): Promise<RouteMatch> {
 	}
 
 	// 查找菜单配置
-	const menuInfo = findMenuByPath(path);
+	const menuInfo = findMenuByPath(cleanPath);
 
 	// 路由不存在
 	if (!menuInfo) {
@@ -150,7 +171,7 @@ export async function matchRoute(path: string): Promise<RouteMatch> {
 	}
 
 	// 检查权限
-	const hasPermission = hasRoutePermission(path);
+	const hasPermission = hasRoutePermission(cleanPath);
 
 	if (!hasPermission) {
 		return {

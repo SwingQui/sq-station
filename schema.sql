@@ -47,8 +47,8 @@ CREATE TABLE IF NOT EXISTS sys_menu (
   redirect TEXT,  -- 重定向地址
   query_param TEXT,  -- 路由参数
   is_frame INTEGER DEFAULT 0,  -- 是否为外链 0否 1是
-  is_cache INTEGER DEFAULT 0,  -- 是否缓存 0缓存 1不缓存
-  menu_visible INTEGER DEFAULT 1,  -- 显示状态 1显示 0隐藏
+  is_cache INTEGER DEFAULT 0,  -- 是否缓存 0否 1是
+  menu_visible INTEGER DEFAULT 1,  -- 显示状态 0否 1是
   menu_status INTEGER DEFAULT 1,  -- 菜单状态 1正常 0停用
   icon TEXT,  -- 菜单图标
   sort_order INTEGER DEFAULT 0,  -- 排序
@@ -100,7 +100,7 @@ INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status) VAL
 
 -- 系统首页（Dashboard）- 第一位
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
-(0, '系统首页', 'C', '/system', 'system/Menu', 'home', 1, 'system:dashboard', 1, 1);
+(0, '系统首页', 'C', '/system/home', 'system/Home', 'home', 1, 'system:home', 1, 1);
 
 -- 内容管理目录（第二位）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
@@ -136,7 +136,7 @@ SELECT 1, id FROM sys_menu;
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
 (2, (SELECT id FROM sys_menu WHERE menu_name = '内容管理' AND menu_type = 'M')),  -- 内容管理目录
 (2, (SELECT id FROM sys_menu WHERE route_path = '/')),                          -- 首页
-(2, (SELECT id FROM sys_menu WHERE route_path = '/system'));                    -- 系统首页
+(2, (SELECT id FROM sys_menu WHERE route_path = '/system/home'));               -- 系统首页
 
 -- ====================================
 -- 按钮级权限

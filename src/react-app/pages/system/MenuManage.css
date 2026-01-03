@@ -1,0 +1,13 @@
+/* MenuManage 页面专属样式 */
+
+/* 展开按钮居中 - 修复版本 */
+.menu-manage-table .ant-table-cell-with-append {
+	position: relative;
+}
+
+.menu-manage-table .ant-table-cell-with-append .ant-table-row-expand-icon {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+}

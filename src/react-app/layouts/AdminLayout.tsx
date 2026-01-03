@@ -18,16 +18,21 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
 	const layoutStyle: React.CSSProperties = {
-		display: "flex",
-		minHeight: "100vh",
+		width: "100vw",
+		height: "100vh",
+		overflow: "hidden",
 	};
 
 	const contentStyle: React.CSSProperties = {
-		flex: 1,
+		position: "absolute",
+		left: sidebarCollapsed ? "64px" : "240px",
+		right: 0,
+		top: 0,
+		bottom: 0,
+		transition: "left 0.3s",
 		display: "flex",
 		flexDirection: "column",
-		marginLeft: sidebarCollapsed ? "64px" : "240px",
-		transition: "margin-left 0.3s",
+		overflow: "hidden",
 	};
 
 	const mainContentStyle: React.CSSProperties = {

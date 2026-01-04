@@ -5,7 +5,7 @@
 
 import { useState, useMemo } from "react";
 import { Modal, Input } from "antd";
-import { iconsMap } from "../utils/icons";
+import { iconsMap } from "../utils/ui/icons";
 import Icon from "./Icon";
 
 interface IconSelectProps {

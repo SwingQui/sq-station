@@ -100,7 +100,7 @@ INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status) VAL
 
 -- 系统首页（Dashboard）- 第一位
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
-(0, '系统首页', 'C', '/system/home', 'system/Home', 'home', 1, 'system:home', 1, 1);
+(0, '系统首页', 'C', '/system/home', 'system/home/Home', 'home', 1, 'system:home', 1, 1);
 
 -- 内容管理目录（第二位）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
@@ -117,11 +117,11 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_or
 -- 系统管理子菜单
 -- 获取系统管理目录的ID用于子菜单的 parent_id
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '用户管理', 'C', '/system/user', 'system/UserManage', 'user', 1, 'system:user:list', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '角色管理', 'C', '/system/role', 'system/RoleManage', 'role', 2, 'system:role:list', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '菜单管理', 'C', '/system/menu', 'system/MenuManage', 'menu', 3, 'system:menu:list', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), 'KV管理', 'C', '/system/testKV', 'system/TestKV', 'database', 4, 'system:kv:view', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '表查询', 'C', '/system/sqlSearch', 'system/SQLSearch', 'database', 5, 'system:sqlSearch', 1, 1);
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '用户管理', 'C', '/system/user', 'system/user/UserManage', 'user', 1, 'system:user:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '角色管理', 'C', '/system/role', 'system/role/RoleManage', 'role', 2, 'system:role:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '菜单管理', 'C', '/system/menu', 'system/menu/MenuManage', 'menu', 3, 'system:menu:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), 'KV管理', 'C', '/system/kv', 'system/kv/TestKV', 'database', 4, 'system:kv:view', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '表查询', 'C', '/system/sql', 'system/sql/SQLSearch', 'database', 5, 'system:sqlSearch', 1, 1);
 
 -- 用户角色关联
 INSERT OR IGNORE INTO sys_user_role (id, user_id, role_id) VALUES

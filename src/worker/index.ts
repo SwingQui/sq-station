@@ -1,14 +1,15 @@
 import { Hono } from "hono";
 import type { Env, Variables } from "./index.d";
 import { cors } from "hono/cors";
-import kvApi from "./api/kv";
-import userApi from "./api/user";
-import roleApi from "./api/role";
-import menuApi from "./api/menu";
-import userRoleApi from "./api/user-role";
-import roleMenuApi from "./api/role-menu";
-import permissionApi from "./api/permission";
-import authApi from "./api/auth";
+// 导入新的 Controller 层
+import kvController from "./controllers/kv.controller";
+import userController from "./controllers/user.controller";
+import roleController from "./controllers/role.controller";
+import menuController from "./controllers/menu.controller";
+import userRoleController from "./controllers/user-role.controller";
+import roleMenuController from "./controllers/role-menu.controller";
+import permissionController from "./controllers/permission.controller";
+import authController from "./controllers/auth.controller";
 import { success, fail, badRequest } from "./utils/response";
 import { createAuthRouter } from "./utils/auth-helper";
 
@@ -41,16 +42,16 @@ app.get("/api/", (c) => c.json(success({ name: "Cloudflare" })));
 const apiRouter = createAuthRouter();
 
 // 挂载 auth API（包含 login、logout 等公开路由）
-apiRouter.route("/auth", authApi);
+apiRouter.route("/auth", authController);
 
 // 挂载受保护的 API
-apiRouter.route("/kv", kvApi);
-apiRouter.route("/users", userApi);
-apiRouter.route("/roles", roleApi);
-apiRouter.route("/menus", menuApi);
-apiRouter.route("/users", userRoleApi);  // /api/users/:id/roles
-apiRouter.route("/roles", roleMenuApi);  // /api/roles/:id/menus
-apiRouter.route("/user", permissionApi);  // /api/user/:id/menus, /api/user/:id/permissions
+apiRouter.route("/kv", kvController);
+apiRouter.route("/users", userController);
+apiRouter.route("/roles", roleController);
+apiRouter.route("/menus", menuController);
+apiRouter.route("/users", userRoleController);  // /api/users/:id/roles
+apiRouter.route("/roles", roleMenuController);  // /api/roles/:id/menus
+apiRouter.route("/user", permissionController);  // /api/user/:id/menus, /api/user/:id/permissions
 
 // SQL 执行工具 API (支持所有 SQL 操作) - 需要认证+管理员权限
 apiRouter.post("/sql/query", async (c) => {

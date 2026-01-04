@@ -3,7 +3,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useTagsView } from "./contexts/TagsViewContext";
 import { onRouteChange, navigate } from "./utils/router";
 import { getMenus, MenuItem } from "./utils/auth";
-import { matchRoute, isSystemRoute } from "./utils/routeMatcher";
+import { matchRoute, isSystemRoute } from "./utils/core/route/matcher";
 import { TagsViewProvider } from "./contexts/TagsViewContext";
 import AdminLayout from "./layouts/AdminLayout";
 

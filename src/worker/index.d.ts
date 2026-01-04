@@ -12,7 +12,21 @@ export interface AuthUser {
 	username: string;
 }
 
+// 导入服务类型（避免循环依赖，使用类型导入）
+import type { UserService } from "./services/user.service";
+import type { RoleService } from "./services/role.service";
+import type { MenuService } from "./services/menu.service";
+import type { UserRoleService } from "./services/user-role.service";
+import type { RoleMenuService } from "./services/role-menu.service";
+import type { UserRepository } from "./repositories/user.repository";
+
 // 扩展 Hono Context 类型
 export type Variables = {
 	currentUser?: AuthUser;
+	userService?: UserService;
+	roleService?: RoleService;
+	menuService?: MenuService;
+	userRoleService?: UserRoleService;
+	roleMenuService?: RoleMenuService;
+	userRepo?: UserRepository;
 };

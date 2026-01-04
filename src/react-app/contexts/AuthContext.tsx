@@ -6,7 +6,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { AuthUser } from "../utils/auth";
 import { navigate } from "../utils/router";
-import { clearMenuIndexCache } from "../utils/routeMatcher";
+import { clearMenuIndexCache } from "../utils/core/route/matcher";
 
 interface AuthContextType {
 	user: AuthUser | null;

@@ -4,7 +4,7 @@
  * 图标名称从数据库 Menu.icon 字段读取
  */
 
-import { getIcon } from "../utils/icons";
+import { getIcon } from "../utils/ui/icons";
 
 interface IconProps {
 	name: string | null;

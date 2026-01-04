@@ -8,6 +8,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import TagsView from "../components/TagsView";
 import Breadcrumb from "../components/Breadcrumb";
+import { SIDEBAR, FIXED_HEADER_HEIGHT } from "../config/layout.config";
 
 interface AdminLayoutProps {
 	children: React.ReactNode;
@@ -25,18 +26,19 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
 	const contentStyle: React.CSSProperties = {
 		position: "absolute",
-		left: sidebarCollapsed ? "64px" : "240px",
+		left: sidebarCollapsed ? `${SIDEBAR.COLLAPSED_WIDTH}px` : `${SIDEBAR.EXPANDED_WIDTH}px`,
 		right: 0,
 		top: 0,
 		bottom: 0,
-		transition: "left 0.3s",
+		transition: `left ${SIDEBAR.TRANSITION_DURATION}`,
 		display: "flex",
 		flexDirection: "column",
 		overflow: "hidden",
 	};
 
 	const mainContentStyle: React.CSSProperties = {
-		flex: 1,
+		width: `calc(100vw - ${sidebarCollapsed ? SIDEBAR.COLLAPSED_WIDTH : SIDEBAR.EXPANDED_WIDTH}px)`,
+		height: `calc(100vh - ${FIXED_HEADER_HEIGHT}px)`,
 		overflow: "auto",
 		background: "#f5f5f5",
 	};
@@ -59,7 +61,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
 				{/* 主内容 */}
 				<div style={mainContentStyle}>
-					<div style={{ padding: "20px" }}>
+					<div style={{ padding: "20px", height: "100%", boxSizing: "border-box" }}>
 						{title && (
 							<h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px", color: "#333" }}>
 								{title}

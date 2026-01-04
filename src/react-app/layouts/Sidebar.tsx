@@ -5,6 +5,7 @@
 import React from "react";
 import { getMenus } from "../utils/auth";
 import MenuTree from "./MenuTree";
+import { SIDEBAR, HEADER_HEIGHT } from "../config/layout.config";
 
 interface SidebarProps {
 	collapsed: boolean;
@@ -19,15 +20,15 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 		left: 0,
 		top: 0,
 		bottom: 0,
-		width: collapsed ? "64px" : "240px",
+		width: collapsed ? `${SIDEBAR.COLLAPSED_WIDTH}px` : `${SIDEBAR.EXPANDED_WIDTH}px`,
 		background: "#001529",
-		transition: "width 0.3s",
+		transition: `width ${SIDEBAR.TRANSITION_DURATION}`,
 		overflow: "hidden",
 		zIndex: 100,
 	};
 
 	const headerStyle: React.CSSProperties = {
-		height: "64px",
+		height: `${HEADER_HEIGHT}px`,
 		display: "flex",
 		alignItems: "center",
 		justifyContent: collapsed ? "center" : "space-between",
@@ -50,7 +51,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 	};
 
 	const contentStyle: React.CSSProperties = {
-		height: "calc(100vh - 64px)",
+		height: `calc(100vh - ${HEADER_HEIGHT}px)`,
 		overflow: "auto",
 		paddingTop: "10px",
 	};

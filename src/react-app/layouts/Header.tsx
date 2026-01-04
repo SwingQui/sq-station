@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import Avatar from "../components/Avatar";
 import UserDropdown from "../components/UserDropdown";
+import { HEADER_HEIGHT } from "../config/layout.config";
 
 interface HeaderProps {
 	onToggleSidebar: () => void;
@@ -16,7 +17,8 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
 	const headerStyle: React.CSSProperties = {
-		height: "64px",
+		height: `${HEADER_HEIGHT}px`,
+		flexShrink: 0,
 		background: "white",
 		borderBottom: "1px solid #f0f0f0",
 		display: "flex",

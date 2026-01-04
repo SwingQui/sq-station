@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { useTagsView } from "../contexts/TagsViewContext";
 import { navigate } from "../utils/router";
+import { TAGS_VIEW_HEIGHT } from "../config/layout.config";
 
 export default function TagsView() {
 	const { tabs, activeTab, setActiveTab, removeTab, closeOtherTabs, closeAllTabs } = useTagsView();
@@ -50,7 +51,8 @@ export default function TagsView() {
 	}, [contextMenu]);
 
 	const tagsViewStyle: React.CSSProperties = {
-		height: "40px",
+		height: `${TAGS_VIEW_HEIGHT}px`,
+		flexShrink: 0,
 		background: "#f5f5f5",
 		borderBottom: "1px solid #e8e8e8",
 		display: "flex",

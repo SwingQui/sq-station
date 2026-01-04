@@ -52,8 +52,8 @@ export default function SQLSearch() {
 	}, []);
 
 	return (
-		<div style={{ padding: "20px", height: "calc(100vh - 100px)" }}>
-			<h2 style={{ marginBottom: "20px" }}>表查询</h2>
+		<div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+			<h2 style={{ marginBottom: "20px", padding: "0 20px" }}>表查询</h2>
 
 			{error && (
 				<div style={{
@@ -68,7 +68,7 @@ export default function SQLSearch() {
 				</div>
 			)}
 
-			<div style={{ display: "flex", gap: "20px", height: "calc(100% - 50px)" }}>
+			<div style={{ display: "flex", gap: "20px", flex: 1, minHeight: 0 }}>
 				{/* 左侧：表列表 */}
 				<div style={{
 					width: "250px",

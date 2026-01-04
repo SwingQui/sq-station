@@ -8,11 +8,11 @@ export default function SystemHome() {
 			display: "flex",
 			justifyContent: "center",
 			alignItems: "center",
-			height: "100vh",
+			height: "100%",
 			fontSize: "24px",
 			fontWeight: "bold",
 		}}>
-			后台页面
+			欢迎使用系统
 		</div>
 	);
 }

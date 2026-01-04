@@ -7,6 +7,7 @@
 import React, { useMemo } from "react";
 import { getMenus } from "../utils/auth";
 import { navigate } from "../utils/router";
+import { BREADCRUMB_HEIGHT } from "../config/layout.config";
 
 interface BreadcrumbItem {
 	title: string;
@@ -38,9 +39,9 @@ export default function Breadcrumb() {
 	const currentPath = window.location.pathname;
 
 	const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
-		// /system/home 首页不显示面包屑
+		// /system/home 首页只显示"系统首页"
 		if (currentPath === "/system/home" || currentPath === "/system/home/") {
-			return [];
+			return [{ title: "系统首页" }];
 		}
 
 		const items: BreadcrumbItem[] = [
@@ -71,7 +72,8 @@ export default function Breadcrumb() {
 	}
 
 	const containerStyle: React.CSSProperties = {
-		height: "40px",
+		height: `${BREADCRUMB_HEIGHT}px`,
+		flexShrink: 0,
 		display: "flex",
 		alignItems: "center",
 		padding: "0 20px",

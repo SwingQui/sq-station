@@ -3,7 +3,7 @@
  * 基于数据库菜单配置实现动态路由
  */
 
-import { getMenus, getPermissions } from "../../auth";
+import { getMenus, hasRoutePermission as checkRoutePermission } from "../../auth";
 import { loadComponent } from "./registry";
 
 /**
@@ -108,31 +108,25 @@ export function findMenuByPath(path: string): MenuItem | null {
 }
 
 /**
- * 检查路由权限
+ * 检查路由权限（使用统一的权限检查逻辑）
  */
 export function hasRoutePermission(path: string): boolean {
-	const menu = findMenuByPath(path);
-
-	// 未知路由，拒绝访问
-	if (!menu) return false;
-
-	// 没有权限要求，允许访问
-	if (!menu.permission) return true;
-
-	// 检查用户是否有该权限
-	return getPermissions().includes(menu.permission);
+	return checkRoutePermission(path);
 }
 
 /**
  * 判断路由是否需要认证
- * 前台路由（/）不需要认证，后台路由（/system/*）需要认证
+ * 前台路由（/）不需要认证，后台路由（/dashboard/*）需要认证
  */
 export function requiresAuth(path: string): boolean {
 	// 登录页不需要认证
 	if (path === "/login") return false;
 
+	// 前台首页不需要认证
+	if (path === "/") return false;
+
 	// 后台路由需要认证
-	return path.startsWith("/system");
+	return path.startsWith("/dashboard");
 }
 
 /**

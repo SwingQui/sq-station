@@ -390,17 +390,17 @@ export default function MenuManage() {
 					<Row gutter={16}>
 						<Col span={8}>
 							<Form.Item label="路由路径" name="route_path" labelCol={{ span: 24 }}>
-								<Input placeholder="如: /system/user" />
+								<Input placeholder="如: /dashboard/system/user" />
 							</Form.Item>
 						</Col>
 						<Col span={8}>
 							<Form.Item label="组件路径" name="component_path" labelCol={{ span: 24 }}>
-								<Input placeholder="如: /system/UserManage" />
+								<Input placeholder="如: system/user/UserManage" />
 							</Form.Item>
 						</Col>
 						<Col span={8}>
 							<Form.Item label="重定向" name="redirect" labelCol={{ span: 24 }}>
-								<Input placeholder="如: /system" />
+								<Input placeholder="如: /dashboard" />
 							</Form.Item>
 						</Col>
 					</Row>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { get, put, del } from "../../../utils/api/request";
-
-interface KVKey {
-	name: string;
-	metadata?: Record<string, unknown>;
-}
+import {
+	getKVList,
+	getKVValue,
+	setKVValue,
+	deleteKVKey,
+	type KVKey,
+} from "../../../api/kv";
 
 export default function TestKV() {
 	const [keys, setKeys] = useState<KVKey[]>([]);
@@ -18,8 +19,7 @@ export default function TestKV() {
 	const loadKeys = async () => {
 		setLoading(true);
 		try {
-			// get 函数自动处理 token 和响应格式，直接返回 data
-			const data = await get("/api/kv");
+			const data = await getKVList();
 			setKeys(data || []);
 		} catch (e) {
 			console.error("加载失败", e);
@@ -30,7 +30,7 @@ export default function TestKV() {
 	// 获取单个值
 	const loadValue = async (key: string) => {
 		try {
-			const data = await get(`/api/kv/${encodeURIComponent(key)}`);
+			const data = await getKVValue(key);
 			setSelectedKey(key);
 			setSelectedValue(data.value || "");
 		} catch (e) {
@@ -42,7 +42,7 @@ export default function TestKV() {
 	const saveValue = async () => {
 		if (!keyInput.trim()) return;
 		try {
-			await put(`/api/kv/${encodeURIComponent(keyInput)}`, { value: valueInput });
+			await setKVValue(keyInput, valueInput);
 			setKeyInput("");
 			setValueInput("");
 			loadKeys();
@@ -54,7 +54,7 @@ export default function TestKV() {
 	// 删除
 	const deleteKey = async (key: string) => {
 		try {
-			await del(`/api/kv/${encodeURIComponent(key)}`);
+			await deleteKVKey(key);
 			if (selectedKey === key) {
 				setSelectedKey(null);
 				setSelectedValue("");
@@ -69,7 +69,7 @@ export default function TestKV() {
 	const updateCurrentValue = async () => {
 		if (!selectedKey) return;
 		try {
-			await put(`/api/kv/${encodeURIComponent(selectedKey)}`, { value: selectedValue });
+			await setKVValue(selectedKey, selectedValue);
 			loadKeys();
 		} catch (e) {
 			console.error("更新失败", e);

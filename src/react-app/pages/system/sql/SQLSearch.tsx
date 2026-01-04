@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
-import { post } from "../../../utils/api/request";
-
-interface TableData {
-	columns: string[];
-	rows: unknown[][];
-}
+import { querySQL, type QueryResult } from "../../../api/sql";
 
 export default function SQLSearch() {
 	const [tables, setTables] = useState<string[]>([]);
 	const [selectedTable, setSelectedTable] = useState<string | null>(null);
-	const [tableData, setTableData] = useState<TableData | null>(null);
+	const [tableData, setTableData] = useState<QueryResult | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -18,9 +13,9 @@ export default function SQLSearch() {
 		setLoading(true);
 		setError(null);
 		try {
-			const result = await post<{ columns: string[]; rows: unknown[][] }>("/api/sql/query", {
-				sql: "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-			});
+			const result = await querySQL(
+				"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+			);
 			// 提取表名（result.rows 是二维数组，每个元素是一行数据）
 			const tableNames = result.rows.map((row) => row[0] as string);
 			setTables(tableNames);
@@ -35,9 +30,7 @@ export default function SQLSearch() {
 		setLoading(true);
 		setError(null);
 		try {
-			const result = await post<{ columns: string[]; rows: unknown[][] }>("/api/sql/query", {
-				sql: `SELECT * FROM ${tableName} LIMIT 100`,
-			});
+			const result = await querySQL(`SELECT * FROM ${tableName} LIMIT 100`);
 			setTableData(result);
 			setSelectedTable(tableName);
 		} catch (e: unknown) {

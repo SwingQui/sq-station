@@ -40,6 +40,7 @@ export interface SysUser {
 	email: string | null;
 	phone: string | null;
 	status: number; // 1=启用, 0=禁用
+	roles: string; // JSON 数组格式，如 ["admin","user"]
 	created_at?: string;
 	updated_at?: string;
 }
@@ -53,8 +54,10 @@ export interface SysRole {
 	role_name: string;
 	role_key: string;
 	role_sort: number;
+	sort_order: number; // 排序
 	status: number; // 1=启用, 0=禁用
 	is_admin: number; // 1=超级管理员角色, 0=普通角色
+	permissions: string; // JSON 数组格式，如 ["system:user:list"] 或 ["*:*:*"]
 	remark: string | null;
 	created_at?: string;
 	updated_at?: string;

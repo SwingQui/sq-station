@@ -144,10 +144,10 @@ function AppContent() {
 			window.scrollTo(0, 0);
 
 			// 添加标签页
-			if (newPath.startsWith("/system") && newPath !== "/login") {
-				// 如果访问 /system，重定向到 /system/home
-				if (newPath === "/system") {
-					navigate("/system/home", true);
+			if (newPath.startsWith("/dashboard") && newPath !== "/login") {
+				// 如果访问 /dashboard，重定向到 /dashboard/home
+				if (newPath === "/dashboard") {
+					navigate("/dashboard/home", true);
 					return;
 				}
 
@@ -155,7 +155,7 @@ function AppContent() {
 				addTab({
 					key: newPath,
 					title,
-					closable: newPath !== "/system/home",
+					closable: newPath !== "/dashboard/home",
 				});
 				setActiveTab(newPath);
 			}
@@ -166,7 +166,7 @@ function AppContent() {
 			const newPath = window.location.pathname;
 			setPath(newPath);
 
-			if (newPath.startsWith("/system")) {
+			if (newPath.startsWith("/dashboard")) {
 				setActiveTab(newPath);
 			}
 		};
@@ -174,10 +174,10 @@ function AppContent() {
 		window.addEventListener("popstate", handlePopState);
 
 		// 初始化：添加当前路由的标签
-		if (path.startsWith("/system") && path !== "/login") {
-			// 如果当前是 /system，重定向到 /system/home
-			if (path === "/system") {
-				navigate("/system/home", true);
+		if (path.startsWith("/dashboard") && path !== "/login") {
+			// 如果当前是 /dashboard，重定向到 /dashboard/home
+			if (path === "/dashboard") {
+				navigate("/dashboard/home", true);
 				return;
 			}
 
@@ -185,7 +185,7 @@ function AppContent() {
 			addTab({
 				key: path,
 				title,
-				closable: path !== "/system/home",
+				closable: path !== "/dashboard/home",
 			});
 		}
 
@@ -219,7 +219,7 @@ function AppContent() {
 	}
 
 	// 检查后台路由认证
-	if (path.startsWith("/system") && path !== "/login" && !isLoading && !isAuthenticated) {
+	if (path.startsWith("/dashboard") && path !== "/login" && !isLoading && !isAuthenticated) {
 		const redirect = encodeURIComponent(path);
 		navigate(`/login?redirect=${redirect}`, true);
 		// 返回 loading 状态，等待路由更新
@@ -230,7 +230,7 @@ function AppContent() {
 	const content = getPageContent(path);
 
 	// 后台路由包裹 AdminLayout
-	if (path.startsWith("/system") && path !== "/login") {
+	if (path.startsWith("/dashboard") && path !== "/login") {
 		return (
 			<Suspense fallback={<div style={{ padding: "20px" }}>加载中...</div>}>
 				<AdminLayout>{content}</AdminLayout>

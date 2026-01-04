@@ -12,6 +12,7 @@ export interface AuthUser {
 	username: string;
 	nickname?: string;
 	avatar?: string;
+	is_admin?: boolean;
 }
 
 export interface LoginResponse {
@@ -79,10 +80,16 @@ export function setPermissions(permissions: string[]): void {
  */
 export function getPermissions(): string[] {
 	const permsStr = localStorage.getItem(PERMISSIONS_KEY);
-	if (!permsStr) return [];
+	if (!permsStr) {
+		console.log("[Auth] No permissions in localStorage");
+		return [];
+	}
 	try {
-		return JSON.parse(permsStr);
-	} catch {
+		const perms = JSON.parse(permsStr);
+		console.log("[Auth] Loaded permissions:", perms);
+		return perms;
+	} catch (e) {
+		console.error("[Auth] Failed to parse permissions:", permsStr, e);
 		return [];
 	}
 }
@@ -134,9 +141,22 @@ export function isAuthenticated(): boolean {
 }
 
 /**
+ * 检查是否为超级管理员（拥有 *:*:* 通配符权限）
+ */
+export function isSuperAdmin(): boolean {
+	const permissions = getPermissions();
+	const isAdmin = permissions.includes("*:*:*");
+	console.log("[Auth] isSuperAdmin:", isAdmin, "permissions:", permissions);
+	return isAdmin;
+}
+
+/**
  * 检查是否有指定权限
  */
 export function hasPermission(permission: string): boolean {
+	// 超级管理员拥有所有权限
+	if (isSuperAdmin()) return true;
+
 	const permissions = getPermissions();
 	return permissions.includes(permission);
 }
@@ -145,6 +165,9 @@ export function hasPermission(permission: string): boolean {
  * 检查是否有任一权限
  */
 export function hasAnyPermission(permissions: string[]): boolean {
+	// 超级管理员拥有所有权限
+	if (isSuperAdmin()) return true;
+
 	const userPermissions = getPermissions();
 	return permissions.some(p => userPermissions.includes(p));
 }
@@ -233,11 +256,18 @@ export function findMenuByPath(path: string): MenuItem | null {
  * 检查路由权限
  */
 export function hasRoutePermission(path: string): boolean {
+	// 超级管理员拥有所有路由权限
+	if (isSuperAdmin()) return true;
+
 	const menu = findMenuByPath(path);
 
 	// 未知路由，拒绝访问
 	if (!menu) return false;
 
+	// 禁用的菜单不能访问（menu_status = 0）
+	if (menu.menu_status === 0) return false;
+
+	// 隐藏的菜单（menu_visible = 0）如果有权限可以访问
 	// 没有权限要求，允许访问
 	if (!menu.permission) return true;
 

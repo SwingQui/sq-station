@@ -7,6 +7,13 @@ import type { Context, Next } from "hono";
 import type { Env, Variables, AuthUser } from "../index.d";
 
 /**
+ * 检查用户是否为超级管理员（拥有 *:*:* 权限）
+ */
+function isSuperAdmin(permissions: string[]): boolean {
+	return permissions.includes("*:*:*");
+}
+
+/**
  * 权限检查中间件工厂函数
  * @param permission 需要的权限标识
  */
@@ -18,16 +25,14 @@ export const requirePermission = (permission: string) => {
 			return c.json({ error: "未登录" }, 401);
 		}
 
-		// 查询用户权限
-		const result = await c.env.DB.prepare(`
-			SELECT DISTINCT m.permission
-			FROM sys_menu m
-			INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
-			INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-			WHERE ur.user_id = ? AND m.permission = ?
-		`).bind(currentUser.userId, permission).first();
+		// 超级管理员绕过权限检查
+		if (isSuperAdmin(currentUser.permissions || [])) {
+			await next();
+			return;
+		}
 
-		if (!result) {
+		// 检查用户是否有该权限
+		if (!currentUser.permissions?.includes(permission)) {
 			return c.json({ error: "无权限访问" }, 403);
 		}
 
@@ -47,17 +52,15 @@ export const requireAnyPermission = (permissions: string[]) => {
 			return c.json({ error: "未登录" }, 401);
 		}
 
-		// 检查是否有任一权限
-		const placeholders = permissions.map(() => "?").join(",");
-		const result = await c.env.DB.prepare(`
-			SELECT DISTINCT m.permission
-			FROM sys_menu m
-			INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
-			INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-			WHERE ur.user_id = ? AND m.permission IN (${placeholders})
-		`).bind(currentUser.userId, ...permissions).first();
+		// 超级管理员绕过权限检查
+		if (isSuperAdmin(currentUser.permissions || [])) {
+			await next();
+			return;
+		}
 
-		if (!result) {
+		// 检查是否有任一权限
+		const hasPermission = permissions.some(p => currentUser.permissions?.includes(p));
+		if (!hasPermission) {
 			return c.json({ error: "无权限访问" }, 403);
 		}
 
@@ -77,15 +80,30 @@ export const requireRole = (roleKey: string) => {
 			return c.json({ error: "未登录" }, 401);
 		}
 
+		// 超级管理员绕过角色检查
+		if (isSuperAdmin(currentUser.permissions || [])) {
+			await next();
+			return;
+		}
+
 		// 检查用户是否有该角色
 		const result = await c.env.DB.prepare(`
-			SELECT r.*
-			FROM sys_role r
-			INNER JOIN sys_user_role ur ON r.id = ur.role_id
-			WHERE ur.user_id = ? AND r.role_key = ? AND r.status = 1
-		`).bind(currentUser.userId, roleKey).first();
+			SELECT roles FROM sys_user WHERE id = ?
+		`).bind(currentUser.userId).first<{ roles: string }>();
 
 		if (!result) {
+			return c.json({ error: "无权限访问" }, 403);
+		}
+
+		// 解析用户的角色数组
+		let userRoles: string[];
+		try {
+			userRoles = JSON.parse(result.roles || "[]") as string[];
+		} catch (e) {
+			return c.json({ error: "无权限访问" }, 403);
+		}
+
+		if (!userRoles.includes(roleKey)) {
 			return c.json({ error: "无权限访问" }, 403);
 		}
 

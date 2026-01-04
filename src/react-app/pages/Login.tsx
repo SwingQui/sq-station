@@ -14,11 +14,11 @@ export default function Login() {
 	const [error, setError] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 
-	// 如果已登录，重定向到 /system/home 或原访问页面
+	// 如果已登录，重定向到 /dashboard/home 或原访问页面
 	useEffect(() => {
 		if (isAuthenticated) {
 			const params = new URLSearchParams(window.location.search);
-			const redirect = params.get("redirect") || "/system/home";
+			const redirect = params.get("redirect") || "/dashboard/home";
 			navigate(redirect, true); // replace 避免返回到登录页
 		}
 	}, [isAuthenticated]);

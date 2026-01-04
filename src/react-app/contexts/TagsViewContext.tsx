@@ -7,7 +7,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect, Re
 import { navigate } from "../utils/router";
 
 export interface Tab {
-	key: string;      // 路由路径，如 "/system/user"
+	key: string;      // 路由路径，如 "/dashboard/system/user"
 	title: string;    // 页面标题，如 "用户管理"
 	closable: boolean; // 是否可关闭（首页不可关闭）
 }
@@ -26,9 +26,9 @@ const TagsViewContext = createContext<TagsViewContextType | undefined>(undefined
 
 export function TagsViewProvider({ children }: { children: ReactNode }) {
 	const [tabs, setTabs] = useState<Tab[]>([
-		{ key: "/system/home", title: "系统首页", closable: false },
+		{ key: "/dashboard/home", title: "仪表盘首页", closable: false },
 	]);
-	const [activeTab, setActiveTabState] = useState("/system/home");
+	const [activeTab, setActiveTabState] = useState("/dashboard/home");
 	const pendingNavigationRef = useRef<string | null>(null);
 
 	// 添加标签页
@@ -65,13 +65,13 @@ export function TagsViewProvider({ children }: { children: ReactNode }) {
 	// 关闭其他标签
 	const closeOtherTabs = useCallback(() => {
 		setTabs((prev) => prev.filter((t) => !t.closable));
-		setActiveTabState("/system/home");
+		setActiveTabState("/dashboard/home");
 	}, []);
 
 	// 关闭所有标签
 	const closeAllTabs = useCallback(() => {
 		setTabs((prev) => prev.filter((t) => !t.closable));
-		setActiveTabState("/system/home");
+		setActiveTabState("/dashboard/home");
 	}, []);
 
 	// 延迟处理导航，避免在渲染过程中触发其他组件的状态更新

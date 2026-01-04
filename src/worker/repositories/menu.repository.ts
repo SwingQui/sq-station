@@ -114,23 +114,27 @@ export class MenuRepository extends BaseRepository {
 			    menu_status = ?, icon = ?, sort_order = ?, permission = ?, updated_at = CURRENT_TIMESTAMP
 			WHERE id = ?
 		`;
-		await this.executeRun(sql, [
-			data.parent_id ?? 0,
-			data.menu_name,
-			data.menu_type,
-			data.route_path || null,
-			data.component_path || null,
-			data.redirect || null,
-			data.query_param || null,
-			data.is_frame ?? 0,
-			data.is_cache ?? 0,
-			data.menu_visible ?? 0,
-			data.menu_status ?? 1,
-			data.icon || null,
-			data.sort_order ?? 0,
-			data.permission || null,
+
+		// 确保所有值都不是 undefined（D1 不支持 undefined）
+		const params = [
+			data.parent_id != null ? data.parent_id : 0,
+			data.menu_name ?? "",
+			data.menu_type ?? "",
+			data.route_path != null ? data.route_path : null,
+			data.component_path != null ? data.component_path : null,
+			data.redirect != null ? data.redirect : null,
+			data.query_param != null ? data.query_param : null,
+			data.is_frame != null ? data.is_frame : 0,
+			data.is_cache != null ? data.is_cache : 0,
+			data.menu_visible != null ? data.menu_visible : 0,
+			data.menu_status != null ? data.menu_status : 1,
+			data.icon != null ? data.icon : null,
+			data.sort_order != null ? data.sort_order : 0,
+			data.permission != null ? data.permission : null,
 			id
-		]);
+		];
+
+		await this.executeRun(sql, params);
 	}
 
 	/**
@@ -150,6 +154,37 @@ export class MenuRepository extends BaseRepository {
 			FROM sys_menu m
 			WHERE m.menu_status = 1
 			AND (
+				-- 用户直接角色的菜单
+				m.id IN (
+					SELECT rm.menu_id
+					FROM sys_role_menu rm
+					INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+					WHERE ur.user_id = ?
+				)
+				OR
+				-- 用户所属组织的角色菜单
+				m.id IN (
+					SELECT rm.menu_id
+					FROM sys_role_menu rm
+					INNER JOIN sys_org_role ore ON rm.role_id = ore.role_id
+					INNER JOIN sys_user_organization uo ON ore.org_id = uo.org_id
+					WHERE uo.user_id = ?
+				)
+			)
+			ORDER BY m.sort_order ASC
+		`;
+		const result = await this.executeQuery<SysMenu>(sql, [userId, userId]);
+		return result.results;
+	}
+
+	/**
+	 * 根据用户 ID 查询所有菜单（不过滤状态和可见性，用于权限检查）
+	 */
+	async findAllMenusByUserId(userId: number): Promise<SysMenu[]> {
+		const sql = `
+			SELECT DISTINCT m.*
+			FROM sys_menu m
+			WHERE (
 				-- 用户直接角色的菜单
 				m.id IN (
 					SELECT rm.menu_id
@@ -202,33 +237,108 @@ export class MenuRepository extends BaseRepository {
 	}
 
 	/**
-	 * 根据用户 ID 查询权限标识（合并直接角色 + 组织角色权限）
+	 * 根据用户 ID 查询权限标识（从用户的角色中获取）
 	 */
 	async findPermissionsByUserId(userId: number): Promise<string[]> {
+		// 先获取用户的角色列表
+		const userSql = "SELECT roles FROM sys_user WHERE id = ?";
+		const userResult = await this.executeFirst<{ roles: string }>(userSql, [userId]);
+
+		if (!userResult || !userResult.roles) {
+			return [];
+		}
+
+		// 解析用户的角色数组
+		let userRoles: string[];
+		try {
+			userRoles = JSON.parse(userResult.roles) as string[];
+		} catch (e) {
+			console.error("Failed to parse user roles:", userResult.roles, e);
+			return [];
+		}
+
+		if (userRoles.length === 0) {
+			return [];
+		}
+
+		// 根据角色查询权限
+		const placeholders = userRoles.map(() => "?").join(",");
 		const sql = `
-			SELECT DISTINCT m.permission
-			FROM sys_menu m
-			WHERE m.permission IS NOT NULL AND m.permission != ''
-			AND (
-				-- 用户直接角色的权限
-				m.id IN (
-					SELECT rm.menu_id
-					FROM sys_role_menu rm
-					INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-					WHERE ur.user_id = ?
-				)
-				OR
-				-- 用户所属组织的角色权限
-				m.id IN (
-					SELECT rm.menu_id
-					FROM sys_role_menu rm
-					INNER JOIN sys_org_role ore ON rm.role_id = ore.role_id
-					INNER JOIN sys_user_organization uo ON ore.org_id = uo.org_id
-					WHERE uo.user_id = ?
-				)
-			)
+			SELECT DISTINCT permissions
+			FROM sys_role
+			WHERE role_key IN (${placeholders}) AND status = 1
 		`;
-		const result = await this.executeQuery<{ permission: string }>(sql, [userId, userId]);
-		return result.results.map(r => r.permission);
+
+		const results = await this.executeQuery<{ permissions: string }>(sql, userRoles);
+
+		// 合并所有角色的权限
+		const allPermissions = new Set<string>();
+		for (const row of results.results || []) {
+			try {
+				const perms = JSON.parse(row.permissions || "[]") as string[];
+				for (const perm of perms) {
+					allPermissions.add(perm);
+				}
+			} catch (e) {
+				console.error("Failed to parse permissions:", row.permissions, e);
+			}
+		}
+
+		return Array.from(allPermissions);
+	}
+
+	/**
+	 * 递归查找所有子菜单ID
+	 */
+	async findChildMenuIds(parentId: number): Promise<number[]> {
+		const sql = "SELECT id FROM sys_menu WHERE parent_id = ?";
+		const result = await this.executeQuery<{ id: number }>(sql, [parentId]);
+		const childIds = result.results.map(r => r.id);
+
+		// 递归查找孙级菜单
+		let allChildIds = [...childIds];
+		for (const childId of childIds) {
+			const grandChildIds = await this.findChildMenuIds(childId);
+			allChildIds = allChildIds.concat(grandChildIds);
+		}
+
+		return allChildIds;
+	}
+
+	/**
+	 * 更新子菜单状态（仅更新目录和菜单，不更新按钮）
+	 */
+	async updateChildMenuStatus(childIds: number[], status: number): Promise<void> {
+		if (childIds.length === 0) return;
+
+		const placeholders = childIds.map(() => "?").join(",");
+		const sql = `
+			UPDATE sys_menu
+			SET menu_status = ?, updated_at = CURRENT_TIMESTAMP
+			WHERE id IN (${placeholders})
+			AND menu_type IN ('M', 'C')
+		`;
+
+		await this.executeRun(sql, [status, ...childIds]);
+	}
+
+	/**
+	 * 更新菜单（带级联禁用）
+	 * 当禁用目录时，自动禁用所有子菜单（按钮权限除外）
+	 */
+	async updateWithCascade(id: number, data: UpdateMenuDto): Promise<void> {
+		// 检查是否是禁用目录
+		if (data.menu_status === 0) {
+			const currentMenu = await this.findById(id);
+			if (currentMenu && currentMenu.menu_type === 'M') {
+				// 查找所有子菜单
+				const childMenuIds = await this.findChildMenuIds(id);
+				// 禁用所有子菜单（除了按钮）
+				await this.updateChildMenuStatus(childMenuIds, 0);
+			}
+		}
+
+		// 更新主菜单
+		await this.update(id, data);
 	}
 }

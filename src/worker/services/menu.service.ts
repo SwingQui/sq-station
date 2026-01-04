@@ -79,7 +79,8 @@ export class MenuService {
 			}
 		}
 
-		await this.menuRepo.update(id, data);
+		// 使用带级联禁用的更新方法
+		await this.menuRepo.updateWithCascade(id, data);
 	}
 
 	/**

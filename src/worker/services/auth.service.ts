@@ -5,7 +5,6 @@
 
 import { UserRepository } from "../repositories/user.repository";
 import { MenuRepository } from "../repositories/menu.repository";
-import { RoleRepository } from "../repositories/role.repository";
 import { signToken } from "../utils/jwt";
 import { verifyPasswordWithUsername } from "../utils/password";
 import { appConfig } from "../config";
@@ -22,7 +21,7 @@ export interface LoginResult {
 }
 
 export interface UserInfoResult {
-	user: Omit<SysUser, "password">;
+	user: Omit<SysUser, "password"> & { is_admin?: boolean };
 	permissions: string[];
 	menus: SysMenu[];
 }
@@ -30,8 +29,7 @@ export interface UserInfoResult {
 export class AuthService {
 	constructor(
 		private userRepo: UserRepository,
-		private menuRepo: MenuRepository,
-		private roleRepo: RoleRepository
+		private menuRepo: MenuRepository
 	) {}
 
 	/**
@@ -94,28 +92,30 @@ export class AuthService {
 			throw new Error("用户不存在");
 		}
 
-		// 改为通过角色判断是否为超级管理员
-		const isAdmin = await this.roleRepo.hasAdminRoleByUserId(userId);
+		// 获取用户权限（从用户的角色中获取）
+		const permissions = await this.menuRepo.findPermissionsByUserId(userId);
+		const isAdmin = permissions.includes("*:*:*");
 
-		let permissions: string[];
+		// 获取所有菜单（不过滤状态和可见性，用于权限检查）
+		const allMenus = await this.menuRepo.findAll();
+
+		// 为前端过滤侧边栏菜单
 		let menuTree: SysMenu[];
-
 		if (isAdmin) {
-			// 超级管理员获取所有权限和菜单
-			const allPermissionsResult = await this.menuRepo.findAll();
-			const enabledMenus = allPermissionsResult.filter(m => m.menu_status === appConfig.menu.enabledStatus);
-
-			permissions = await this.menuRepo.findAllPermissions();
+			// 超级管理员：显示所有启用的菜单（不受 menu_visible 影响）
+			const enabledMenus = allMenus.filter(m => m.menu_status === 1);
 			menuTree = this.buildMenuTree(enabledMenus);
 		} else {
-			// 普通用户按角色查询
-			permissions = await this.menuRepo.findPermissionsByUserId(userId);
-			const menus = await this.menuRepo.findByUserId(userId);
-			menuTree = this.buildMenuTree(menus);
+			// 普通用户：只显示可见且启用的菜单
+			const visibleMenus = allMenus.filter(m => m.menu_visible === 1 && m.menu_status === 1);
+			menuTree = this.buildMenuTree(visibleMenus);
 		}
 
 		return {
-			user,
+			user: {
+				...user,
+				is_admin: isAdmin
+			},
 			permissions,
 			menus: menuTree
 		};

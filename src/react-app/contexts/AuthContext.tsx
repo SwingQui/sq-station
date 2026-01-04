@@ -71,24 +71,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 		const { token, user } = result.data;
 
+		console.log("[AuthContext] Login successful, token:", token ? "exists" : "missing");
+		console.log("[AuthContext] User info:", user);
+
 		// 保存到 localStorage
 		localStorage.setItem("auth_token", token);
 		localStorage.setItem("auth_user", JSON.stringify(user));
 
+		console.log("[AuthContext] Token saved to localStorage");
+		console.log("[AuthContext] Token from localStorage:", localStorage.getItem("auth_token"));
+
 		// 获取用户权限和菜单
+		console.log("[AuthContext] Fetching /api/auth/me...");
 		const meResponse = await fetch("/api/auth/me", {
 			headers: { "Authorization": `Bearer ${token}` },
 		});
 
+		console.log("[AuthContext] /api/auth/me response status:", meResponse.status);
+
 		if (meResponse.ok) {
 			const meResult = await meResponse.json();
+			console.log("[AuthContext] /api/auth/me response:", meResult);
 			// 新格式: {code: 200, data: {user, permissions, menus}, msg}
 			if (meResult.code === 200 && meResult.data) {
+				console.log("[AuthContext] Saving permissions:", meResult.data.permissions);
+				console.log("[AuthContext] Saving menus:", meResult.data.menus);
 				localStorage.setItem("auth_permissions", JSON.stringify(meResult.data.permissions || []));
 				localStorage.setItem("auth_menus", JSON.stringify(meResult.data.menus || []));
 				// 清除菜单索引缓存，以便重新构建
 				clearMenuIndexCache();
 			}
+		} else {
+			console.error("[AuthContext] Failed to get user info:", meResponse.status, meResponse.statusText);
+			const errorText = await meResponse.text();
+			console.error("[AuthContext] Error response:", errorText);
 		}
 
 		setUser(user);

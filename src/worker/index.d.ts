@@ -10,6 +10,7 @@ export interface Env {
 export interface AuthUser {
 	userId: number;
 	username: string;
+	permissions?: string[];
 }
 
 // 导入服务类型（避免循环依赖，使用类型导入）

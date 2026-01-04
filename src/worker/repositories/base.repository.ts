@@ -16,9 +16,7 @@ export abstract class BaseRepository {
 		params: any[] = []
 	): Promise<DbResult<T>> {
 		let stmt = this.db.prepare(sql);
-		for (const param of params) {
-			stmt = stmt.bind(param);
-		}
+		stmt = stmt.bind(...params);
 		return await stmt.all();
 	}
 
@@ -30,9 +28,7 @@ export abstract class BaseRepository {
 		params: any[] = []
 	): Promise<DbExecResult> {
 		let stmt = this.db.prepare(sql);
-		for (const param of params) {
-			stmt = stmt.bind(param);
-		}
+		stmt = stmt.bind(...params);
 		return await stmt.run();
 	}
 
@@ -44,9 +40,7 @@ export abstract class BaseRepository {
 		params: any[] = []
 	): Promise<T | null> {
 		let stmt = this.db.prepare(sql);
-		for (const param of params) {
-			stmt = stmt.bind(param);
-		}
+		stmt = stmt.bind(...params);
 		const result = await stmt.first();
 		return (result as T | null);
 	}

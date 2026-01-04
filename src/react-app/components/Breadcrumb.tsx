@@ -1,7 +1,7 @@
 /**
  * 面包屑导航组件
  * 根据当前路径和菜单数据生成面包屑
- * /system 首页不显示面包屑
+ * /dashboard 首页不显示面包屑
  */
 
 import React, { useMemo } from "react";
@@ -39,13 +39,13 @@ export default function Breadcrumb() {
 	const currentPath = window.location.pathname;
 
 	const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
-		// /system/home 首页只显示"系统首页"
-		if (currentPath === "/system/home" || currentPath === "/system/home/") {
-			return [{ title: "系统首页" }];
+		// /dashboard/home 首页只显示"仪表盘首页"
+		if (currentPath === "/dashboard/home" || currentPath === "/dashboard/home/") {
+			return [{ title: "仪表盘首页" }];
 		}
 
 		const items: BreadcrumbItem[] = [
-			{ title: "系统首页", path: "/system/home" },
+			{ title: "仪表盘首页", path: "/dashboard/home" },
 		];
 
 		// 在菜单树中查找当前路径

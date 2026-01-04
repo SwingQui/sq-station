@@ -114,8 +114,11 @@ export async function signToken(payload: Omit<JWTPayload, 'iat' | 'exp'>, secret
  */
 export async function verifyToken(token: string, secret: string): Promise<JWTPayload | null> {
 	try {
+		console.log("[JWT] verifyToken called, token length:", token.length);
+
 		const parts = token.split('.');
 		if (parts.length !== 3) {
+			console.log("[JWT] Invalid token format, parts:", parts.length);
 			return null;
 		}
 
@@ -125,6 +128,7 @@ export async function verifyToken(token: string, secret: string): Promise<JWTPay
 		// 验证签名
 		const isValid = await verifyHmac(data, signature, secret);
 		if (!isValid) {
+			console.log("[JWT] Signature verification failed");
 			return null;
 		}
 
@@ -132,14 +136,19 @@ export async function verifyToken(token: string, secret: string): Promise<JWTPay
 		const payloadJson = base64UrlDecode(encodedPayload);
 		const payload: JWTPayload = JSON.parse(payloadJson);
 
+		console.log("[JWT] Token payload decoded:", payload);
+
 		// 检查过期时间
 		const now = Math.floor(Date.now() / 1000);
 		if (payload.exp < now) {
+			console.log("[JWT] Token expired:", { exp: payload.exp, now });
 			return null;
 		}
 
+		console.log("[JWT] Token verified successfully");
 		return payload;
-	} catch {
+	} catch (error: any) {
+		console.log("[JWT] Exception during verification:", error.message);
 		return null;
 	}
 }

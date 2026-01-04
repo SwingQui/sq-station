@@ -145,11 +145,17 @@ function AppContent() {
 
 			// 添加标签页
 			if (newPath.startsWith("/system") && newPath !== "/login") {
+				// 如果访问 /system，重定向到 /system/home
+				if (newPath === "/system") {
+					navigate("/system/home", true);
+					return;
+				}
+
 				const title = getPageTitle(newPath);
 				addTab({
 					key: newPath,
 					title,
-					closable: newPath !== "/system",
+					closable: newPath !== "/system/home",
 				});
 				setActiveTab(newPath);
 			}
@@ -169,11 +175,17 @@ function AppContent() {
 
 		// 初始化：添加当前路由的标签
 		if (path.startsWith("/system") && path !== "/login") {
+			// 如果当前是 /system，重定向到 /system/home
+			if (path === "/system") {
+				navigate("/system/home", true);
+				return;
+			}
+
 			const title = getPageTitle(path);
 			addTab({
 				key: path,
 				title,
-				closable: path !== "/system",
+				closable: path !== "/system/home",
 			});
 		}
 

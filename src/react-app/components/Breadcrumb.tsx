@@ -38,13 +38,13 @@ export default function Breadcrumb() {
 	const currentPath = window.location.pathname;
 
 	const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
-		// /system 首页不显示面包屑
-		if (currentPath === "/system" || currentPath === "/system/") {
+		// /system/home 首页不显示面包屑
+		if (currentPath === "/system/home" || currentPath === "/system/home/") {
 			return [];
 		}
 
 		const items: BreadcrumbItem[] = [
-			{ title: "系统首页", path: "/system" },
+			{ title: "系统首页", path: "/system/home" },
 		];
 
 		// 在菜单树中查找当前路径

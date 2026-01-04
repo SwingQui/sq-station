@@ -7,7 +7,7 @@ import { navigate } from "../utils/router";
 
 export default function Forbidden() {
 	const handleGoHome = () => {
-		navigate("/system");
+		navigate("/system/home");
 	};
 
 	const containerStyle: React.CSSProperties = {

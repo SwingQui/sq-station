@@ -26,9 +26,9 @@ const TagsViewContext = createContext<TagsViewContextType | undefined>(undefined
 
 export function TagsViewProvider({ children }: { children: ReactNode }) {
 	const [tabs, setTabs] = useState<Tab[]>([
-		{ key: "/system", title: "系统首页", closable: false },
+		{ key: "/system/home", title: "系统首页", closable: false },
 	]);
-	const [activeTab, setActiveTabState] = useState("/system");
+	const [activeTab, setActiveTabState] = useState("/system/home");
 	const pendingNavigationRef = useRef<string | null>(null);
 
 	// 添加标签页
@@ -65,13 +65,13 @@ export function TagsViewProvider({ children }: { children: ReactNode }) {
 	// 关闭其他标签
 	const closeOtherTabs = useCallback(() => {
 		setTabs((prev) => prev.filter((t) => !t.closable));
-		setActiveTabState("/system");
+		setActiveTabState("/system/home");
 	}, []);
 
 	// 关闭所有标签
 	const closeAllTabs = useCallback(() => {
 		setTabs((prev) => prev.filter((t) => !t.closable));
-		setActiveTabState("/system");
+		setActiveTabState("/system/home");
 	}, []);
 
 	// 延迟处理导航，避免在渲染过程中触发其他组件的状态更新

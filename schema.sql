@@ -3,8 +3,11 @@
 -- ====================================
 
 -- 删除旧表（重新创建时使用）
+DROP TABLE IF EXISTS sys_org_role;
+DROP TABLE IF EXISTS sys_user_organization;
 DROP TABLE IF EXISTS sys_role_menu;
 DROP TABLE IF EXISTS sys_user_role;
+DROP TABLE IF EXISTS sys_organization;
 DROP TABLE IF EXISTS sys_menu;
 DROP TABLE IF EXISTS sys_role;
 DROP TABLE IF EXISTS sys_user;
@@ -31,6 +34,7 @@ CREATE TABLE IF NOT EXISTS sys_role (
   role_key TEXT NOT NULL UNIQUE,  -- 角色权限字符串
   sort_order INTEGER DEFAULT 0,
   status INTEGER DEFAULT 1,  -- 0:禁用 1:正常
+  is_admin INTEGER DEFAULT 0,  -- 0:普通角色 1:超级管理员角色
   remark TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -78,6 +82,42 @@ CREATE TABLE IF NOT EXISTS sys_role_menu (
 );
 
 -- ====================================
+-- 组织架构相关表
+-- ====================================
+
+-- 组织表
+CREATE TABLE IF NOT EXISTS sys_organization (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  org_name TEXT NOT NULL UNIQUE,
+  org_code TEXT NOT NULL UNIQUE,
+  sort_order INTEGER DEFAULT 0,
+  status INTEGER DEFAULT 1,
+  remark TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户组织关联表
+CREATE TABLE IF NOT EXISTS sys_user_organization (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  org_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, org_id)
+);
+
+-- 组织角色关联表
+CREATE TABLE IF NOT EXISTS sys_org_role (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  org_id INTEGER NOT NULL,
+  role_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(org_id, role_id)
+);
+
+-- ====================================
 -- 初始化数据
 -- ====================================
 
@@ -90,9 +130,9 @@ INSERT OR IGNORE INTO sys_user (id, username, password, nickname, status) VALUES
 (2, 'user', 'user$a52197d73c0a6a5bec9a30fb0342759f1920ac154b0244376fa874f639338bec', '普通用户', 1);
 
 -- 初始化角色
-INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status) VALUES
-(1, '超级管理员', 'admin', 1, 1),
-(2, '普通用户', 'user', 2, 1);
+INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status, is_admin) VALUES
+(1, '超级管理员', 'admin', 1, 1, 1),
+(2, '普通用户', 'user', 2, 1, 0);
 
 -- ====================================
 -- 初始化菜单 (参考若依设计)
@@ -166,3 +206,35 @@ INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)
 SELECT 1, id FROM sys_menu WHERE NOT EXISTS (
 	SELECT 1 FROM sys_role_menu WHERE role_id = 1 AND menu_id = sys_menu.id
 );
+
+-- ====================================
+-- 组织管理菜单
+-- ====================================
+-- 组织管理菜单（在系统管理目录下）
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M'), '组织管理', 'C', '/system/organization', 'system/organization/OrganizationManage', 'team', 6, 'system:organization:list', 1, 1);
+
+-- 组织管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/system/organization'), '新增组织', 'F', 'system:organization:add', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/organization'), '编辑组织', 'F', 'system:organization:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/organization'), '删除组织', 'F', 'system:organization:delete', 3, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/system/organization'), '分配角色', 'F', 'system:organization:assign', 4, 0, 1);
+
+-- 用户管理按钮权限（添加分配组织权限）
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/system/user'), '分配组织', 'F', 'system:user:assignOrgs', 5, 0, 1);
+
+-- 确保超级管理员拥有组织管理相关权限
+INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT 1, id FROM sys_menu WHERE NOT EXISTS (
+	SELECT 1 FROM sys_role_menu WHERE role_id = 1 AND menu_id = sys_menu.id
+);
+
+-- ====================================
+-- 初始化示例组织数据
+-- ====================================
+INSERT OR IGNORE INTO sys_organization (id, org_name, org_code, sort_order, status) VALUES
+(1, '总公司', 'HQ', 1, 1),
+(2, '技术部', 'TECH', 2, 1),
+(3, '市场部', 'MARKET', 3, 1);

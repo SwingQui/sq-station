@@ -4,7 +4,7 @@
  */
 
 import { BaseRepository } from "./base.repository";
-import type { SysUser } from "../types/database";
+import type { SysUser } from "../core/types/database";
 
 export interface CreateUserDto {
 	username: string;

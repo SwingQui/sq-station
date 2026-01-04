@@ -4,7 +4,7 @@
  */
 
 import { BaseRepository } from "./base.repository";
-import type { SysRole } from "../types/database";
+import type { SysRole } from "../core/types/database";
 
 export class UserRoleRepository extends BaseRepository {
 	/**

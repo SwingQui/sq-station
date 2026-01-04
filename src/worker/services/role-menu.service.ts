@@ -6,7 +6,7 @@
 import { RoleRepository } from "../repositories/role.repository";
 import { MenuRepository } from "../repositories/menu.repository";
 import { RoleMenuRepository } from "../repositories/role-menu.repository";
-import type { SysMenu } from "../types/database";
+import type { SysMenu } from "../core/types/database";
 
 export class RoleMenuService {
 	constructor(

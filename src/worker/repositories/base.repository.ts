@@ -3,7 +3,7 @@
  * 提供数据库操作的通用方法
  */
 
-import type { DbResult, DbExecResult } from "../types/database";
+import type { DbResult, DbExecResult } from "../core/types/database";
 
 export abstract class BaseRepository {
 	constructor(protected db: D1Database) {}

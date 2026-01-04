@@ -2,7 +2,7 @@
  * 树构建工具函数
  */
 
-import type { SysMenu } from "../types/database";
+import type { SysMenu } from "../../core/types/database";
 
 /**
  * 构建菜单树

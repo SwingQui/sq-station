@@ -4,8 +4,9 @@
  */
 
 import { MenuRepository, CreateMenuDto, UpdateMenuDto } from "../repositories/menu.repository";
-import { buildMenuTree } from "../utils/tree";
-import type { SysMenu } from "../types/database";
+import { buildMenuTree } from "../utils/format/tree";
+import { appConfig } from "../config";
+import type { SysMenu } from "../core/types/database";
 
 export class MenuService {
 	constructor(private menuRepo: MenuRepository) {}
@@ -109,7 +110,7 @@ export class MenuService {
 		if (isAdmin) {
 			// 超级管理员获取所有启用的菜单
 			const allMenus = await this.menuRepo.findAll();
-			menus = allMenus.filter(m => m.menu_status === 1);
+			menus = allMenus.filter(m => m.menu_status === appConfig.menu.enabledStatus);
 		} else {
 			// 普通用户按角色查询
 			menus = await this.menuRepo.findByUserId(userId);

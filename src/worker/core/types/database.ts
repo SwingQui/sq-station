@@ -54,6 +54,7 @@ export interface SysRole {
 	role_key: string;
 	role_sort: number;
 	status: number; // 1=启用, 0=禁用
+	is_admin: number; // 1=超级管理员角色, 0=普通角色
 	remark: string | null;
 	created_at?: string;
 	updated_at?: string;
@@ -120,4 +121,37 @@ export type SqlRow = Record<string, string | number | null>;
 export interface SqlQueryResult {
 	columns: string[];
 	rows: unknown[][];
+}
+
+// ============================================
+// 组织表 (sys_organization)
+// ============================================
+
+export interface SysOrganization {
+	id: number;
+	org_name: string;
+	org_code: string;
+	sort_order: number;
+	status: number;
+	remark: string | null;
+	created_at?: string;
+	updated_at?: string;
+}
+
+// ============================================
+// 用户组织关联表 (sys_user_organization)
+// ============================================
+
+export interface SysUserOrganization {
+	user_id: number;
+	org_id: number;
+}
+
+// ============================================
+// 组织角色关联表 (sys_org_role)
+// ============================================
+
+export interface SysOrgRole {
+	org_id: number;
+	role_id: number;
 }

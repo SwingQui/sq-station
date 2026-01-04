@@ -10,6 +10,9 @@ import userRoleController from "./controllers/user-role.controller";
 import roleMenuController from "./controllers/role-menu.controller";
 import permissionController from "./controllers/permission.controller";
 import authController from "./controllers/auth.controller";
+import organizationController from "./controllers/organization.controller";
+import userOrganizationController from "./controllers/user-organization.controller";
+import orgRoleController from "./controllers/org-role.controller";
 import { success, fail, badRequest } from "./utils/response";
 import { createAuthRouter } from "./utils/auth-helper";
 
@@ -52,6 +55,9 @@ apiRouter.route("/menus", menuController);
 apiRouter.route("/users", userRoleController);  // /api/users/:id/roles
 apiRouter.route("/roles", roleMenuController);  // /api/roles/:id/menus
 apiRouter.route("/user", permissionController);  // /api/user/:id/menus, /api/user/:id/permissions
+apiRouter.route("/organization", organizationController);
+apiRouter.route("/user-organization", userOrganizationController);
+apiRouter.route("/org-role", orgRoleController);
 
 // SQL 执行工具 API (支持所有 SQL 操作) - 需要认证+管理员权限
 apiRouter.post("/sql/query", async (c) => {

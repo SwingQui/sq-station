@@ -4,7 +4,7 @@
  */
 
 import { BaseRepository } from "./base.repository";
-import type { SysRole } from "../types/database";
+import type { SysRole } from "../core/types/database";
 
 export interface CreateRoleDto {
 	role_name: string;
@@ -135,6 +135,20 @@ export class RoleRepository extends BaseRepository {
 	async existsByRoleKeyExcludeId(roleKey: string, excludeId: number): Promise<boolean> {
 		const sql = "SELECT COUNT(*) as count FROM sys_role WHERE role_key = ? AND id != ?";
 		const result = await this.executeFirst<{ count: number }>(sql, [roleKey, excludeId]);
+		return (result?.count ?? 0) > 0;
+	}
+
+	/**
+	 * 检查用户是否拥有超级管理员角色
+	 */
+	async hasAdminRoleByUserId(userId: number): Promise<boolean> {
+		const sql = `
+			SELECT COUNT(*) as count
+			FROM sys_role r
+			INNER JOIN sys_user_role ur ON r.id = ur.role_id
+			WHERE ur.user_id = ? AND r.is_admin = 1
+		`;
+		const result = await this.executeFirst<{ count: number }>(sql, [userId]);
 		return (result?.count ?? 0) > 0;
 	}
 }

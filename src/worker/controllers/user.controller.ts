@@ -8,6 +8,7 @@ import type { Env, Variables } from "../index.d";
 import { UserService } from "../services/user.service";
 import { UserRepository } from "../repositories/user.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
+import { RoleRepository } from "../repositories/role.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -16,7 +17,8 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use("/*", async (c, next) => {
 	const userRepo = new UserRepository(c.env.DB);
 	const userRoleRepo = new UserRoleRepository(c.env.DB);
-	const userService = new UserService(userRepo, userRoleRepo);
+	const roleRepo = new RoleRepository(c.env.DB);
+	const userService = new UserService(userRepo, userRoleRepo, roleRepo);
 	c.set("userService", userService);
 	await next();
 });

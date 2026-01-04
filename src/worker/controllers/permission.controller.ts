@@ -8,6 +8,7 @@ import type { Env, Variables } from "../index.d";
 import { MenuService } from "../services/menu.service";
 import { UserRepository } from "../repositories/user.repository";
 import { MenuRepository } from "../repositories/menu.repository";
+import { RoleRepository } from "../repositories/role.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -37,7 +38,8 @@ app.get("/:id/menus", async (c) => {
 		}
 
 		const menuService = c.get("menuService") as MenuService;
-		const isAdmin = id === 1 || user.username === "admin";
+		const roleRepo = new RoleRepository(c.env.DB);
+		const isAdmin = await roleRepo.hasAdminRoleByUserId(id);
 		const menus = await menuService.findByUserIdTree(id, isAdmin);
 
 		return c.json(success(menus));
@@ -61,7 +63,8 @@ app.get("/:id/permissions", async (c) => {
 		}
 
 		const menuService = c.get("menuService") as MenuService;
-		const isAdmin = id === 1 || user.username === "admin";
+		const roleRepo = new RoleRepository(c.env.DB);
+		const isAdmin = await roleRepo.hasAdminRoleByUserId(id);
 		const permissions = await menuService.findPermissionsByUserId(id, isAdmin);
 
 		return c.json(success(permissions));

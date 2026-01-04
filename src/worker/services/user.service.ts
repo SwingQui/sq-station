@@ -5,13 +5,15 @@
 
 import { UserRepository, CreateUserDto, UpdateUserDto } from "../repositories/user.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
+import { RoleRepository } from "../repositories/role.repository";
 import { hashPasswordWithUsername } from "../utils/password";
-import type { SysUser, SysRole } from "../types/database";
+import type { SysUser, SysRole } from "../core/types/database";
 
 export class UserService {
 	constructor(
 		private userRepo: UserRepository,
-		private userRoleRepo: UserRoleRepository
+		private userRoleRepo: UserRoleRepository,
+		private roleRepo: RoleRepository
 	) {}
 
 	/**
@@ -80,9 +82,10 @@ export class UserService {
 			throw new Error("用户不存在");
 		}
 
-		// 业务规则：不能修改超级管理员
-		if (id === 1) {
-			throw new Error("不能修改超级管理员");
+		// 业务规则：不能修改拥有超级管理员角色的用户
+		const isAdmin = await this.roleRepo.hasAdminRoleByUserId(id);
+		if (isAdmin) {
+			throw new Error("不能修改拥有超级管理员权限的用户");
 		}
 
 		// 检查用户名是否被其他用户占用
@@ -109,9 +112,10 @@ export class UserService {
 	 * 删除用户
 	 */
 	async delete(id: number): Promise<void> {
-		// 业务规则：不能删除超级管理员
-		if (id === 1) {
-			throw new Error("不能删除超级管理员");
+		// 业务规则：不能删除拥有超级管理员角色的用户
+		const isAdmin = await this.roleRepo.hasAdminRoleByUserId(id);
+		if (isAdmin) {
+			throw new Error("不能删除拥有超级管理员权限的用户");
 		}
 
 		// 检查用户是否存在
@@ -156,7 +160,7 @@ export class UserService {
 	/**
 	 * 检查用户是否为超级管理员
 	 */
-	isSuperAdmin(userId: number): boolean {
-		return userId === 1;
+	async isSuperAdmin(userId: number): Promise<boolean> {
+		return await this.roleRepo.hasAdminRoleByUserId(userId);
 	}
 }

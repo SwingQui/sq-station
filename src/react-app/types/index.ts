@@ -146,3 +146,31 @@ export interface UserInfoResponse {
 	menus: Menu[];
 	permissions: string[];
 }
+
+// ==================== 组织类型 ====================
+export interface Organization {
+	id: number;
+	org_name: string;
+	org_code: string;
+	sort_order: number;
+	status: number;
+	remark: string | null;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface CreateOrganizationDto {
+	org_name: string;
+	org_code: string;
+	sort_order?: number;
+	status?: number;
+	remark?: string | null;
+}
+
+export interface UpdateOrganizationDto {
+	org_name?: string;
+	org_code?: string;
+	sort_order?: number;
+	status?: number;
+	remark?: string | null;
+}

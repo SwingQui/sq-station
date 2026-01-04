@@ -6,7 +6,7 @@
 import { UserRepository } from "../repositories/user.repository";
 import { RoleRepository } from "../repositories/role.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
-import type { SysRole } from "../types/database";
+import type { SysRole } from "../core/types/database";
 
 export class UserRoleService {
 	constructor(

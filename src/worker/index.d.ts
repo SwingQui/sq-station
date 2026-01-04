@@ -18,6 +18,7 @@ import type { RoleService } from "./services/role.service";
 import type { MenuService } from "./services/menu.service";
 import type { UserRoleService } from "./services/user-role.service";
 import type { RoleMenuService } from "./services/role-menu.service";
+import type { OrganizationService } from "./services/organization.service";
 import type { UserRepository } from "./repositories/user.repository";
 
 // 扩展 Hono Context 类型
@@ -28,5 +29,6 @@ export type Variables = {
 	menuService?: MenuService;
 	userRoleService?: UserRoleService;
 	roleMenuService?: RoleMenuService;
+	orgService?: OrganizationService;
 	userRepo?: UserRepository;
 };

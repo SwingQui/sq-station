@@ -4,7 +4,7 @@
  */
 
 import { BaseRepository } from "./base.repository";
-import type { SysMenu } from "../types/database";
+import type { SysMenu } from "../core/types/database";
 
 export class RoleMenuRepository extends BaseRepository {
 	/**

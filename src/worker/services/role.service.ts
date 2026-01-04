@@ -5,7 +5,7 @@
 
 import { RoleRepository, CreateRoleDto, UpdateRoleDto } from "../repositories/role.repository";
 import { RoleMenuRepository } from "../repositories/role-menu.repository";
-import type { SysRole, SysMenu } from "../types/database";
+import type { SysRole, SysMenu } from "../core/types/database";
 
 export class RoleService {
 	constructor(
@@ -66,7 +66,7 @@ export class RoleService {
 		}
 
 		// 业务规则：不能修改超级管理员角色
-		if (id === 1) {
+		if (role.is_admin === 1) {
 			throw new Error("不能修改超级管理员角色");
 		}
 
@@ -93,15 +93,15 @@ export class RoleService {
 	 * 删除角色
 	 */
 	async delete(id: number): Promise<void> {
-		// 业务规则：不能删除超级管理员角色
-		if (id === 1) {
-			throw new Error("不能删除超级管理员角色");
-		}
-
 		// 检查角色是否存在
 		const role = await this.roleRepo.findById(id);
 		if (!role) {
 			throw new Error("角色不存在");
+		}
+
+		// 业务规则：不能删除超级管理员角色
+		if (role.is_admin === 1) {
+			throw new Error("不能删除超级管理员角色");
 		}
 
 		// 删除角色菜单关联

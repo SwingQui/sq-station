@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getUserList, createUser, updateUser, deleteUser } from "../../../api/user";
-import type { User } from "../../../types";
+import { getOrganizationList, getUserOrganizations, assignUserOrganizations } from "../../../api/organization";
+import type { User, Organization } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
 
 export default function UserManage() {
@@ -8,6 +9,10 @@ export default function UserManage() {
 	const [loading, setLoading] = useState(true);
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showModal, setShowModal] = useState(false);
+	const [showOrgModal, setShowOrgModal] = useState(false);
+	const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+	const [userOrgs, setUserOrgs] = useState<number[]>([]);
+	const [allOrgs, setAllOrgs] = useState<Organization[]>([]);
 
 	useEffect(() => {
 		fetchUsers();
@@ -73,6 +78,39 @@ export default function UserManage() {
 		setShowModal(true);
 	};
 
+	const handleAssignOrgs = async (user: User) => {
+		setCurrentUserId(user.id);
+		try {
+			const orgs = await getUserOrganizations(user.id);
+			setUserOrgs(orgs.map(o => o.id));
+			// Load all organizations
+			const allOrgsData = await getOrganizationList();
+			setAllOrgs(allOrgsData);
+			setShowOrgModal(true);
+		} catch (e: any) {
+			console.error(e);
+			alert(e.message || "加载组织失败");
+		}
+	};
+
+	const handleSaveOrgs = async () => {
+		if (currentUserId === null) return;
+		try {
+			await assignUserOrganizations(currentUserId, userOrgs);
+			alert("分配组织成功");
+			setShowOrgModal(false);
+		} catch (e: any) {
+			console.error(e);
+			alert(e.message || "分配失败");
+		}
+	};
+
+	const toggleOrg = (orgId: number) => {
+		setUserOrgs(prev =>
+			prev.includes(orgId) ? prev.filter(id => id !== orgId) : [...prev, orgId]
+		);
+	};
+
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
 			<div style={{ marginBottom: "20px" }}>
@@ -112,6 +150,9 @@ export default function UserManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(user.created_at).toLocaleString("zh-CN")}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
+									<PermissionButton permission="system:user:assignOrgs" onClick={() => handleAssignOrgs(user)} style={{ padding: "4px 12px", marginRight: "8px", background: "#52c41a" }}>
+										分配组织
+									</PermissionButton>
 									<PermissionButton permission="system:user:edit" onClick={() => handleEdit(user)} style={{ padding: "4px 12px", marginRight: "8px" }}>
 										编辑
 									</PermissionButton>
@@ -166,6 +207,42 @@ export default function UserManage() {
 								</button>
 							</div>
 						</form>
+					</div>
+				</div>
+			)}
+
+			{/* 组织分配弹窗 */}
+			{showOrgModal && (
+				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
+						<h2 style={{ marginTop: 0 }}>分配组织 - {users.find(u => u.id === currentUserId)?.username}</h2>
+						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+							{allOrgs.length === 0 ? (
+								<div style={{ color: "#888", textAlign: "center" }}>暂无组织</div>
+							) : (
+								allOrgs.map(org => (
+									<label key={org.id} style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
+										<input
+											type="checkbox"
+											checked={userOrgs.includes(org.id)}
+											onChange={() => toggleOrg(org.id)}
+											style={{ marginRight: "8px" }}
+										/>
+										<span>
+											<strong>{org.org_name}</strong> ({org.org_code})
+										</span>
+									</label>
+								))
+							)}
+						</div>
+						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+							<button type="button" onClick={() => setShowOrgModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								取消
+							</button>
+							<button type="button" onClick={handleSaveOrgs} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								保存
+							</button>
+						</div>
 					</div>
 				</div>
 			)}

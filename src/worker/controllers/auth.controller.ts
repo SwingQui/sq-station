@@ -3,12 +3,12 @@
  * 处理登录、登出、获取用户信息等认证相关的 HTTP 请求
  */
 
-import
-{ Hono } from "hono";
+import { Hono } from "hono";
 import type { Env, Variables } from "../index.d";
 import { AuthService } from "../services/auth.service";
 import { UserRepository } from "../repositories/user.repository";
 import { MenuRepository } from "../repositories/menu.repository";
+import { RoleRepository } from "../repositories/role.repository";
 import { success, fail, unauthorized, notFound, handleError } from "../utils/response";
 import { authMiddleware } from "../middleware/auth";
 
@@ -25,7 +25,8 @@ app.post("/login", async (c) => {
 
 		const userRepo = new UserRepository(c.env.DB);
 		const menuRepo = new MenuRepository(c.env.DB);
-		const authService = new AuthService(userRepo, menuRepo);
+		const roleRepo = new RoleRepository(c.env.DB);
+		const authService = new AuthService(userRepo, menuRepo, roleRepo);
 
 		const result = await authService.login(
 			data,
@@ -65,7 +66,8 @@ app.get("/me", authMiddleware, async (c) => {
 
 		const userRepo = new UserRepository(c.env.DB);
 		const menuRepo = new MenuRepository(c.env.DB);
-		const authService = new AuthService(userRepo, menuRepo);
+		const roleRepo = new RoleRepository(c.env.DB);
+		const authService = new AuthService(userRepo, menuRepo, roleRepo);
 
 		const result = await authService.getUserInfo(currentUser.userId);
 
@@ -92,7 +94,8 @@ app.post("/refresh", authMiddleware, async (c) => {
 
 		const userRepo = new UserRepository(c.env.DB);
 		const menuRepo = new MenuRepository(c.env.DB);
-		const authService = new AuthService(userRepo, menuRepo);
+		const roleRepo = new RoleRepository(c.env.DB);
+		const authService = new AuthService(userRepo, menuRepo, roleRepo);
 
 		const token = await authService.refreshToken(
 			currentUser.userId,

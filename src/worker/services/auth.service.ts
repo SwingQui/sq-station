@@ -5,9 +5,11 @@
 
 import { UserRepository } from "../repositories/user.repository";
 import { MenuRepository } from "../repositories/menu.repository";
+import { RoleRepository } from "../repositories/role.repository";
 import { signToken } from "../utils/jwt";
 import { verifyPasswordWithUsername } from "../utils/password";
-import type { SysUser, SysMenu, LoginUser } from "../types/database";
+import { appConfig } from "../config";
+import type { SysUser, SysMenu, LoginUser } from "../core/types/database";
 
 export interface LoginDto {
 	username: string;
@@ -28,7 +30,8 @@ export interface UserInfoResult {
 export class AuthService {
 	constructor(
 		private userRepo: UserRepository,
-		private menuRepo: MenuRepository
+		private menuRepo: MenuRepository,
+		private roleRepo: RoleRepository
 	) {}
 
 	/**
@@ -49,7 +52,7 @@ export class AuthService {
 		}
 
 		// 检查用户状态
-		if (user.status === 0) {
+		if (user.status === appConfig.user.disabledStatus) {
 			throw new Error("账户已被禁用");
 		}
 
@@ -91,8 +94,8 @@ export class AuthService {
 			throw new Error("用户不存在");
 		}
 
-		// 检查是否为超级管理员
-		const isAdmin = userId === 1 || user.username === "admin";
+		// 改为通过角色判断是否为超级管理员
+		const isAdmin = await this.roleRepo.hasAdminRoleByUserId(userId);
 
 		let permissions: string[];
 		let menuTree: SysMenu[];
@@ -100,7 +103,7 @@ export class AuthService {
 		if (isAdmin) {
 			// 超级管理员获取所有权限和菜单
 			const allPermissionsResult = await this.menuRepo.findAll();
-			const enabledMenus = allPermissionsResult.filter(m => m.menu_status === 1);
+			const enabledMenus = allPermissionsResult.filter(m => m.menu_status === appConfig.menu.enabledStatus);
 
 			permissions = await this.menuRepo.findAllPermissions();
 			menuTree = this.buildMenuTree(enabledMenus);

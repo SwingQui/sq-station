@@ -4,28 +4,23 @@
  */
 
 export const appConfig = {
-	// 超级管理员配置
-	superAdmin: {
-		id: 1,
-		username: "admin",
-	},
-
 	// 用户默认配置
 	user: {
 		defaultStatus: 1, // 默认启用状态
 		defaultAvatar: "/default-avatar.png",
-	},
-
-	// JWT 配置默认值
-	jwt: {
-		expiresIn: "24 * 60 * 60", // 24小时
-		algorithm: "HS256",
+		disabledStatus: 0, // 禁用状态
 	},
 
 	// 分页配置
 	pagination: {
 		defaultPageSize: 10,
 		maxPageSize: 100,
+	},
+
+	// 菜单配置
+	menu: {
+		enabledStatus: 1, // 启用状态
+		disabledStatus: 0, // 禁用状态
 	},
 } as const;
 

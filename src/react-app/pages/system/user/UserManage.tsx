@@ -3,6 +3,7 @@ import { getUserList, createUser, updateUser, deleteUser } from "../../../api/us
 import { getOrganizationList, getUserOrganizations, assignUserOrganizations } from "../../../api/organization";
 import type { User, Organization } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
+import { handleError, handleSuccess } from "../../../utils/error-handler";
 
 export default function UserManage() {
 	const [users, setUsers] = useState<User[]>([]);
@@ -23,8 +24,7 @@ export default function UserManage() {
 			const data = await getUserList();
 			setUsers(data);
 		} catch (e) {
-			console.error(e);
-			alert("加载失败");
+			handleError(e, "加载失败");
 		} finally {
 			setLoading(false);
 		}
@@ -48,12 +48,12 @@ export default function UserManage() {
 			} else {
 				await createUser(userData);
 			}
+			handleSuccess(editingUser ? "更新成功" : "创建成功");
 			setShowModal(false);
 			setEditingUser(null);
 			fetchUsers();
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "保存失败");
+		} catch (e) {
+			handleError(e, "保存失败");
 		}
 	};
 
@@ -66,10 +66,10 @@ export default function UserManage() {
 		if (!confirm("确定删除此用户吗？")) return;
 		try {
 			await deleteUser(id);
+			handleSuccess("删除成功");
 			fetchUsers();
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "删除失败");
+		} catch (e) {
+			handleError(e, "删除失败");
 		}
 	};
 
@@ -87,9 +87,8 @@ export default function UserManage() {
 			const allOrgsData = await getOrganizationList();
 			setAllOrgs(allOrgsData);
 			setShowOrgModal(true);
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "加载组织失败");
+		} catch (e) {
+			handleError(e, "加载组织失败");
 		}
 	};
 
@@ -97,11 +96,10 @@ export default function UserManage() {
 		if (currentUserId === null) return;
 		try {
 			await assignUserOrganizations(currentUserId, userOrgs);
-			alert("分配组织成功");
+			handleSuccess("分配组织成功");
 			setShowOrgModal(false);
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "分配失败");
+		} catch (e) {
+			handleError(e, "分配失败");
 		}
 	};
 

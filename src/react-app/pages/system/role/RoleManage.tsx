@@ -3,6 +3,7 @@ import { getRoleList, createRole, updateRole, deleteRole, getRoleMenus, assignRo
 import { getMenuList } from "../../../api/menu";
 import type { Role, Menu } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
+import { handleError, handleSuccess } from "../../../utils/error-handler";
 
 export default function RoleManage() {
 	const [roles, setRoles] = useState<Role[]>([]);
@@ -59,9 +60,8 @@ export default function RoleManage() {
 			setShowModal(false);
 			setEditingRole(null);
 			fetchRoles();
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "保存失败");
+		} catch (e) {
+			handleError(e, "保存失败");
 		}
 	};
 
@@ -74,10 +74,10 @@ export default function RoleManage() {
 		if (!confirm("确定删除此角色吗？")) return;
 		try {
 			await deleteRole(id);
+			handleSuccess("删除成功");
 			fetchRoles();
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "删除失败");
+		} catch (e) {
+			handleError(e, "删除失败");
 		}
 	};
 
@@ -93,9 +93,8 @@ export default function RoleManage() {
 			const menuIds = data.map((m: Menu) => m.id);
 			setSelectedMenus(menuIds);
 			setShowMenuModal(true);
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "获取菜单失败");
+		} catch (e) {
+			handleError(e, "获取菜单失败");
 		}
 	};
 
@@ -103,12 +102,11 @@ export default function RoleManage() {
 		if (!selectedRole) return;
 		try {
 			await assignRoleMenus(selectedRole.id, selectedMenus);
+			handleSuccess("菜单分配成功");
 			setShowMenuModal(false);
 			setSelectedRole(null);
-			alert("菜单分配成功");
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "保存失败");
+		} catch (e) {
+			handleError(e, "保存失败");
 		}
 	};
 

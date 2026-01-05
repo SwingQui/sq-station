@@ -4,7 +4,16 @@
  */
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { AuthUser } from "../utils/auth";
+import {
+	AuthUser,
+	getToken,
+	setToken,
+	getUser,
+	setUser as setUserStorage,
+	setPermissions,
+	setMenus,
+	logout as authLogout
+} from "../utils/auth";
 import { navigate } from "../utils/router";
 import { clearMenuIndexCache } from "../utils/core/route/matcher";
 
@@ -23,25 +32,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
 	// 从 localStorage 初始化用户状态和加载状态
 	const [user, setUser] = useState<AuthUser | null>(() => {
-		const userStr = localStorage.getItem("auth_user");
-		if (userStr && userStr !== "undefined") {
-			try {
-				return JSON.parse(userStr);
-			} catch {
-				return null;
-			}
-		}
-		return null;
+		return getUser();
 	});
 	const [isLoading, setIsLoading] = useState(() => {
 		// 如果有用户数据，说明已从 localStorage 恢复，不需要 loading
-		const userStr = localStorage.getItem("auth_user");
-		return !userStr || userStr === "undefined";
+		return !getUser();
 	});
 
 	// 检查 token 是否有效，无效则清除用户状态
 	useEffect(() => {
-		const token = localStorage.getItem("auth_token");
+		const token = getToken();
 		if (!token) {
 			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setUser(null);
@@ -75,11 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		console.log("[AuthContext] User info:", user);
 
 		// 保存到 localStorage
-		localStorage.setItem("auth_token", token);
-		localStorage.setItem("auth_user", JSON.stringify(user));
+		setToken(token);
+		setUserStorage(user);
 
 		console.log("[AuthContext] Token saved to localStorage");
-		console.log("[AuthContext] Token from localStorage:", localStorage.getItem("auth_token"));
+		console.log("[AuthContext] Token from localStorage:", getToken());
 
 		// 获取用户权限和菜单
 		console.log("[AuthContext] Fetching /api/auth/me...");
@@ -96,15 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			if (meResult.code === 200 && meResult.data) {
 				console.log("[AuthContext] Saving permissions:", meResult.data.permissions);
 				console.log("[AuthContext] Saving menus:", meResult.data.menus);
-				localStorage.setItem("auth_permissions", JSON.stringify(meResult.data.permissions || []));
-				localStorage.setItem("auth_menus", JSON.stringify(meResult.data.menus || []));
+				setPermissions(meResult.data.permissions || []);
+				setMenus(meResult.data.menus || []);
 				// 清除菜单索引缓存，以便重新构建
 				clearMenuIndexCache();
 			}
 		} else {
-			console.error("[AuthContext] Failed to get user info:", meResponse.status, meResponse.statusText);
+			console.error("Failed to get user info:", meResponse.status, meResponse.statusText);
 			const errorText = await meResponse.text();
-			console.error("[AuthContext] Error response:", errorText);
+			console.error("Error response:", errorText);
 		}
 
 		setUser(user);
@@ -112,10 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	// 登出
 	const logout = () => {
-		localStorage.removeItem("auth_token");
-		localStorage.removeItem("auth_user");
-		localStorage.removeItem("auth_permissions");
-		localStorage.removeItem("auth_menus");
+		authLogout();
 		setUser(null);
 
 		// 使用 SPA 导航跳转到登录页
@@ -124,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	// 刷新用户信息
 	const refreshUser = async () => {
-		const token = localStorage.getItem("auth_token");
+		const token = getToken();
 		if (!token) {
 			logout();
 			return;
@@ -148,9 +145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		}
 
 		const { user, permissions, menus } = result.data;
-		localStorage.setItem("auth_user", JSON.stringify(user));
-		localStorage.setItem("auth_permissions", JSON.stringify(permissions || []));
-		localStorage.setItem("auth_menus", JSON.stringify(menus || []));
+		setUserStorage(user);
+		setPermissions(permissions || []);
+		setMenus(menus || []);
 		// 清除菜单索引缓存，以便重新构建
 		clearMenuIndexCache();
 
@@ -159,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	// 刷新菜单（数据库更新后调用）
 	const refreshMenus = async () => {
-		const token = localStorage.getItem("auth_token");
+		const token = getToken();
 		if (!token) return;
 
 		const response = await fetch("/api/auth/me", {
@@ -169,8 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		if (response.ok) {
 			const result = await response.json();
 			if (result.code === 200 && result.data) {
-				localStorage.setItem("auth_permissions", JSON.stringify(result.data.permissions || []));
-				localStorage.setItem("auth_menus", JSON.stringify(result.data.menus || []));
+				setPermissions(result.data.permissions || []);
+				setMenus(result.data.menus || []);
 				// 清除菜单索引缓存
 				clearMenuIndexCache();
 			}

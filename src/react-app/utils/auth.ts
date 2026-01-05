@@ -304,7 +304,7 @@ export async function fetchPermissionMeta(): Promise<PermissionConfig | null> {
 	try {
 		const response = await fetch("/api/config/permissions");
 		if (!response.ok) {
-			console.error("[Auth] Failed to fetch permission meta:", response.status);
+			console.error("Failed to fetch permission meta:", response.status);
 			return null;
 		}
 		const result = await response.json();
@@ -315,7 +315,7 @@ export async function fetchPermissionMeta(): Promise<PermissionConfig | null> {
 		}
 		return null;
 	} catch (e) {
-		console.error("[Auth] Error fetching permission meta:", e);
+		console.error("Error fetching permission meta:", e);
 		return null;
 	}
 }

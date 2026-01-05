@@ -10,6 +10,7 @@ import {
 import { getRoleList } from "../../../api/role";
 import type { Organization, Role } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
+import { handleError, handleSuccess } from "../../../utils/error-handler";
 
 export default function OrganizationManage() {
 	const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -31,7 +32,7 @@ export default function OrganizationManage() {
 			const data = await getRoleList();
 			setAllRoles(data);
 		} catch (e) {
-			console.error(e);
+			handleError(e, "加载角色失败");
 		}
 	};
 
@@ -40,7 +41,7 @@ export default function OrganizationManage() {
 			const data = await getOrganizationList();
 			setOrganizations(data);
 		} catch (e) {
-			console.error(e);
+			handleError(e, "加载组织失败");
 		} finally {
 			setLoading(false);
 		}
@@ -63,12 +64,12 @@ export default function OrganizationManage() {
 			} else {
 				await createOrganization(orgData);
 			}
+			handleSuccess(editingOrg ? "更新成功" : "创建成功");
 			setShowModal(false);
 			setEditingOrg(null);
 			fetchOrganizations();
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "保存失败");
+		} catch (e) {
+			handleError(e, "保存失败");
 		}
 	};
 
@@ -81,10 +82,10 @@ export default function OrganizationManage() {
 		if (!confirm("确定删除此组织吗？")) return;
 		try {
 			await deleteOrganization(id);
+			handleSuccess("删除成功");
 			fetchOrganizations();
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "删除失败");
+		} catch (e) {
+			handleError(e, "删除失败");
 		}
 	};
 
@@ -99,9 +100,8 @@ export default function OrganizationManage() {
 			const roles = await getOrganizationRoles(org.id);
 			setOrgRoles(roles.map((r: Role) => r.id));
 			setShowRoleModal(true);
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "加载角色失败");
+		} catch (e) {
+			handleError(e, "加载角色失败");
 		}
 	};
 
@@ -109,11 +109,10 @@ export default function OrganizationManage() {
 		if (!currentOrg) return;
 		try {
 			await assignOrganizationRoles(currentOrg.id, orgRoles);
-			alert("分配角色成功");
+			handleSuccess("分配角色成功");
 			setShowRoleModal(false);
-		} catch (e: any) {
-			console.error(e);
-			alert(e.message || "分配失败");
+		} catch (e) {
+			handleError(e, "分配失败");
 		}
 	};
 

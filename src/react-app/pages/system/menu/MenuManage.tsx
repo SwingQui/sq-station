@@ -7,6 +7,7 @@ import PermissionButton from "../../../components/PermissionButton";
 import Icon from "../../../components/Icon";
 import IconSelect from "../../../components/IconSelect";
 import { cleanEmptyChildren } from "../../../utils/data/tree";
+import { handleError, handleSuccess } from "../../../utils/error-handler";
 import "./MenuManage.css";
 
 interface TableRow extends Menu {
@@ -46,7 +47,7 @@ export default function MenuManage() {
 			};
 			setParentOptions(buildParentOptions(data));
 		} catch (e) {
-			console.error(e);
+			handleError(e, "加载菜单失败");
 		} finally {
 			setLoading(false);
 		}
@@ -63,18 +64,17 @@ export default function MenuManage() {
 
 			if (editingMenu && editingMenu.id > 0) {
 				await updateMenu(editingMenu.id, menuData);
-				message.success("更新成功");
+				handleSuccess("更新成功");
 			} else {
 				await createMenu(menuData);
-				message.success("创建成功");
+				handleSuccess("创建成功");
 			}
 			setShowModal(false);
 			setEditingMenu(null);
 			form.resetFields();
 			fetchMenus();
-		} catch (e: any) {
-			console.error(e);
-			message.error(e.message || "保存失败");
+		} catch (e) {
+			handleError(e, "保存失败");
 		}
 	};
 
@@ -87,11 +87,10 @@ export default function MenuManage() {
 	const handleDelete = async (id: number) => {
 		try {
 			await deleteMenu(id);
-			message.success("删除成功");
+			handleSuccess("删除成功");
 			fetchMenus();
-		} catch (e: any) {
-			console.error(e);
-			message.error(e.message || "删除失败");
+		} catch (e) {
+			handleError(e, "删除失败");
 		}
 	};
 
@@ -110,11 +109,11 @@ export default function MenuManage() {
 			for (const id of selectedRowKeys) {
 				await deleteMenu(Number(id));
 			}
-			message.success(`成功删除 ${selectedRowKeys.length} 个菜单`);
+			handleSuccess(`成功删除 ${selectedRowKeys.length} 个菜单`);
 			setSelectedRowKeys([]);
 			fetchMenus();
-		} catch (e: any) {
-			message.error(e.message || "删除失败");
+		} catch (e) {
+			handleError(e, "删除失败");
 		}
 	};
 

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 import { getUserList, createUser, updateUser, deleteUser } from "../../../api/user";
 import { getOrganizationList, getUserOrganizations, assignUserOrganizations } from "../../../api/organization";
 import type { User, Organization } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
+import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
 
 export default function UserManage() {
 	const [users, setUsers] = useState<User[]>([]);
@@ -109,11 +111,63 @@ export default function UserManage() {
 		);
 	};
 
+	const handleExport = () => {
+		exportToExcel({
+			sheetName: "用户列表",
+			filename: "users",
+			columns: [
+				{
+					header: "ID",
+					field: "id",
+					width: 10,
+				},
+				{
+					header: "用户名",
+					field: "username",
+					width: 15,
+				},
+				{
+					header: "昵称",
+					field: "nickname",
+					width: 15,
+				},
+				{
+					header: "邮箱",
+					field: "email",
+					width: 25,
+				},
+				{
+					header: "手机",
+					field: "phone",
+					width: 15,
+				},
+				{
+					header: "状态",
+					field: "status",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.status[value as keyof typeof ExportEnumMaps.status] || value : ""),
+				},
+				{
+					header: "创建时间",
+					field: "created_at",
+					width: 20,
+					formatter: (value) => (value ? new Date(value).toLocaleString("zh-CN") : ""),
+				},
+			],
+			data: users,
+		});
+
+		handleSuccess("导出成功");
+	};
+
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ marginBottom: "20px" }}>
-				<PermissionButton permission="system:user:add" onClick={handleAdd}>
+			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
+				<PermissionButton permission="system:user:add" onClick={handleAdd} icon={<PlusOutlined />} type="primary">
 					新增用户
+				</PermissionButton>
+				<PermissionButton permission="system:user:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+					导出
 				</PermissionButton>
 			</div>
 

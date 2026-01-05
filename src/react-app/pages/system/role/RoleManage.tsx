@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 import { getRoleList, createRole, updateRole, deleteRole, getRoleMenus, assignRoleMenus } from "../../../api/role";
 import { getMenuList } from "../../../api/menu";
 import type { Role, Menu } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
+import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
 
 export default function RoleManage() {
 	const [roles, setRoles] = useState<Role[]>([]);
@@ -135,11 +137,63 @@ export default function RoleManage() {
 		));
 	};
 
+	const handleExport = () => {
+		exportToExcel({
+			sheetName: "角色列表",
+			filename: "roles",
+			columns: [
+				{
+					header: "ID",
+					field: "id",
+					width: 10,
+				},
+				{
+					header: "角色名称",
+					field: "role_name",
+					width: 20,
+				},
+				{
+					header: "权限标识",
+					field: "role_key",
+					width: 20,
+				},
+				{
+					header: "排序",
+					field: "sort_order",
+					width: 10,
+				},
+				{
+					header: "状态",
+					field: "status",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.status[value as keyof typeof ExportEnumMaps.status] || value : ""),
+				},
+				{
+					header: "备注",
+					field: "remark",
+					width: 30,
+				},
+				{
+					header: "创建时间",
+					field: "created_at",
+					width: 20,
+					formatter: (value) => (value ? new Date(value).toLocaleString("zh-CN") : ""),
+				},
+			],
+			data: roles,
+		});
+
+		handleSuccess("导出成功");
+	};
+
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ marginBottom: "20px" }}>
-				<PermissionButton permission="system:role:add" onClick={handleAdd}>
+			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
+				<PermissionButton permission="system:role:add" onClick={handleAdd} icon={<PlusOutlined />} type="primary">
 					新增角色
+				</PermissionButton>
+				<PermissionButton permission="system:role:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+					导出
 				</PermissionButton>
 			</div>
 

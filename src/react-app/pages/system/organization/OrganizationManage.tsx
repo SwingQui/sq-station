@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
 import {
 	getOrganizationList,
 	createOrganization,
@@ -11,6 +12,7 @@ import { getRoleList } from "../../../api/role";
 import type { Organization, Role } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
+import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
 
 export default function OrganizationManage() {
 	const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -122,11 +124,63 @@ export default function OrganizationManage() {
 		);
 	};
 
+	const handleExport = () => {
+		exportToExcel({
+			sheetName: "组织列表",
+			filename: "organizations",
+			columns: [
+				{
+					header: "ID",
+					field: "id",
+					width: 10,
+				},
+				{
+					header: "组织名称",
+					field: "org_name",
+					width: 20,
+				},
+				{
+					header: "组织编码",
+					field: "org_code",
+					width: 20,
+				},
+				{
+					header: "排序",
+					field: "sort_order",
+					width: 10,
+				},
+				{
+					header: "状态",
+					field: "status",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.status[value as keyof typeof ExportEnumMaps.status] || value : ""),
+				},
+				{
+					header: "备注",
+					field: "remark",
+					width: 30,
+				},
+				{
+					header: "创建时间",
+					field: "created_at",
+					width: 20,
+					formatter: (value) => (value ? new Date(value).toLocaleString("zh-CN") : ""),
+				},
+			],
+			data: organizations,
+		});
+
+		handleSuccess("导出成功");
+	};
+
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ marginBottom: "20px" }}>
-				<PermissionButton permission="system:organization:add" onClick={handleAdd}>
+			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
+				<PermissionButton permission="system:organization:add" onClick={handleAdd} icon={<PlusOutlined />} type="primary">
 					新增组织
+				</PermissionButton>
+				<PermissionButton permission="system:organization:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+					导出
 				</PermissionButton>
 			</div>
 

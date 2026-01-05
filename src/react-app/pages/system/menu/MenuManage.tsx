@@ -8,6 +8,7 @@ import Icon from "../../../components/Icon";
 import IconSelect from "../../../components/IconSelect";
 import { cleanEmptyChildren } from "../../../utils/data/tree";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
+import { exportToExcel, flattenTreeData, ExportEnumMaps, formatLevelText } from "../../../utils/excel-export";
 import "./MenuManage.css";
 
 interface TableRow extends Menu {
@@ -118,15 +119,86 @@ export default function MenuManage() {
 	};
 
 	const handleExport = () => {
-		const data = JSON.stringify(menus, null, 2);
-		const blob = new Blob([data], { type: "application/json" });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = `menus_${Date.now()}.json`;
-		a.click();
-		URL.revokeObjectURL(url);
-		message.success("导出成功");
+		// 扁平化树形数据
+		const flatMenus = flattenTreeData(menus);
+
+		// 导出为 Excel
+		exportToExcel({
+			sheetName: "菜单列表",
+			filename: "menus",
+			columns: [
+				{
+					header: "ID",
+					field: "id",
+					width: 10,
+				},
+				{
+					header: "菜单名称",
+					field: "menu_name",
+					width: 20,
+					formatter: (value, row) => formatLevelText(value || "", row.__level || 0),
+				},
+				{
+					header: "类型",
+					field: "menu_type",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.menuType[value as keyof typeof ExportEnumMaps.menuType] || value : ""),
+				},
+				{
+					header: "路由路径",
+					field: "route_path",
+					width: 25,
+				},
+				{
+					header: "组件路径",
+					field: "component_path",
+					width: 30,
+					formatter: (value) => (value ? `/${value}` : ""),
+				},
+				{
+					header: "图标",
+					field: "icon",
+					width: 12,
+				},
+				{
+					header: "权限标识",
+					field: "permission",
+					width: 20,
+				},
+				{
+					header: "排序",
+					field: "sort_order",
+					width: 8,
+				},
+				{
+					header: "状态",
+					field: "menu_status",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.menuStatus[value as keyof typeof ExportEnumMaps.menuStatus] || value : ""),
+				},
+				{
+					header: "是否外链",
+					field: "is_frame",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.yesNo[value as keyof typeof ExportEnumMaps.yesNo] || value : ""),
+				},
+				{
+					header: "是否缓存",
+					field: "is_cache",
+					width: 10,
+					formatter: (value) => (value === 1 ? "缓存" : "不缓存"),
+				},
+				{
+					header: "菜单显隐",
+					field: "menu_visible",
+					width: 10,
+					formatter: (value) => (value !== undefined ? ExportEnumMaps.menuVisible[value as keyof typeof ExportEnumMaps.menuVisible] || value : ""),
+				},
+			],
+			data: flatMenus,
+		});
+
+		handleSuccess("导出成功");
 	};
 
 	// 计算菜单层级深度
@@ -326,9 +398,9 @@ export default function MenuManage() {
 						批量删除 ({selectedRowKeys.length})
 					</Button>
 				</Popconfirm>
-				<Button icon={<ExportOutlined />} onClick={handleExport} type="primary" style={{ backgroundColor: "#52c41a" }}>
+				<PermissionButton permission="system:menu:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
 					导出
-				</Button>
+				</PermissionButton>
 			</div>
 
 			<Table

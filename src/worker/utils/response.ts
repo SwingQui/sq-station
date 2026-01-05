@@ -48,6 +48,13 @@ export function unauthorized(msg = "未授权"): ApiResponse<null> {
 }
 
 /**
+ * 禁止访问响应（权限不足）
+ */
+export function forbidden(msg = "无权限访问"): ApiResponse<null> {
+	return fail(403, msg);
+}
+
+/**
  * 服务器错误响应
  */
 export function serverError(msg = "服务器错误"): ApiResponse<null> {

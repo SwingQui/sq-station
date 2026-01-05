@@ -152,7 +152,7 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_pat
 
 -- 系统管理目录（根目录）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
-(0, '系统管理', 'M', '/dashboard/system', 'setting', 2, 1, 1);
+(0, '系统管理', 'M', NULL, 'setting', 2, 1, 1);
 
 -- 系统管理子菜单
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES

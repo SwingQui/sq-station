@@ -12,6 +12,7 @@ import permissionController from "./controllers/permission.controller";
 import organizationController from "./controllers/organization.controller";
 import userOrganizationController from "./controllers/user-organization.controller";
 import orgRoleController from "./controllers/org-role.controller";
+import configController from "./controllers/config.controller";
 import { success, fail, badRequest, unauthorized, notFound, handleError } from "./utils/response";
 import { createAuthRouter, createPublicRouter } from "./utils/auth-helper";
 import { AuthService } from "./services/auth.service";
@@ -80,7 +81,8 @@ app.route("/api/auth", publicApiRouter);
 // ==================== 受保护 API 路由器（需要认证）====================
 const protectedApiRouter = createAuthRouter();
 
-// 受保护的认证 API - 获取用户信息、刷新 Token
+// ==================== 认证相关 API（登录后可访问）====================
+// 获取用户信息（需要认证）
 protectedApiRouter.get("/auth/me", async (c) => {
 	try {
 		const currentUser = c.get("currentUser");
@@ -128,16 +130,38 @@ protectedApiRouter.post("/auth/refresh", async (c) => {
 });
 
 // 挂载受保护的 API
-protectedApiRouter.route("/kv", kvController);
+// ==================== 用户管理路由 ====================
+// 权限检查已在控制器内部实现
 protectedApiRouter.route("/users", userController);
-protectedApiRouter.route("/roles", roleController);
-protectedApiRouter.route("/menus", menuController);
 protectedApiRouter.route("/users", userRoleController);  // /api/users/:id/roles
+
+// ==================== 角色管理路由 ====================
+// 权限检查已在控制器内部实现
+protectedApiRouter.route("/roles", roleController);
 protectedApiRouter.route("/roles", roleMenuController);  // /api/roles/:id/menus
-protectedApiRouter.route("/user", permissionController);  // /api/user/:id/menus, /api/user/:id/permissions
+
+// ==================== 菜单管理路由 ====================
+// 权限检查已在控制器内部实现
+protectedApiRouter.route("/menus", menuController);
+
+// ==================== 组织管理路由 ====================
 protectedApiRouter.route("/organization", organizationController);
+
+// ==================== 用户组织关联路由 ====================
 protectedApiRouter.route("/user-organization", userOrganizationController);
+
+// ==================== 组织角色关联路由 ====================
 protectedApiRouter.route("/org-role", orgRoleController);
+
+// ==================== 权限相关路由 ====================
+protectedApiRouter.route("/user", permissionController);
+
+// ==================== 配置相关路由（公开访问，用于获取权限元数据）====================
+// 配置 API 可以公开访问，因为只返回静态的权限定义
+app.route("/api/config", configController);
+
+// ==================== KV 存储路由 ====================
+protectedApiRouter.route("/kv", kvController);
 
 // SQL 执行工具 API (支持所有 SQL 操作) - 需要认证+管理员权限
 protectedApiRouter.post("/sql/query", async (c) => {

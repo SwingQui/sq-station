@@ -1,11 +1,17 @@
 /**
  * 前端认证工具
+ *
+ * 权限管理说明：
+ * - 权限列表从后端 API 获取，登录时存储在 localStorage
+ * - 权限元数据（名称、分组）从 /api/config/permissions 获取
+ * - 前端使用权限常量避免硬编码权限字符串
  */
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";
 const PERMISSIONS_KEY = "auth_permissions";
 const MENUS_KEY = "auth_menus";
+const PERMISSION_META_KEY = "permission_meta";
 
 export interface AuthUser {
 	id: number;
@@ -273,4 +279,96 @@ export function hasRoutePermission(path: string): boolean {
 
 	// 检查用户是否有该权限
 	return hasPermission(menu.permission);
+}
+
+/**
+ * 权限元数据接口
+ */
+export interface PermissionMeta {
+	name: string;
+	module: string;
+	description?: string;
+}
+
+export interface PermissionConfig {
+	permissions: Record<string, PermissionMeta>;
+	groups: Record<string, string[]>;
+	version: number;
+}
+
+/**
+ * 从 API 获取权限元数据
+ * 用于前端权限配置界面
+ */
+export async function fetchPermissionMeta(): Promise<PermissionConfig | null> {
+	try {
+		const response = await fetch("/api/config/permissions");
+		if (!response.ok) {
+			console.error("[Auth] Failed to fetch permission meta:", response.status);
+			return null;
+		}
+		const result = await response.json();
+		if (result.success) {
+			// 缓存到 localStorage
+			localStorage.setItem(PERMISSION_META_KEY, JSON.stringify(result.data));
+			return result.data;
+		}
+		return null;
+	} catch (e) {
+		console.error("[Auth] Error fetching permission meta:", e);
+		return null;
+	}
+}
+
+/**
+ * 获取缓存的权限元数据
+ */
+export function getPermissionMeta(): PermissionConfig | null {
+	const metaStr = localStorage.getItem(PERMISSION_META_KEY);
+	if (!metaStr) return null;
+	try {
+		return JSON.parse(metaStr);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * 获取权限显示名称
+ */
+export function getPermissionName(permission: string): string {
+	const meta = getPermissionMeta();
+	if (meta?.permissions?.[permission]) {
+		return meta.permissions[permission].name;
+	}
+	return permission;
+}
+
+/**
+ * 获取权限所属模块
+ */
+export function getPermissionModule(permission: string): string {
+	const meta = getPermissionMeta();
+	if (meta?.permissions?.[permission]) {
+		return meta.permissions[permission].module;
+	}
+	return "其他";
+}
+
+/**
+ * 按模块获取权限列表
+ */
+export function getPermissionsByModule(moduleName: string): string[] {
+	const meta = getPermissionMeta();
+	if (!meta?.groups) return [];
+	return meta.groups[moduleName] || [];
+}
+
+/**
+ * 获取所有模块列表
+ */
+export function getAllModules(): string[] {
+	const meta = getPermissionMeta();
+	if (!meta?.groups) return [];
+	return Object.keys(meta.groups);
 }

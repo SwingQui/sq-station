@@ -8,6 +8,8 @@ import type { Env, Variables } from "../index.d";
 import { MenuService } from "../services/menu.service";
 import { MenuRepository } from "../repositories/menu.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
+import { requirePermission, requireAnyPermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -19,8 +21,8 @@ app.use("/*", async (c, next) => {
 	await next();
 });
 
-// 获取菜单列表（树形结构）
-app.get("/", async (c) => {
+// 获取菜单列表（需要权限）
+app.get("/", requirePermission(Permission.SYSTEM_MENU_LIST), async (c) => {
 	try {
 		const menuService = c.get("menuService") as MenuService;
 		const menus = await menuService.findAllTree();
@@ -30,8 +32,8 @@ app.get("/", async (c) => {
 	}
 });
 
-// 获取单个菜单
-app.get("/:id", async (c) => {
+// 获取单个菜单（需要权限）
+app.get("/:id", requireAnyPermission([Permission.SYSTEM_MENU_LIST, Permission.SYSTEM_MENU_VIEW]), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -49,8 +51,8 @@ app.get("/:id", async (c) => {
 	}
 });
 
-// 创建菜单
-app.post("/", async (c) => {
+// 创建菜单（需要权限）
+app.post("/", requirePermission(Permission.SYSTEM_MENU_ADD), async (c) => {
 	try {
 		const data = await c.req.json();
 		const menuService = c.get("menuService") as MenuService;
@@ -64,8 +66,8 @@ app.post("/", async (c) => {
 	}
 });
 
-// 更新菜单
-app.put("/:id", async (c) => {
+// 更新菜单（需要权限）
+app.put("/:id", requirePermission(Permission.SYSTEM_MENU_EDIT), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -87,8 +89,8 @@ app.put("/:id", async (c) => {
 	}
 });
 
-// 删除菜单
-app.delete("/:id", async (c) => {
+// 删除菜单（需要权限）
+app.delete("/:id", requirePermission(Permission.SYSTEM_MENU_DELETE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

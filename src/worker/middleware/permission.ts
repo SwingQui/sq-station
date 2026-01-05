@@ -5,6 +5,7 @@
 
 import type { Context, Next } from "hono";
 import type { Env, Variables, AuthUser } from "../index.d";
+import { unauthorized, forbidden } from "../utils/response";
 
 /**
  * 检查用户是否为超级管理员（拥有 *:*:* 权限）
@@ -22,7 +23,7 @@ export const requirePermission = (permission: string) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
 
 		if (!currentUser) {
-			return c.json({ error: "未登录" }, 401);
+			return c.json(unauthorized("未登录"));
 		}
 
 		// 超级管理员绕过权限检查
@@ -33,7 +34,7 @@ export const requirePermission = (permission: string) => {
 
 		// 检查用户是否有该权限
 		if (!currentUser.permissions?.includes(permission)) {
-			return c.json({ error: "无权限访问" }, 403);
+			return c.json(forbidden("无权限访问"));
 		}
 
 		await next();
@@ -49,7 +50,7 @@ export const requireAnyPermission = (permissions: string[]) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
 
 		if (!currentUser) {
-			return c.json({ error: "未登录" }, 401);
+			return c.json(unauthorized("未登录"));
 		}
 
 		// 超级管理员绕过权限检查
@@ -61,7 +62,7 @@ export const requireAnyPermission = (permissions: string[]) => {
 		// 检查是否有任一权限
 		const hasPermission = permissions.some(p => currentUser.permissions?.includes(p));
 		if (!hasPermission) {
-			return c.json({ error: "无权限访问" }, 403);
+			return c.json(forbidden("无权限访问"));
 		}
 
 		await next();
@@ -77,7 +78,7 @@ export const requireRole = (roleKey: string) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
 
 		if (!currentUser) {
-			return c.json({ error: "未登录" }, 401);
+			return c.json(unauthorized("未登录"));
 		}
 
 		// 超级管理员绕过角色检查
@@ -92,7 +93,7 @@ export const requireRole = (roleKey: string) => {
 		`).bind(currentUser.userId).first<{ roles: string }>();
 
 		if (!result) {
-			return c.json({ error: "无权限访问" }, 403);
+			return c.json(forbidden("无权限访问"));
 		}
 
 		// 解析用户的角色数组
@@ -100,11 +101,11 @@ export const requireRole = (roleKey: string) => {
 		try {
 			userRoles = JSON.parse(result.roles || "[]") as string[];
 		} catch (e) {
-			return c.json({ error: "无权限访问" }, 403);
+			return c.json(forbidden("无权限访问"));
 		}
 
 		if (!userRoles.includes(roleKey)) {
-			return c.json({ error: "无权限访问" }, 403);
+			return c.json(forbidden("无权限访问"));
 		}
 
 		await next();

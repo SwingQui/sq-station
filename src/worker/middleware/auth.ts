@@ -1,68 +1,23 @@
 /**
  * 认证中间件
  * 验证 JWT token 并将用户信息附加到上下文
+ * 使用 KV 缓存优化权限加载性能
  */
 
 import type { Context, Next } from "hono";
 import type { Env, Variables, AuthUser } from "../index.d";
 import { verifyToken } from "../utils/jwt";
 import { unauthorized } from "../utils/response";
+import { PermissionCacheService } from "../services/permission-cache.service";
 
 /**
- * 从数据库加载用户权限
+ * 从缓存或数据库加载用户权限
+ * 使用 KV 缓存避免每次请求都查询数据库
  */
-async function loadUserPermissions(db: D1Database, userId: number): Promise<string[]> {
+async function loadUserPermissions(kv: KVNamespace, db: D1Database, userId: number): Promise<string[]> {
 	try {
-		// 获取用户的角色列表
-		const userResult = await db.prepare("SELECT roles FROM sys_user WHERE id = ?").bind(userId).first<{ roles: string }>();
-
-		if (!userResult || !userResult.roles) {
-			console.log(`[Auth] No roles found for user ${userId}`);
-			return [];
-		}
-
-		// 解析用户的角色数组
-		let userRoles: string[];
-		try {
-			userRoles = JSON.parse(userResult.roles) as string[];
-		} catch (e) {
-			console.error(`[Auth] Failed to parse user roles:`, userResult.roles, e);
-			return [];
-		}
-
-		if (userRoles.length === 0) {
-			console.log(`[Auth] User ${userId} has no roles`);
-			return [];
-		}
-
-		console.log(`[Auth] User ${userId} roles:`, userRoles);
-
-		// 根据角色查询权限
-		const placeholders = userRoles.map(() => "?").join(",");
-		const sql = `
-			SELECT DISTINCT permissions
-			FROM sys_role
-			WHERE role_key IN (${placeholders}) AND status = 1
-		`;
-
-		const results = await db.prepare(sql).bind(...userRoles).all<{ permissions: string }>();
-
-		// 合并所有角色的权限
-		const allPermissions = new Set<string>();
-		for (const row of results.results || []) {
-			try {
-				const perms = JSON.parse(row.permissions || "[]") as string[];
-				for (const perm of perms) {
-					allPermissions.add(perm);
-				}
-			} catch (e) {
-				console.error("[Auth] Failed to parse permissions:", row.permissions, e);
-			}
-		}
-
-		const permissionsArray = Array.from(allPermissions);
-		console.log(`[Auth] User ${userId} permissions:`, permissionsArray);
-		return permissionsArray;
+		const permissionCache = new PermissionCacheService(kv);
+		return await permissionCache.getUserPermissions(userId, db);
 	} catch (e) {
 		console.error("[Auth] Error loading user permissions:", e);
 		return []; // 返回空数组而不是抛出错误
@@ -111,8 +66,8 @@ export const authMiddleware = async (c: Context<{ Bindings: Env; Variables: Vari
 
 	console.log(`[AuthMiddleware] Token verified for user: ${payload.username} (ID: ${payload.userId})`);
 
-	// 加载用户权限
-	const permissions = await loadUserPermissions(c.env.DB, payload.userId);
+	// 加载用户权限（使用 KV 缓存）
+	const permissions = await loadUserPermissions(c.env.KV_BINDING, c.env.DB, payload.userId);
 
 	// 将用户信息附加到上下文
 	c.set("currentUser", {
@@ -137,8 +92,8 @@ export const optionalAuthMiddleware = async (c: Context<{ Bindings: Env; Variabl
 		const payload = await verifyToken(token, c.env.JWT_SECRET || "default-secret-key");
 
 		if (payload) {
-			// 加载用户权限
-			const permissions = await loadUserPermissions(c.env.DB, payload.userId);
+			// 加载用户权限（使用 KV 缓存）
+			const permissions = await loadUserPermissions(c.env.KV_BINDING, c.env.DB, payload.userId);
 
 			c.set("currentUser", {
 				userId: payload.userId,

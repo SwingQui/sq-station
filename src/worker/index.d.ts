@@ -1,5 +1,7 @@
 import { KVNamespace } from "@cloudflare/workers-types";
 
+export type { KVNamespace };
+
 export interface Env {
 	KV_BINDING: KVNamespace;
 	DB: D1Database;

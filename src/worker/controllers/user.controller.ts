@@ -10,6 +10,8 @@ import { UserRepository } from "../repositories/user.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
 import { RoleRepository } from "../repositories/role.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
+import { requirePermission, requireAnyPermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -23,8 +25,8 @@ app.use("/*", async (c, next) => {
 	await next();
 });
 
-// 获取用户列表
-app.get("/", async (c) => {
+// 获取用户列表（需要权限）
+app.get("/", requirePermission(Permission.SYSTEM_USER_LIST), async (c) => {
 	try {
 		const userService = c.get("userService") as UserService;
 		const users = await userService.findAll();
@@ -34,8 +36,8 @@ app.get("/", async (c) => {
 	}
 });
 
-// 获取单个用户
-app.get("/:id", async (c) => {
+// 获取单个用户（需要权限）
+app.get("/:id", requireAnyPermission([Permission.SYSTEM_USER_LIST, Permission.SYSTEM_USER_VIEW]), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -53,8 +55,8 @@ app.get("/:id", async (c) => {
 	}
 });
 
-// 创建用户
-app.post("/", async (c) => {
+// 创建用户（需要权限）
+app.post("/", requirePermission(Permission.SYSTEM_USER_ADD), async (c) => {
 	try {
 		const data = await c.req.json();
 		const userService = c.get("userService") as UserService;
@@ -68,8 +70,8 @@ app.post("/", async (c) => {
 	}
 });
 
-// 更新用户
-app.put("/:id", async (c) => {
+// 更新用户（需要权限）
+app.put("/:id", requirePermission(Permission.SYSTEM_USER_EDIT), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -91,8 +93,8 @@ app.put("/:id", async (c) => {
 	}
 });
 
-// 删除用户
-app.delete("/:id", async (c) => {
+// 删除用户（需要权限）
+app.delete("/:id", requirePermission(Permission.SYSTEM_USER_DELETE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

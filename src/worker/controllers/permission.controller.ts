@@ -4,12 +4,15 @@
  */
 
 import { Hono } from "hono";
-import type { Env, Variables } from "../index.d";
+import type { Env, Variables, AuthUser } from "../index.d";
 import { MenuService } from "../services/menu.service";
 import { UserRepository } from "../repositories/user.repository";
 import { MenuRepository } from "../repositories/menu.repository";
 import { RoleRepository } from "../repositories/role.repository";
+import { UserPermissionRepository } from "../repositories/user-permission.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -48,7 +51,7 @@ app.get("/:id/menus", async (c) => {
 	}
 });
 
-// 获取用户的权限标识列表
+// 获取用户的权限标识列表（角色权限 + 直接权限的并集）
 app.get("/:id/permissions", async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
@@ -68,6 +71,61 @@ app.get("/:id/permissions", async (c) => {
 		const permissions = await menuService.findPermissionsByUserId(id, isAdmin);
 
 		return c.json(success(permissions));
+	} catch (e: any) {
+		return c.json(fail(500, e.message));
+	}
+});
+
+// 获取用户的直接权限列表（从 sys_user_permission 表）
+app.get("/:id/direct-permissions", requirePermission(Permission.SYSTEM_USER_LIST), async (c) => {
+	try {
+		const id = parseInt(c.req.param("id"));
+		if (isNaN(id)) {
+			return c.json(badRequest("无效的用户 ID"));
+		}
+
+		const userRepo = c.get("userRepo") as UserRepository;
+		const user = await userRepo.findById(id);
+		if (!user) {
+			return c.json(notFound("用户不存在"));
+		}
+
+		const userPermRepo = new UserPermissionRepository(c.env.DB);
+		const permissions = await userPermRepo.findByUserId(id);
+
+		return c.json(success(permissions));
+	} catch (e: any) {
+		return c.json(fail(500, e.message));
+	}
+});
+
+// 为用户分配直接权限（需要权限）
+app.put("/:id/permissions", requirePermission(Permission.SYSTEM_USER_ASSIGN_PERMISSIONS), async (c) => {
+	try {
+		const id = parseInt(c.req.param("id"));
+		if (isNaN(id)) {
+			return c.json(badRequest("无效的用户 ID"));
+		}
+
+		const { permissions } = await c.req.json();
+		if (!Array.isArray(permissions)) {
+			return c.json(badRequest("权限列表必须是数组"));
+		}
+
+		const userRepo = c.get("userRepo") as UserRepository;
+		const user = await userRepo.findById(id);
+		if (!user) {
+			return c.json(notFound("用户不存在"));
+		}
+
+		// 获取当前登录用户 ID
+		const currentUser = c.get("currentUser") as AuthUser;
+		const createdBy = currentUser.userId;
+
+		const userPermRepo = new UserPermissionRepository(c.env.DB);
+		await userPermRepo.assignPermissions(id, permissions, createdBy);
+
+		return c.json(success(null, "分配成功"));
 	} catch (e: any) {
 		return c.json(fail(500, e.message));
 	}

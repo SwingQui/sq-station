@@ -3,7 +3,7 @@
  * 路径前缀: /api/kv
  */
 
-import { apiRequest } from "../../utils/api/request";
+import { apiRequest } from "../../utils/core/request";
 
 export interface KVKey {
 	name: string;

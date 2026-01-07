@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
-import { getUserList, createUser, updateUser, deleteUser } from "../../../api/user";
+import { getUserList, createUser, updateUser, deleteUser, getUserRoles, assignUserRoles, getUserDirectPermissions, assignUserPermissions } from "../../../api/user";
 import { getOrganizationList, getUserOrganizations, assignUserOrganizations } from "../../../api/organization";
-import type { User, Organization } from "../../../types";
+import { getRoleList } from "../../../api/role";
+import type { User, Organization, Role } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
+import PermissionTree from "../../../components/PermissionTree";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
 import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
 
@@ -13,9 +15,15 @@ export default function UserManage() {
 	const [editingUser, setEditingUser] = useState<User | null>(null);
 	const [showModal, setShowModal] = useState(false);
 	const [showOrgModal, setShowOrgModal] = useState(false);
+	const [showRoleModal, setShowRoleModal] = useState(false);
+	const [showPermModal, setShowPermModal] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-	const [userOrgs, setUserOrgs] = useState<number[]>([]);
+	const [currentUserOrgs, setCurrentUserOrgs] = useState<number[]>([]);
+	const [currentUserRoles, setCurrentUserRoles] = useState<number[]>([]);
+	const [currentUserPerms, setCurrentUserPerms] = useState<string[]>([]);
+	const [cascadeEnabled, setCascadeEnabled] = useState(true);
 	const [allOrgs, setAllOrgs] = useState<Organization[]>([]);
+	const [allRoles, setAllRoles] = useState<Role[]>([]);
 
 	useEffect(() => {
 		fetchUsers();
@@ -84,7 +92,7 @@ export default function UserManage() {
 		setCurrentUserId(user.id);
 		try {
 			const orgs = await getUserOrganizations(user.id);
-			setUserOrgs(orgs.map(o => o.id));
+			setCurrentUserOrgs(orgs.map(o => o.id));
 			// Load all organizations
 			const allOrgsData = await getOrganizationList();
 			setAllOrgs(allOrgsData);
@@ -97,7 +105,7 @@ export default function UserManage() {
 	const handleSaveOrgs = async () => {
 		if (currentUserId === null) return;
 		try {
-			await assignUserOrganizations(currentUserId, userOrgs);
+			await assignUserOrganizations(currentUserId, currentUserOrgs);
 			handleSuccess("分配组织成功");
 			setShowOrgModal(false);
 		} catch (e) {
@@ -106,9 +114,64 @@ export default function UserManage() {
 	};
 
 	const toggleOrg = (orgId: number) => {
-		setUserOrgs(prev =>
+		setCurrentUserOrgs(prev =>
 			prev.includes(orgId) ? prev.filter(id => id !== orgId) : [...prev, orgId]
 		);
+	};
+
+	// 角色分配
+	const handleAssignRoles = async (user: User) => {
+		setCurrentUserId(user.id);
+		try {
+			const roles = await getUserRoles(user.id);
+			setCurrentUserRoles(roles.map(r => r.id));
+			// Load all roles
+			const allRolesData = await getRoleList();
+			setAllRoles(allRolesData);
+			setShowRoleModal(true);
+		} catch (e) {
+			handleError(e, "加载角色失败");
+		}
+	};
+
+	const handleSaveRoles = async () => {
+		if (currentUserId === null) return;
+		try {
+			await assignUserRoles(currentUserId, currentUserRoles);
+			handleSuccess("分配角色成功");
+			setShowRoleModal(false);
+		} catch (e) {
+			handleError(e, "分配失败");
+		}
+	};
+
+	const toggleRole = (roleId: number) => {
+		setCurrentUserRoles(prev =>
+			prev.includes(roleId) ? prev.filter(id => id !== roleId) : [...prev, roleId]
+		);
+	};
+
+	// 权限分配
+	const handleAssignPerms = async (user: User) => {
+		setCurrentUserId(user.id);
+		try {
+			const perms = await getUserDirectPermissions(user.id);
+			setCurrentUserPerms(perms);
+			setShowPermModal(true);
+		} catch (e) {
+			handleError(e, "加载权限失败");
+		}
+	};
+
+	const handleSavePerms = async () => {
+		if (currentUserId === null) return;
+		try {
+			await assignUserPermissions(currentUserId, currentUserPerms);
+			handleSuccess("分配权限成功");
+			setShowPermModal(false);
+		} catch (e) {
+			handleError(e, "分配失败");
+		}
 	};
 
 	const handleExport = () => {
@@ -202,10 +265,16 @@ export default function UserManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(user.created_at).toLocaleString("zh-CN")}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:user:assignOrgs" onClick={() => handleAssignOrgs(user)} style={{ padding: "4px 12px", marginRight: "8px", background: "#52c41a" }}>
+									<PermissionButton permission="system:user:assignRoles" onClick={() => handleAssignRoles(user)} style={{ padding: "4px 12px", marginRight: "4px", background: "#1890ff" }}>
+										分配角色
+									</PermissionButton>
+									<PermissionButton permission="system:user:assignPermissions" onClick={() => handleAssignPerms(user)} style={{ padding: "4px 12px", marginRight: "4px", background: "#722ed1" }}>
+										分配权限
+									</PermissionButton>
+									<PermissionButton permission="system:user:assignOrgs" onClick={() => handleAssignOrgs(user)} style={{ padding: "4px 12px", marginRight: "4px", background: "#52c41a" }}>
 										分配组织
 									</PermissionButton>
-									<PermissionButton permission="system:user:edit" onClick={() => handleEdit(user)} style={{ padding: "4px 12px", marginRight: "8px" }}>
+									<PermissionButton permission="system:user:edit" onClick={() => handleEdit(user)} style={{ padding: "4px 12px", marginRight: "4px" }}>
 										编辑
 									</PermissionButton>
 									<PermissionButton permission="system:user:delete" onClick={() => handleDelete(user.id)} style={{ padding: "4px 12px" }}>
@@ -276,7 +345,7 @@ export default function UserManage() {
 									<label key={org.id} style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
 										<input
 											type="checkbox"
-											checked={userOrgs.includes(org.id)}
+											checked={currentUserOrgs.includes(org.id)}
 											onChange={() => toggleOrg(org.id)}
 											style={{ marginRight: "8px" }}
 										/>
@@ -292,6 +361,77 @@ export default function UserManage() {
 								取消
 							</button>
 							<button type="button" onClick={handleSaveOrgs} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								保存
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* 角色分配弹窗 */}
+			{showRoleModal && (
+				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
+						<h2 style={{ marginTop: 0 }}>分配角色 - {users.find(u => u.id === currentUserId)?.username}</h2>
+						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+							{allRoles.length === 0 ? (
+								<div style={{ color: "#888", textAlign: "center" }}>暂无角色</div>
+							) : (
+								allRoles.map(role => (
+									<label key={role.id} style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
+										<input
+											type="checkbox"
+											checked={currentUserRoles.includes(role.id)}
+											onChange={() => toggleRole(role.id)}
+											style={{ marginRight: "8px" }}
+										/>
+										<span>
+											<strong>{role.role_name}</strong> ({role.role_key})
+										</span>
+									</label>
+								))
+							)}
+						</div>
+						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+							<button type="button" onClick={() => setShowRoleModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								取消
+							</button>
+							<button type="button" onClick={handleSaveRoles} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								保存
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* 权限分配弹窗 */}
+			{showPermModal && (
+				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "600px", maxWidth: "90%" }}>
+						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+							<div>
+								<h2 style={{ marginTop: 0 }}>分配权限 - {users.find(u => u.id === currentUserId)?.username}</h2>
+								<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>为用户分配额外的直接权限（与角色权限叠加）</p>
+							</div>
+							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>
+								<input
+									type="checkbox"
+									checked={cascadeEnabled}
+									onChange={(e) => setCascadeEnabled(e.target.checked)}
+									style={{ marginRight: "6px" }}
+								/>
+								<span style={{ fontSize: "13px" }}>启用父子级联勾选</span>
+							</label>
+						</div>
+						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+							{/* 动态权限树 */}
+							<PermissionTree permissions={currentUserPerms} onChange={setCurrentUserPerms} cascadeEnabled={cascadeEnabled} />
+						</div>
+						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+							<button type="button" onClick={() => setShowPermModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								取消
+							</button>
+							<button type="button" onClick={handleSavePerms} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
 								保存
 							</button>
 						</div>

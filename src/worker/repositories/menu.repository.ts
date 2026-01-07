@@ -237,51 +237,61 @@ export class MenuRepository extends BaseRepository {
 	}
 
 	/**
-	 * 根据用户 ID 查询权限标识（从用户的角色中获取）
+	 * 根据用户 ID 查询权限标识（用户直接权限 + 用户角色权限 + 组织直接权限）
 	 */
 	async findPermissionsByUserId(userId: number): Promise<string[]> {
-		// 先获取用户的角色列表
+		// 使用 Set 合并所有权限（自动去重）
+		const allPermissions = new Set<string>();
+
+		// 1. 获取用户的直接权限（从 sys_user_permission 表）
+		const directPermsSql = `
+			SELECT permission FROM sys_user_permission WHERE user_id = ?
+		`;
+		const directResult = await this.executeQuery<{ permission: string }>(directPermsSql, [userId]);
+		for (const row of directResult.results || []) {
+			allPermissions.add(row.permission);
+		}
+
+		// 2. 获取用户角色的权限（从 sys_role 表）
 		const userSql = "SELECT roles FROM sys_user WHERE id = ?";
 		const userResult = await this.executeFirst<{ roles: string }>(userSql, [userId]);
 
-		if (!userResult || !userResult.roles) {
-			return [];
-		}
-
-		// 解析用户的角色数组
-		let userRoles: string[];
-		try {
-			userRoles = JSON.parse(userResult.roles) as string[];
-		} catch (e) {
-			console.error("Failed to parse user roles:", userResult.roles, e);
-			return [];
-		}
-
-		if (userRoles.length === 0) {
-			return [];
-		}
-
-		// 根据角色查询权限
-		const placeholders = userRoles.map(() => "?").join(",");
-		const sql = `
-			SELECT DISTINCT permissions
-			FROM sys_role
-			WHERE role_key IN (${placeholders}) AND status = 1
-		`;
-
-		const results = await this.executeQuery<{ permissions: string }>(sql, userRoles);
-
-		// 合并所有角色的权限
-		const allPermissions = new Set<string>();
-		for (const row of results.results || []) {
+		if (userResult && userResult.roles) {
 			try {
-				const perms = JSON.parse(row.permissions || "[]") as string[];
-				for (const perm of perms) {
-					allPermissions.add(perm);
+				const userRoles = JSON.parse(userResult.roles) as string[];
+				if (userRoles.length > 0) {
+					const placeholders = userRoles.map(() => "?").join(",");
+					const sql = `
+						SELECT DISTINCT permissions FROM sys_role
+						WHERE role_key IN (${placeholders}) AND status = 1
+					`;
+					const results = await this.executeQuery<{ permissions: string }>(sql, userRoles);
+
+					// 合并角色权限到 Set
+					for (const row of results.results || []) {
+						try {
+							const perms = JSON.parse(row.permissions || "[]") as string[];
+							perms.forEach(p => allPermissions.add(p));
+						} catch (e) {
+							console.error("Failed to parse role permissions:", row.permissions, e);
+						}
+					}
 				}
 			} catch (e) {
-				console.error("Failed to parse permissions:", row.permissions, e);
+				console.error("Failed to parse user roles:", userResult.roles, e);
 			}
+		}
+
+		// 3. 获取用户所在组织的直接权限（从 sys_org_permission 表）
+		const orgPermSql = `
+			SELECT DISTINCT op.permission
+			FROM sys_org_permission op
+			INNER JOIN sys_user_organization uo ON op.org_id = uo.org_id
+			WHERE uo.user_id = ?
+		`;
+		const orgPermResult = await this.executeQuery<{ permission: string }>(orgPermSql, [userId]);
+		for (const row of orgPermResult.results || []) {
+			allPermissions.add(row.permission);
 		}
 
 		return Array.from(allPermissions);

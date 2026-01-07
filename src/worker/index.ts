@@ -11,7 +11,7 @@ import roleMenuController from "./controllers/role-menu.controller";
 import permissionController from "./controllers/permission.controller";
 import organizationController from "./controllers/organization.controller";
 import userOrganizationController from "./controllers/user-organization.controller";
-import orgRoleController from "./controllers/org-role.controller";
+import orgPermissionController from "./controllers/org-permission.controller";
 import configController from "./controllers/config.controller";
 import { success, fail, badRequest, unauthorized, notFound, handleError } from "./utils/response";
 import { createAuthRouter, createPublicRouter } from "./utils/auth-helper";
@@ -150,10 +150,11 @@ protectedApiRouter.route("/organization", organizationController);
 // ==================== 用户组织关联路由 ====================
 protectedApiRouter.route("/user-organization", userOrganizationController);
 
-// ==================== 组织角色关联路由 ====================
-protectedApiRouter.route("/org-role", orgRoleController);
+// ==================== 组织权限路由 ====================
+protectedApiRouter.route("/organization", orgPermissionController);
 
 // ==================== 权限相关路由 ====================
+protectedApiRouter.route("/permissions", permissionController);
 protectedApiRouter.route("/user", permissionController);
 
 // ==================== 配置相关路由（公开访问，用于获取权限元数据）====================

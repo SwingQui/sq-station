@@ -83,6 +83,19 @@ CREATE TABLE IF NOT EXISTS sys_role_menu (
   UNIQUE(role_id, menu_id)
 );
 
+-- 用户权限表 (用户直接分配的权限)
+CREATE TABLE IF NOT EXISTS sys_user_permission (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  permission TEXT NOT NULL,  -- 权限字符串，如 "system:menu:list"
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER,
+  UNIQUE(user_id, permission)
+);
+
+-- 用户权限表索引
+CREATE INDEX IF NOT EXISTS idx_user_permission_user_id ON sys_user_permission(user_id);
+
 -- ====================================
 -- 组织架构相关表
 -- ====================================
@@ -119,6 +132,19 @@ CREATE TABLE IF NOT EXISTS sys_org_role (
   UNIQUE(org_id, role_id)
 );
 
+-- 组织权限表 (组织直接分配的权限)
+CREATE TABLE IF NOT EXISTS sys_org_permission (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  org_id INTEGER NOT NULL,
+  permission TEXT NOT NULL,  -- 权限字符串，如 "system:user:list"
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_by INTEGER,
+  UNIQUE(org_id, permission)
+);
+
+-- 组织权限表索引
+CREATE INDEX IF NOT EXISTS idx_org_permission_org_id ON sys_org_permission(org_id);
+
 -- ====================================
 -- 初始化数据
 -- ====================================
@@ -140,7 +166,7 @@ INSERT OR IGNORE INTO sys_role (id, role_name, role_key, sort_order, status, is_
 -- 超级管理员拥有所有权限（通配符）
 UPDATE sys_role SET permissions = '["*:*:*"]' WHERE role_key = 'admin';
 -- 普通用户初始权限（可根据需要调整）
-UPDATE sys_role SET permissions = '["dashboard:home","home:view"]' WHERE role_key = 'user';
+UPDATE sys_role SET permissions = '["dashboard:home:view","home:view"]' WHERE role_key = 'user';
 
 -- ====================================
 -- 初始化菜单 (参考若依设计)
@@ -148,7 +174,7 @@ UPDATE sys_role SET permissions = '["dashboard:home","home:view"]' WHERE role_ke
 
 -- 仪表盘首页（根菜单）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
-(0, '仪表盘首页', 'C', '/dashboard/home', 'dashboard/home/Home', 'home', 1, 'dashboard:home', 1, 1);
+(0, '仪表盘首页', 'C', '/dashboard/home', 'dashboard/home/Home', 'home', 1, 'dashboard:home:view', 1, 1);
 
 -- 系统管理目录（根目录）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
@@ -193,14 +219,16 @@ INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sor
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '新增用户', 'F', 'system:user:add', 1, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '编辑用户', 'F', 'system:user:edit', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '删除用户', 'F', 'system:user:delete', 3, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配角色', 'F', 'system:user:assignRoles', 4, 0, 1);
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配角色', 'F', 'system:user:assignRoles', 4, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配权限', 'F', 'system:user:assignPermissions', 5, 0, 1);
 
 -- 角色管理按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '新增角色', 'F', 'system:role:add', 1, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '编辑角色', 'F', 'system:role:edit', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '删除角色', 'F', 'system:role:delete', 3, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '分配菜单', 'F', 'system:role:assignMenus', 4, 0, 1);
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '分配菜单', 'F', 'system:role:assignMenus', 4, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '配置权限', 'F', 'system:role:configPermissions', 5, 0, 1);
 
 -- 菜单管理按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
@@ -230,7 +258,7 @@ INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sor
 
 -- 用户管理按钮权限（添加分配组织权限）
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配组织', 'F', 'system:user:assignOrgs', 5, 0, 1);
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配组织', 'F', 'system:user:assignOrgs', 6, 0, 1);
 
 -- 确保超级管理员拥有组织管理相关权限
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)

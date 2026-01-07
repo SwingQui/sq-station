@@ -18,13 +18,15 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 	// 过滤侧边栏显示的菜单：只显示可见且启用的菜单
 	// 超级管理员：显示所有启用的菜单（不受 menu_visible 影响）
 	// 普通用户：显示可见且启用的菜单，且需要有权限访问
+	// 目录：如果没有可访问的子菜单，则隐藏该目录
 	const menus = React.useMemo(() => {
 		console.log("[Sidebar] All menus from localStorage:", allMenus);
 		const admin = isSuperAdmin();
 		console.log("[Sidebar] Is super admin:", admin);
 
 		const filterMenus = (items: any[]): any[] => {
-			return items
+			// 第一步：过滤每个菜单项
+			const filtered = items
 				.filter((item) => {
 					// 跳过按钮类型（menu_type = 'F'）
 					if (item.menu_type === 'F') {
@@ -56,6 +58,19 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 					...item,
 					children: item.children ? filterMenus(item.children) : undefined,
 				}));
+
+			// 第二步：移除没有可访问子菜单的目录
+			return filtered.filter((item) => {
+				// 如果是目录（M 类型）且有子菜单，检查是否有可访问的子菜单
+				if (item.menu_type === 'M' && item.children) {
+					const hasAccessibleChildren = item.children.length > 0;
+					if (!hasAccessibleChildren) {
+						console.log(`[Sidebar] Hiding directory with no accessible children: ${item.menu_name}`);
+					}
+					return hasAccessibleChildren;
+				}
+				return true;
+			});
 		};
 		return filterMenus(allMenus);
 	}, [allMenus]);

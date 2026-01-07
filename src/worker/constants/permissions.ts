@@ -16,6 +16,9 @@ export const Permission = {
 	SYSTEM_USER_EDIT: 'system:user:edit',
 	SYSTEM_USER_DELETE: 'system:user:delete',
 	SYSTEM_USER_VIEW: 'system:user:view',
+	SYSTEM_USER_ASSIGN_ROLES: 'system:user:assignRoles',
+	SYSTEM_USER_ASSIGN_PERMISSIONS: 'system:user:assignPermissions',
+	SYSTEM_USER_ASSIGN_ORGS: 'system:user:assignOrgs',
 
 	// 角色管理
 	SYSTEM_ROLE_LIST: 'system:role:list',
@@ -23,6 +26,8 @@ export const Permission = {
 	SYSTEM_ROLE_EDIT: 'system:role:edit',
 	SYSTEM_ROLE_DELETE: 'system:role:delete',
 	SYSTEM_ROLE_VIEW: 'system:role:view',
+	SYSTEM_ROLE_ASSIGN_MENUS: 'system:role:assignMenus',
+	SYSTEM_ROLE_CONFIG_PERMISSIONS: 'system:role:configPermissions',
 
 	// 菜单管理
 	SYSTEM_MENU_LIST: 'system:menu:list',
@@ -67,7 +72,7 @@ export const Permission = {
 	USER_NOTIFICATION_READ: 'user:notification:read',
 
 	// ==================== 仪表盘模块 ====================
-	DASHBOARD_VIEW: 'dashboard:view',
+	DASHBOARD_VIEW: 'dashboard:home:view',
 	DASHBOARD_STATISTICS: 'dashboard:statistics',
 
 	// ==================== 超级管理员通配符 ====================
@@ -90,6 +95,9 @@ export const PermissionMeta: Record<PermissionKey, { name: string; module: strin
 	[Permission.SYSTEM_USER_EDIT]: { name: '编辑用户', module: '系统管理', description: '编辑用户信息' },
 	[Permission.SYSTEM_USER_DELETE]: { name: '删除用户', module: '系统管理', description: '删除用户' },
 	[Permission.SYSTEM_USER_VIEW]: { name: '查看用户', module: '系统管理', description: '查看用户详情' },
+	[Permission.SYSTEM_USER_ASSIGN_ROLES]: { name: '分配角色', module: '系统管理', description: '为用户分配角色' },
+	[Permission.SYSTEM_USER_ASSIGN_PERMISSIONS]: { name: '分配权限', module: '系统管理', description: '为用户分配直接权限' },
+	[Permission.SYSTEM_USER_ASSIGN_ORGS]: { name: '分配组织', module: '系统管理', description: '为用户分配组织' },
 
 	// 系统管理 - 角色管理
 	[Permission.SYSTEM_ROLE_LIST]: { name: '角色列表', module: '系统管理', description: '查看角色列表' },
@@ -97,6 +105,8 @@ export const PermissionMeta: Record<PermissionKey, { name: string; module: strin
 	[Permission.SYSTEM_ROLE_EDIT]: { name: '编辑角色', module: '系统管理', description: '编辑角色信息' },
 	[Permission.SYSTEM_ROLE_DELETE]: { name: '删除角色', module: '系统管理', description: '删除角色' },
 	[Permission.SYSTEM_ROLE_VIEW]: { name: '查看角色', module: '系统管理', description: '查看角色详情' },
+	[Permission.SYSTEM_ROLE_ASSIGN_MENUS]: { name: '分配菜单', module: '系统管理', description: '为角色分配菜单权限' },
+	[Permission.SYSTEM_ROLE_CONFIG_PERMISSIONS]: { name: '配置权限', module: '系统管理', description: '配置角色的权限列表' },
 
 	// 系统管理 - 菜单管理
 	[Permission.SYSTEM_MENU_LIST]: { name: '菜单列表', module: '系统管理', description: '查看菜单列表' },
@@ -155,11 +165,16 @@ export const PermissionGroups: Record<string, PermissionKey[]> = {
 		Permission.SYSTEM_USER_EDIT,
 		Permission.SYSTEM_USER_DELETE,
 		Permission.SYSTEM_USER_VIEW,
+		Permission.SYSTEM_USER_ASSIGN_ROLES,
+		Permission.SYSTEM_USER_ASSIGN_PERMISSIONS,
+		Permission.SYSTEM_USER_ASSIGN_ORGS,
 		Permission.SYSTEM_ROLE_LIST,
 		Permission.SYSTEM_ROLE_ADD,
 		Permission.SYSTEM_ROLE_EDIT,
 		Permission.SYSTEM_ROLE_DELETE,
 		Permission.SYSTEM_ROLE_VIEW,
+		Permission.SYSTEM_ROLE_ASSIGN_MENUS,
+		Permission.SYSTEM_ROLE_CONFIG_PERMISSIONS,
 		Permission.SYSTEM_MENU_LIST,
 		Permission.SYSTEM_MENU_ADD,
 		Permission.SYSTEM_MENU_EDIT,

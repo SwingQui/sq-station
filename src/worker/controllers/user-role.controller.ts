@@ -9,7 +9,6 @@ import { UserRoleService } from "../services/user-role.service";
 import { UserRepository } from "../repositories/user.repository";
 import { RoleRepository } from "../repositories/role.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
-import { PermissionCacheService } from "../services/permission-cache.service";
 import { success, fail, badRequest, notFound } from "../utils/response";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -58,10 +57,6 @@ app.put("/:id/roles", async (c) => {
 
 		const userRoleService = c.get("userRoleService") as UserRoleService;
 		await userRoleService.assignRoles(id, roleIds);
-
-		// 清除用户权限缓存
-		const permissionCache = new PermissionCacheService(c.env.KV_BINDING);
-		await permissionCache.invalidateUser(id);
 
 		return c.json(success(null, "分配成功"));
 	} catch (e: any) {

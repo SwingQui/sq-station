@@ -4,6 +4,7 @@ import { getRoleList, createRole, updateRole, deleteRole, getRoleMenus, assignRo
 import { getMenuList } from "../../../api/menu";
 import type { Role, Menu } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
+import PermissionTree from "../../../components/PermissionTree";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
 import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
 
@@ -14,8 +15,11 @@ export default function RoleManage() {
 	const [editingRole, setEditingRole] = useState<Role | null>(null);
 	const [showModal, setShowModal] = useState(false);
 	const [showMenuModal, setShowMenuModal] = useState(false);
+	const [showPermModal, setShowPermModal] = useState(false);
 	const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 	const [selectedMenus, setSelectedMenus] = useState<number[]>([]);
+	const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
+	const [cascadeEnabled, setCascadeEnabled] = useState(true);
 
 	useEffect(() => {
 		fetchRoles();
@@ -137,6 +141,42 @@ export default function RoleManage() {
 		));
 	};
 
+	// 权限配置
+	const handlePermConfig = (role: Role) => {
+		setSelectedRole(role);
+		// Parse existing permissions
+		let perms: string[] = [];
+		try {
+			perms = role.permissions ? JSON.parse(role.permissions) : [];
+		} catch (e) {
+			console.error("Failed to parse permissions:", role.permissions);
+		}
+		setSelectedPerms(perms);
+		setShowPermModal(true);
+	};
+
+	const handleSavePerms = async () => {
+		if (!selectedRole) return;
+		try {
+			const updateData: any = {
+				role_name: selectedRole.role_name,
+				role_key: selectedRole.role_key,
+				permissions: JSON.stringify(selectedPerms),
+			};
+			if (selectedRole.sort_order !== undefined) updateData.sort_order = selectedRole.sort_order;
+			if (selectedRole.status !== undefined) updateData.status = selectedRole.status;
+			if (selectedRole.remark !== undefined) updateData.remark = selectedRole.remark;
+
+			await updateRole(selectedRole.id, updateData);
+			handleSuccess("权限配置成功");
+			setShowPermModal(false);
+			setSelectedRole(null);
+			fetchRoles();
+		} catch (e) {
+			handleError(e, "保存失败");
+		}
+	};
+
 	const handleExport = () => {
 		exportToExcel({
 			sheetName: "角色列表",
@@ -228,10 +268,13 @@ export default function RoleManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(role.created_at).toLocaleString("zh-CN")}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:role:edit" onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "8px" }}>
+									<PermissionButton permission="system:role:edit" onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "4px" }}>
 										编辑
 									</PermissionButton>
-									<PermissionButton permission="system:role:assignMenus" onClick={() => handleMenuAssign(role)} style={{ padding: "4px 12px", marginRight: "8px", background: "#52c41a" }}>
+									<PermissionButton permission="system:role:configPermissions" onClick={() => handlePermConfig(role)} style={{ padding: "4px 12px", marginRight: "4px", background: "#722ed1" }}>
+										配置权限
+									</PermissionButton>
+									<PermissionButton permission="system:role:assignMenus" onClick={() => handleMenuAssign(role)} style={{ padding: "4px 12px", marginRight: "4px", background: "#52c41a" }}>
 										菜单
 									</PermissionButton>
 									<PermissionButton permission="system:role:delete" onClick={() => handleDelete(role.id)} style={{ padding: "4px 12px" }}>
@@ -300,6 +343,60 @@ export default function RoleManage() {
 								取消
 							</button>
 							<button type="button" onClick={handleSaveMenus} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								保存
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* 权限配置弹窗 */}
+			{showPermModal && (
+				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "600px", maxWidth: "90%" }}>
+						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+							<div>
+								<h2 style={{ marginTop: 0 }}>配置权限 - {selectedRole?.role_name}</h2>
+								<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>配置该角色拥有的权限列表</p>
+							</div>
+							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>
+								<input
+									type="checkbox"
+									checked={cascadeEnabled}
+									onChange={(e) => setCascadeEnabled(e.target.checked)}
+									style={{ marginRight: "6px" }}
+								/>
+								<span style={{ fontSize: "13px" }}>启用父子级联勾选</span>
+							</label>
+						</div>
+						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+							{/* 动态权限树 */}
+							<PermissionTree permissions={selectedPerms} onChange={setSelectedPerms} cascadeEnabled={cascadeEnabled} />
+
+							{/* 超级管理员通配符 */}
+							<div style={{ marginTop: "16px", borderTop: "1px solid #e0e0e0", paddingTop: "16px" }}>
+								<label style={{ display: "inline-flex", alignItems: "center", padding: "4px 8px", cursor: "pointer" }}>
+									<input
+										type="checkbox"
+										checked={selectedPerms.includes("*:*:*")}
+										onChange={() => {
+											if (selectedPerms.includes("*:*:*")) {
+												setSelectedPerms(selectedPerms.filter((p) => p !== "*:*:*"));
+											} else {
+												setSelectedPerms([...selectedPerms, "*:*:*"]);
+											}
+										}}
+										style={{ marginRight: "6px" }}
+									/>
+									<span style={{ fontSize: "13px", fontWeight: "bold", color: "#f5222d" }}>*:*:* (所有权限)</span>
+								</label>
+							</div>
+						</div>
+						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
+							<button type="button" onClick={() => setShowPermModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+								取消
+							</button>
+							<button type="button" onClick={handleSavePerms} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
 								保存
 							</button>
 						</div>

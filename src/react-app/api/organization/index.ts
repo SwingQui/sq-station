@@ -3,12 +3,11 @@
  * 路径前缀: /api/organization
  */
 
-import { apiRequest } from "../../utils/api/request";
+import { apiRequest } from "../../utils/core/request";
 import type {
 	Organization,
 	CreateOrganizationDto,
 	UpdateOrganizationDto,
-	Role,
 } from "../../types";
 
 // ==================== 组织管理 API ====================
@@ -64,18 +63,18 @@ export async function assignUserOrganizations(userId: number, orgIds: number[]):
 	return await apiRequest<void>("PUT", `/api/user-organization/${userId}`, { orgIds });
 }
 
-// ==================== 组织角色关联 API ====================
+// ==================== 组织权限关联 API ====================
 
 /**
- * 获取组织的角色列表
+ * 获取组织的权限列表
  */
-export async function getOrganizationRoles(orgId: number): Promise<Role[]> {
-	return await apiRequest<Role[]>("GET", `/api/org-role/${orgId}`);
+export async function getOrganizationPermissions(orgId: number): Promise<string[]> {
+	return await apiRequest<string[]>("GET", `/api/organization/${orgId}/permissions`);
 }
 
 /**
- * 为组织分配角色
+ * 为组织分配权限
  */
-export async function assignOrganizationRoles(orgId: number, roleIds: number[]): Promise<void> {
-	return await apiRequest<void>("PUT", `/api/org-role/${orgId}`, { roleIds });
+export async function assignOrganizationPermissions(orgId: number, permissions: string[]): Promise<void> {
+	return await apiRequest<void>("PUT", `/api/organization/${orgId}/permissions`, { permissions });
 }

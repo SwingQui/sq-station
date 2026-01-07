@@ -3,8 +3,8 @@
  * 路径前缀: /api/roles
  */
 
-import { apiRequest } from "../../utils/api/request";
-import type { Role } from "../../types";
+import { apiRequest } from "../../utils/core/request";
+import type { Role, CreateRoleDto, UpdateRoleDto } from "../../types";
 
 /**
  * 获取角色列表
@@ -23,14 +23,14 @@ export async function getRole(id: number): Promise<Role> {
 /**
  * 创建角色
  */
-export async function createRole(data: any): Promise<{ roleId: number }> {
+export async function createRole(data: CreateRoleDto): Promise<{ roleId: number }> {
 	return await apiRequest("POST", "/api/roles", data);
 }
 
 /**
  * 更新角色
  */
-export async function updateRole(id: number, data: any): Promise<void> {
+export async function updateRole(id: number, data: UpdateRoleDto): Promise<void> {
 	return await apiRequest("PUT", `/api/roles/${id}`, data);
 }
 

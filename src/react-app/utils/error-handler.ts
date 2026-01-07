@@ -5,6 +5,11 @@
 
 import { message } from "antd";
 
+// 防止重复提示
+let lastMessage = "";
+let lastTime = 0;
+const MESSAGE_DEBOUNCE_MS = 1000; // 1秒内相同消息只显示一次
+
 /**
  * 统一的错误处理
  * @param error 错误对象
@@ -16,6 +21,14 @@ export function handleError(error: unknown, defaultMessage: string = "操作失�
 	const errorMessage = error instanceof Error
 		? error.message
 		: defaultMessage;
+
+	// 防止重复提示（1秒内相同消息只显示一次）
+	const now = Date.now();
+	if (errorMessage === lastMessage && now - lastTime < MESSAGE_DEBOUNCE_MS) {
+		return;
+	}
+	lastMessage = errorMessage;
+	lastTime = now;
 
 	message.error(errorMessage);
 }

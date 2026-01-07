@@ -8,7 +8,18 @@ const fs = require("fs");
 const path = require("path");
 
 const DB_NAME = "sq_station";
-const TABLES = ["sys_user", "sys_role", "sys_menu", "sys_user_role", "sys_role_menu"];
+const TABLES = [
+	"sys_user",
+	"sys_role",
+	"sys_menu",
+	"sys_user_role",
+	"sys_role_menu",
+	"sys_organization",
+	"sys_user_organization",
+	"sys_org_role",
+	"sys_org_permission",
+	"sys_user_permission",
+];
 const BACKUP_DIR = path.join(__dirname, "../.wrangler/d1-backup");
 
 // 确保备份目录存在

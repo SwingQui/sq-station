@@ -8,7 +8,6 @@ import type { Env, Variables } from "../index.d";
 import { RoleService } from "../services/role.service";
 import { RoleRepository } from "../repositories/role.repository";
 import { RoleMenuRepository } from "../repositories/role-menu.repository";
-import { PermissionCacheService } from "../services/permission-cache.service";
 import { success, fail, badRequest, notFound } from "../utils/response";
 import { requirePermission, requireAnyPermission } from "../middleware/permission";
 import { Permission } from "../constants/permissions";
@@ -80,20 +79,8 @@ app.put("/:id", requirePermission(Permission.SYSTEM_ROLE_EDIT), async (c) => {
 		const data = await c.req.json();
 		const roleService = c.get("roleService") as RoleService;
 
-		// 获取旧角色数据（用于清除缓存）
-		const oldRole = await roleService.findById(id);
-
 		// 执行更新
 		await roleService.update(id, data);
-
-		// 清除权限缓存（如果更新了权限或角色标识）
-		if (data.permissions || data.role_key) {
-			const roleKey = data.role_key || oldRole?.role_key;
-			if (roleKey) {
-				const permissionCache = new PermissionCacheService(c.env.KV_BINDING);
-				await permissionCache.invalidateRole(roleKey);
-			}
-		}
 
 		return c.json(success(null, "更新成功"));
 	} catch (e: any) {
@@ -117,7 +104,7 @@ app.delete("/:id", requirePermission(Permission.SYSTEM_ROLE_DELETE), async (c) =
 
 		const roleService = c.get("roleService") as RoleService;
 
-		// 获取角色数据（用于清除缓存）
+		// 获取角色数据（用于验证）
 		const role = await roleService.findById(id);
 		if (!role) {
 			return c.json(notFound("角色不存在"));
@@ -125,10 +112,6 @@ app.delete("/:id", requirePermission(Permission.SYSTEM_ROLE_DELETE), async (c) =
 
 		// 执行删除
 		await roleService.delete(id);
-
-		// 清除权限缓存
-		const permissionCache = new PermissionCacheService(c.env.KV_BINDING);
-		await permissionCache.invalidateRole(role.role_key);
 
 		return c.json(success(null, "删除成功"));
 	} catch (e: any) {

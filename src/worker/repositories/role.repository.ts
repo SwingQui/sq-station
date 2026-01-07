@@ -19,6 +19,7 @@ export interface UpdateRoleDto {
 	role_key: string;
 	sort_order?: number;
 	status?: number;
+	permissions?: string | null;
 	remark?: string | null;
 }
 
@@ -81,7 +82,7 @@ export class RoleRepository extends BaseRepository {
 	async update(id: number, data: UpdateRoleDto): Promise<void> {
 		const sql = `
 			UPDATE sys_role
-			SET role_name = ?, role_key = ?, sort_order = ?, status = ?, remark = ?, updated_at = CURRENT_TIMESTAMP
+			SET role_name = ?, role_key = ?, sort_order = ?, status = ?, permissions = ?, remark = ?, updated_at = CURRENT_TIMESTAMP
 			WHERE id = ?
 		`;
 		await this.executeRun(sql, [
@@ -89,6 +90,7 @@ export class RoleRepository extends BaseRepository {
 			data.role_key,
 			data.sort_order ?? 0,
 			data.status ?? 1,
+			data.permissions || '[]',
 			data.remark || null,
 			id
 		]);

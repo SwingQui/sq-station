@@ -6,12 +6,15 @@
 
 import { getToken, logout } from "../../auth";
 import { navigate } from "../../router";
+import { handleError } from "../../error-handler";
 
 export interface RequestOptions {
 	method?: "GET" | "POST" | "PUT" | "DELETE";
 	headers?: Record<string, string>;
 	body?: any;
 	params?: Record<string, string>;
+	silent?: boolean;  // 是否静默（不显示 Toast）
+	showErrorMessage?: boolean;  // 是否自动显示错误（默认 true）
 }
 
 /**
@@ -90,7 +93,12 @@ export async function request<T = any>(url: string, options: RequestOptions = {}
 		return result.data;
 	} catch (error: any) {
 		if (error.message === "Failed to fetch") {
-			throw new Error("网络连接失败，请检查网络");
+			error = new Error("网络连接失败，请检查网络");
+		}
+		// 集成统一错误处理：Toast + 控制台
+		// 只有当 showErrorMessage 不为 false 时才自动显示错误
+		if (!options.silent && options.showErrorMessage !== false) {
+			handleError(error, "请求失败");
 		}
 		throw error;
 	}

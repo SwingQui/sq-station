@@ -83,6 +83,9 @@ app.delete("/:id", async (c) => {
 			return c.json(badRequest("无效的组织 ID"));
 		}
 
+		// 删除组织权限
+		await c.env.DB.prepare(`DELETE FROM sys_org_permission WHERE org_id = ?`).bind(id).run();
+
 		const orgService = c.get("orgService") as OrganizationService;
 		await orgService.delete(id);
 		return c.json(success(null, "删除组织成功"));

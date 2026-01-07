@@ -1,5 +1,6 @@
 /**
  * API 类型定义
+ * 统一管理所有 API 相关的类型定义
  */
 
 // ==================== 用户类型 ====================
@@ -14,6 +15,16 @@ export interface User {
 	remark: string | null;
 	created_at: string;
 	updated_at?: string;
+	organization_id?: number;
+}
+
+/**
+ * 用户角色关联类型
+ */
+export interface UserRoleDto {
+	id: number;
+	username: string;
+	nickname?: string;
 }
 
 export interface CreateUserDto {
@@ -45,6 +56,8 @@ export interface Role {
 	role_key: string;
 	sort_order: number;
 	status: number;
+	is_admin?: number;
+	permissions?: string; // JSON 字符串数组，如 '["system:user:list","system:role:add"]'
 	remark: string | null;
 	created_at: string;
 	updated_at?: string;
@@ -55,6 +68,7 @@ export interface CreateRoleDto {
 	role_key: string;
 	sort_order?: number;
 	status?: number;
+	permissions?: string;
 	remark?: string;
 }
 
@@ -63,6 +77,7 @@ export interface UpdateRoleDto {
 	role_key: string;
 	sort_order?: number;
 	status?: number;
+	permissions?: string;
 	remark?: string;
 }
 
@@ -152,6 +167,7 @@ export interface Organization {
 	id: number;
 	org_name: string;
 	org_code: string;
+	parent_id?: number;
 	sort_order: number;
 	status: number;
 	remark: string | null;
@@ -162,6 +178,7 @@ export interface Organization {
 export interface CreateOrganizationDto {
 	org_name: string;
 	org_code: string;
+	parent_id?: number;
 	sort_order?: number;
 	status?: number;
 	remark?: string | null;
@@ -170,6 +187,7 @@ export interface CreateOrganizationDto {
 export interface UpdateOrganizationDto {
 	org_name?: string;
 	org_code?: string;
+	parent_id?: number;
 	sort_order?: number;
 	status?: number;
 	remark?: string | null;

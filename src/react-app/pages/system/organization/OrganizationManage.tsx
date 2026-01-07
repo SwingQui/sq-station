@@ -5,12 +5,12 @@ import {
 	createOrganization,
 	updateOrganization,
 	deleteOrganization,
-	getOrganizationRoles,
-	assignOrganizationRoles,
+	getOrganizationPermissions,
+	assignOrganizationPermissions,
 } from "../../../api/organization";
-import { getRoleList } from "../../../api/role";
-import type { Organization, Role } from "../../../types";
+import type { Organization } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
+import PermissionTree from "../../../components/PermissionTree";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
 import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
 
@@ -19,24 +19,14 @@ export default function OrganizationManage() {
 	const [loading, setLoading] = useState(true);
 	const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
 	const [showModal, setShowModal] = useState(false);
-	const [showRoleModal, setShowRoleModal] = useState(false);
+	const [showPermModal, setShowPermModal] = useState(false);
 	const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
-	const [allRoles, setAllRoles] = useState<Role[]>([]);
-	const [orgRoles, setOrgRoles] = useState<number[]>([]);
+	const [orgPerms, setOrgPerms] = useState<string[]>([]);
+	const [cascadeEnabled, setCascadeEnabled] = useState(true);
 
 	useEffect(() => {
 		fetchOrganizations();
-		fetchRoles();
 	}, []);
-
-	const fetchRoles = async () => {
-		try {
-			const data = await getRoleList();
-			setAllRoles(data);
-		} catch (e) {
-			handleError(e, "加载角色失败");
-		}
-	};
 
 	const fetchOrganizations = async () => {
 		try {
@@ -56,7 +46,7 @@ export default function OrganizationManage() {
 			org_name: formData.get("org_name"),
 			org_code: formData.get("org_code"),
 			sort_order: Number(formData.get("sort_order") || 0),
-			status: Number(formData.get("status") || 1),
+			status: Number(formData.get("status")) || 1,
 			remark: formData.get("remark"),
 		};
 
@@ -96,32 +86,27 @@ export default function OrganizationManage() {
 		setShowModal(true);
 	};
 
-	const handleAssignRoles = async (org: Organization) => {
+	// 权限分配相关函数
+	const handleAssignPermissions = async (org: Organization) => {
 		setCurrentOrg(org);
 		try {
-			const roles = await getOrganizationRoles(org.id);
-			setOrgRoles(roles.map((r: Role) => r.id));
-			setShowRoleModal(true);
+			const permissions = await getOrganizationPermissions(org.id);
+			setOrgPerms(permissions);
+			setShowPermModal(true);
 		} catch (e) {
-			handleError(e, "加载角色失败");
+			handleError(e, "加载权限失败");
 		}
 	};
 
-	const handleSaveRoles = async () => {
+	const handleSavePermissions = async () => {
 		if (!currentOrg) return;
 		try {
-			await assignOrganizationRoles(currentOrg.id, orgRoles);
-			handleSuccess("分配角色成功");
-			setShowRoleModal(false);
+			await assignOrganizationPermissions(currentOrg.id, orgPerms);
+			handleSuccess("分配权限成功");
+			setShowPermModal(false);
 		} catch (e) {
 			handleError(e, "分配失败");
 		}
-	};
-
-	const toggleRole = (roleId: number) => {
-		setOrgRoles((prev) =>
-			prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
-		);
 	};
 
 	const handleExport = () => {
@@ -215,10 +200,10 @@ export default function OrganizationManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{org.remark || "-"}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:organization:assign" onClick={() => handleAssignRoles(org)} style={{ padding: "4px 12px", marginRight: "8px", background: "#52c41a" }}>
-										分配角色
+									<PermissionButton permission="system:organization:assign" onClick={() => handleAssignPermissions(org)} style={{ padding: "4px 12px", marginRight: "4px", background: "#722ed1" }}>
+										分配权限
 									</PermissionButton>
-									<PermissionButton permission="system:organization:edit" onClick={() => handleEdit(org)} style={{ padding: "4px 12px", marginRight: "8px" }}>
+									<PermissionButton permission="system:organization:edit" onClick={() => handleEdit(org)} style={{ padding: "4px 12px", marginRight: "4px" }}>
 										编辑
 									</PermissionButton>
 									<PermissionButton permission="system:organization:delete" onClick={() => handleDelete(org.id)} style={{ padding: "4px 12px" }}>
@@ -274,35 +259,34 @@ export default function OrganizationManage() {
 				</div>
 			)}
 
-			{/* 角色分配弹窗 */}
-			{showRoleModal && (
+			{/* 权限分配弹窗 */}
+			{showPermModal && (
 				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
-						<h2 style={{ marginTop: 0 }}>分配角色 - {currentOrg?.org_name}</h2>
+					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "600px", maxWidth: "90%" }}>
+						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+							<div>
+								<h2 style={{ marginTop: 0 }}>分配权限 - {currentOrg?.org_name}</h2>
+								<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>配置该组织的权限，组织成员将自动继承</p>
+							</div>
+							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>
+								<input
+									type="checkbox"
+									checked={cascadeEnabled}
+									onChange={(e) => setCascadeEnabled(e.target.checked)}
+									style={{ marginRight: "6px" }}
+								/>
+								<span style={{ fontSize: "13px" }}>启用父子级联勾选</span>
+							</label>
+						</div>
 						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{allRoles.length === 0 ? (
-								<div style={{ color: "#888", textAlign: "center" }}>暂无角色</div>
-							) : (
-								allRoles.map(role => (
-									<label key={role.id} style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
-										<input
-											type="checkbox"
-											checked={orgRoles.includes(role.id)}
-											onChange={() => toggleRole(role.id)}
-											style={{ marginRight: "8px" }}
-										/>
-										<span>
-											<strong>{role.role_name}</strong> ({role.role_key})
-										</span>
-									</label>
-								))
-							)}
+							{/* 动态权限树 */}
+							<PermissionTree permissions={orgPerms} onChange={setOrgPerms} cascadeEnabled={cascadeEnabled} />
 						</div>
 						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-							<button type="button" onClick={() => setShowRoleModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+							<button type="button" onClick={() => setShowPermModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
 								取消
 							</button>
-							<button type="button" onClick={handleSaveRoles} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
+							<button type="button" onClick={handleSavePermissions} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
 								保存
 							</button>
 						</div>

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { querySQL, type QueryResult } from "../../../api/sql";
+import { hasPermission } from "../../../utils/auth/permission";
+import { Permission } from "../../../../worker/constants/permissions";
 
 export default function SQLSearch() {
 	const [tables, setTables] = useState<string[]>([]);
@@ -39,8 +41,13 @@ export default function SQLSearch() {
 		setLoading(false);
 	};
 
-	// 组件挂载时加载表列表
+	// 组件挂载时加载表列表（先检查权限）
 	useEffect(() => {
+		// 检查是否有 SQL 查询权限，如果没有就不发起请求
+		if (!hasPermission(Permission.SYSTEM_SQL_QUERY)) {
+			setError("权限不足：仅超级管理员可执行 SQL 查询");
+			return;
+		}
 		loadTables();
 	}, []);
 

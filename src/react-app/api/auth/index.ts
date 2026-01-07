@@ -3,7 +3,7 @@
  * 路径前缀: /api/auth
  */
 
-import { apiRequest } from "../../utils/api/request";
+import { apiRequest } from "../../utils/core/request";
 
 /**
  * 用户登录

@@ -3,7 +3,7 @@
  * 路径前缀: /api/sql
  */
 
-import { apiRequest } from "../../utils/api/request";
+import { apiRequest } from "../../utils/core/request";
 
 export interface QueryResult {
 	columns: string[];

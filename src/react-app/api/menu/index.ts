@@ -3,7 +3,7 @@
  * 路径前缀: /api/menus
  */
 
-import { apiRequest } from "../../utils/api/request";
+import { apiRequest } from "../../utils/core/request";
 import type { Menu } from "../../types";
 
 /**

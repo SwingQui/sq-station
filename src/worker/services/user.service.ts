@@ -6,6 +6,8 @@
 import { UserRepository, CreateUserDto, UpdateUserDto } from "../repositories/user.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
 import { RoleRepository } from "../repositories/role.repository";
+import { UserPermissionRepository } from "../repositories/user-permission.repository";
+import { UserOrganizationRepository } from "../repositories/user-organization.repository";
 import { hashPasswordWithUsername } from "../utils/password";
 import type { SysUser, SysRole } from "../core/types/database";
 
@@ -13,7 +15,9 @@ export class UserService {
 	constructor(
 		private userRepo: UserRepository,
 		private userRoleRepo: UserRoleRepository,
-		private roleRepo: RoleRepository
+		private roleRepo: RoleRepository,
+		private userPermRepo: UserPermissionRepository,
+		private userOrgRepo: UserOrganizationRepository
 	) {}
 
 	/**
@@ -126,6 +130,12 @@ export class UserService {
 
 		// 删除用户角色关联
 		await this.userRoleRepo.removeAllRolesByUserId(id);
+
+		// 删除用户直接权限
+		await this.userPermRepo.removeByUserId(id);
+
+		// 删除用户组织关联
+		await this.userOrgRepo.removeAllOrgsByUserId(id);
 
 		// 删除用户
 		await this.userRepo.delete(id);

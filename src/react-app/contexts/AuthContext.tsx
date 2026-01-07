@@ -16,6 +16,8 @@ import {
 } from "../utils/auth";
 import { navigate } from "../utils/router";
 import { clearMenuIndexCache } from "../utils/core/route/matcher";
+import { login as apiLogin, getUserInfo } from "../api/auth";
+import { handleError } from "../utils/error-handler";
 
 interface AuthContextType {
 	user: AuthUser | null;
@@ -51,63 +53,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	// 登录
 	const login = async (username: string, password: string) => {
-		const response = await fetch("/api/auth/login", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ username, password }),
-		});
+		try {
+			// 使用 API 函数获取 token 和用户信息
+			const result = await apiLogin(username, password);
+			const { token, user } = result;
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.msg || error.error || "登录失败");
-		}
+			console.log("[AuthContext] Login successful, token:", token ? "exists" : "missing");
+			console.log("[AuthContext] User info:", user);
 
-		const result = await response.json();
+			// 保存到 localStorage
+			setToken(token);
+			setUserStorage(user);
 
-		// 新格式: {code: 200, data: {token, user}, msg}
-		if (result.code !== 200) {
-			throw new Error(result.msg || "登录失败");
-		}
+			console.log("[AuthContext] Token saved to localStorage");
+			console.log("[AuthContext] Token from localStorage:", getToken());
 
-		const { token, user } = result.data;
-
-		console.log("[AuthContext] Login successful, token:", token ? "exists" : "missing");
-		console.log("[AuthContext] User info:", user);
-
-		// 保存到 localStorage
-		setToken(token);
-		setUserStorage(user);
-
-		console.log("[AuthContext] Token saved to localStorage");
-		console.log("[AuthContext] Token from localStorage:", getToken());
-
-		// 获取用户权限和菜单
-		console.log("[AuthContext] Fetching /api/auth/me...");
-		const meResponse = await fetch("/api/auth/me", {
-			headers: { "Authorization": `Bearer ${token}` },
-		});
-
-		console.log("[AuthContext] /api/auth/me response status:", meResponse.status);
-
-		if (meResponse.ok) {
-			const meResult = await meResponse.json();
-			console.log("[AuthContext] /api/auth/me response:", meResult);
-			// 新格式: {code: 200, data: {user, permissions, menus}, msg}
-			if (meResult.code === 200 && meResult.data) {
-				console.log("[AuthContext] Saving permissions:", meResult.data.permissions);
-				console.log("[AuthContext] Saving menus:", meResult.data.menus);
-				setPermissions(meResult.data.permissions || []);
-				setMenus(meResult.data.menus || []);
+			// 获取用户权限和菜单（失败不影响登录流程）
+			console.log("[AuthContext] Fetching /api/auth/me...");
+			try {
+				const meData = await getUserInfo();
+				console.log("[AuthContext] /api/auth/me response:", meData);
+				console.log("[AuthContext] Saving permissions:", meData.permissions);
+				console.log("[AuthContext] Saving menus:", meData.menus);
+				setPermissions(meData.permissions || []);
+				setMenus(meData.menus || []);
 				// 清除菜单索引缓存，以便重新构建
 				clearMenuIndexCache();
+			} catch {
+				// 静默失败，不影响登录流程
+				console.error("[AuthContext] Failed to fetch user permissions (silent)");
 			}
-		} else {
-			console.error("Failed to get user info:", meResponse.status, meResponse.statusText);
-			const errorText = await meResponse.text();
-			console.error("Error response:", errorText);
-		}
 
-		setUser(user);
+			setUser(user);
+		} catch (error) {
+			handleError(error, "登录失败");
+			throw error;
+		}
 	};
 
 	// 登出
@@ -127,31 +108,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			return;
 		}
 
-		const response = await fetch("/api/auth/me", {
-			headers: { "Authorization": `Bearer ${token}` },
-		});
-
-		if (!response.ok) {
+		try {
+			const meData = await getUserInfo();
+			setUserStorage(meData.user);
+			setPermissions(meData.permissions || []);
+			setMenus(meData.menus || []);
+			// 清除菜单索引缓存，以便重新构建
+			clearMenuIndexCache();
+			setUser(meData.user);
+		} catch (error) {
+			handleError(error, "刷新用户信息失败");
 			logout();
-			return;
 		}
-
-		const result = await response.json();
-
-		// 新格式: {code: 200, data: {user, permissions, menus}, msg}
-		if (result.code !== 200 || !result.data) {
-			logout();
-			return;
-		}
-
-		const { user, permissions, menus } = result.data;
-		setUserStorage(user);
-		setPermissions(permissions || []);
-		setMenus(menus || []);
-		// 清除菜单索引缓存，以便重新构建
-		clearMenuIndexCache();
-
-		setUser(user);
 	};
 
 	// 刷新菜单（数据库更新后调用）
@@ -159,18 +127,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		const token = getToken();
 		if (!token) return;
 
-		const response = await fetch("/api/auth/me", {
-			headers: { "Authorization": `Bearer ${token}` },
-		});
-
-		if (response.ok) {
-			const result = await response.json();
-			if (result.code === 200 && result.data) {
-				setPermissions(result.data.permissions || []);
-				setMenus(result.data.menus || []);
-				// 清除菜单索引缓存
-				clearMenuIndexCache();
-			}
+		try {
+			const meData = await getUserInfo();
+			setPermissions(meData.permissions || []);
+			setMenus(meData.menus || []);
+			// 清除菜单索引缓存
+			clearMenuIndexCache();
+		} catch (error) {
+			handleError(error, "刷新菜单失败");
+			throw error;
 		}
 	};
 

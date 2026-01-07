@@ -1,0 +1,21 @@
+# Cloudflare API Token
+# 用于访问 Cloudflare Workers、D1、R2 等资源
+#
+# 获取方式：
+# 1. 访问 https://dash.cloudflare.com/profile/api-tokens
+# 2. 创建 Token，需要以下权限：
+#    - Account → D1 → Edit
+#    - Account → Workers Scripts → Edit
+#    - Account → Cloudflare R2 → Edit（如需使用 R2）
+#
+# 使用方式：
+# 1. 复制此文件为 .dev.vars
+# 2. 将下面的 your_token_here 替换为你的实际 Token
+# 3. .dev.vars 文件已加入 .gitignore，不会提交到 Git
+#
+# 配置完成后，以下命令将自动使用此 Token：
+# - npm run d1:migrate   (同步 schema 到远程 D1)
+# - npm run d1:query     (查询远程 D1)
+# - npm run deploy       (部署到 Workers)
+
+CLOUDFLARE_API_TOKEN=your_token_here

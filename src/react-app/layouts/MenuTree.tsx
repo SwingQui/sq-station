@@ -88,8 +88,17 @@ export default function MenuTree({ items, collapsed = false, level = 0 }: MenuTr
 								) : (
 									<>
 										<Icon name={item.icon || "folder"} size={16} color="rgba(255,255,255,0.65)" />
-										<span style={{ marginLeft: expanded ? "4px" : "8px" }}>{expanded ? "▼" : "▶"}</span>
-										<span style={{ marginLeft: "8px", flex: 1 }}>{item.menu_name}</span>
+										<span style={{
+											marginLeft: "6px",
+											fontSize: "12px",
+											fontWeight: "bold",
+											width: "14px",
+											display: "inline-flex",
+											justifyContent: "center"
+										}}>
+											{expanded ? "−" : "+"}
+										</span>
+										<span style={{ marginLeft: "6px", flex: 1 }}>{item.menu_name}</span>
 									</>
 								)}
 							</div>

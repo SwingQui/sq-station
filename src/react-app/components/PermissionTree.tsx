@@ -278,8 +278,15 @@ function PermissionDirectoryInner({
 						style={{ marginRight: "8px" }}
 					/>
 				)}
-				<span style={{ marginRight: "6px", transition: "transform 0.2s", transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
-					▶
+				<span style={{
+					marginRight: "6px",
+					fontSize: "14px",
+					fontWeight: "bold",
+					width: "16px",
+					display: "inline-flex",
+					justifyContent: "center"
+				}}>
+					{isExpanded ? "−" : "+"}
 				</span>
 				{menu.menu_name}
 			</div>

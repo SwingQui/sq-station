@@ -4,6 +4,7 @@ export type { KVNamespace };
 
 export interface Env {
 	KV_BINDING: KVNamespace;
+	R2_BINDING: R2Bucket;
 	DB: D1Database;
 	JWT_SECRET?: string;
 	JWT_EXPIRES_IN?: string;

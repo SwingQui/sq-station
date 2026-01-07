@@ -186,7 +186,8 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_pat
 ((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '角色管理', 'C', '/dashboard/system/role', 'system/role/RoleManage', 'role', 2, 'system:role:list', 1, 1),
 ((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '菜单管理', 'C', '/dashboard/system/menu', 'system/menu/MenuManage', 'menu', 3, 'system:menu:list', 1, 1),
 ((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), 'KV管理', 'C', '/dashboard/system/kv', 'system/kv/TestKV', 'database', 4, 'system:kv:view', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '表查询', 'C', '/dashboard/system/sql', 'system/sql/SQLSearch', 'database', 5, 'system:sqlSearch', 1, 1);
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), 'R2存储', 'C', '/dashboard/system/r2', 'system/r2/TestR2', 'folder-open', 5, 'system:r2:view', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '表查询', 'C', '/dashboard/system/sql', 'system/sql/SQLSearch', 'database', 6, 'system:sqlSearch', 1, 1);
 
 -- 内容管理目录（根目录）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
@@ -235,6 +236,13 @@ INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sor
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '新增菜单', 'F', 'system:menu:add', 1, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '编辑菜单', 'F', 'system:menu:edit', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '删除菜单', 'F', 'system:menu:delete', 3, 0, 1);
+
+-- R2存储按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '上传文件', 'F', 'system:r2:upload', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '下载文件', 'F', 'system:r2:download', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '删除文件', 'F', 'system:r2:delete', 3, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '批量删除', 'F', 'system:r2:batchDelete', 4, 0, 1);
 
 -- 确保超级管理员拥有所有权限（包括新添加的按钮权限）
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)

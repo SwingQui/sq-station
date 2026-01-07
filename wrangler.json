@@ -27,6 +27,13 @@
 			"database_id": "a394d5c8-3d66-4cc1-bbd4-2f40b85c1489"
 		}
 	],
+	"r2_buckets": [
+		{
+			"binding": "R2_BINDING",
+			"bucket_name": "sq-station-assets"
+		}
+	],
+	"account_id": "62a8de03cc2ad301ccff9458acfeaeb4",
 	"dev": {
 		"port": 8787
 	},

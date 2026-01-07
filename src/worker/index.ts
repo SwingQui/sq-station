@@ -3,6 +3,7 @@ import type { Env, Variables } from "./index.d";
 import { cors } from "hono/cors";
 // 导入新的 Controller 层
 import kvController from "./controllers/kv.controller";
+import r2Controller from "./controllers/r2.controller";
 import userController from "./controllers/user.controller";
 import roleController from "./controllers/role.controller";
 import menuController from "./controllers/menu.controller";
@@ -163,6 +164,9 @@ app.route("/api/config", configController);
 
 // ==================== KV 存储路由 ====================
 protectedApiRouter.route("/kv", kvController);
+
+// ==================== R2 存储路由 ====================
+protectedApiRouter.route("/r2", r2Controller);
 
 // SQL 执行工具 API (支持所有 SQL 操作) - 需要认证+管理员权限
 protectedApiRouter.post("/sql/query", async (c) => {

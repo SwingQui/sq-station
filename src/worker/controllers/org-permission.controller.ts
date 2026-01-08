@@ -7,8 +7,14 @@ import { Hono } from "hono";
 import type { Env, Variables } from "../index.d";
 import { OrgPermissionRepository } from "../repositories/org-permission.repository";
 import { success, fail, badRequest } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 // 中间件：创建 Repository 实例并注入到上下文
 app.use("/*", async (c, next) => {
@@ -21,7 +27,7 @@ app.use("/*", async (c, next) => {
  * 获取组织的权限列表
  * GET /api/organizations/:orgId/permissions
  */
-app.get("/:orgId/permissions", async (c) => {
+app.get("/:orgId/permissions", requirePermission(Permission.SYSTEM_ORGANIZATION_READ), async (c) => {
 	try {
 		const orgId = parseInt(c.req.param("orgId"));
 		if (isNaN(orgId)) {
@@ -41,7 +47,7 @@ app.get("/:orgId/permissions", async (c) => {
  * PUT /api/organizations/:orgId/permissions
  * Body: { permissions: string[] }
  */
-app.put("/:orgId/permissions", async (c) => {
+app.put("/:orgId/permissions", requirePermission(Permission.SYSTEM_ORGANIZATION_UPDATE), async (c) => {
 	try {
 		const orgId = parseInt(c.req.param("orgId"));
 		if (isNaN(orgId)) {

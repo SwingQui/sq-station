@@ -22,7 +22,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 获取菜单列表（需要权限）
-app.get("/", requirePermission(Permission.SYSTEM_MENU_LIST), async (c) => {
+app.get("/", requirePermission(Permission.SYSTEM_MENU_READ), async (c) => {
 	try {
 		const menuService = c.get("menuService") as MenuService;
 		const menus = await menuService.findAllTree();
@@ -33,7 +33,7 @@ app.get("/", requirePermission(Permission.SYSTEM_MENU_LIST), async (c) => {
 });
 
 // 获取单个菜单（需要权限）
-app.get("/:id", requireAnyPermission([Permission.SYSTEM_MENU_LIST, Permission.SYSTEM_MENU_VIEW]), async (c) => {
+app.get("/:id", requireAnyPermission([Permission.SYSTEM_MENU_READ, Permission.SYSTEM_MENU_READ]), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -52,7 +52,7 @@ app.get("/:id", requireAnyPermission([Permission.SYSTEM_MENU_LIST, Permission.SY
 });
 
 // 创建菜单（需要权限）
-app.post("/", requirePermission(Permission.SYSTEM_MENU_ADD), async (c) => {
+app.post("/", requirePermission(Permission.SYSTEM_MENU_CREATE), async (c) => {
 	try {
 		const data = await c.req.json();
 		const menuService = c.get("menuService") as MenuService;
@@ -67,7 +67,7 @@ app.post("/", requirePermission(Permission.SYSTEM_MENU_ADD), async (c) => {
 });
 
 // 更新菜单（需要权限）
-app.put("/:id", requirePermission(Permission.SYSTEM_MENU_EDIT), async (c) => {
+app.put("/:id", requirePermission(Permission.SYSTEM_MENU_UPDATE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

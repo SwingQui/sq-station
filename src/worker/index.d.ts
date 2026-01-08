@@ -16,6 +16,12 @@ export interface AuthUser {
 	permissions?: string[];
 }
 
+export interface OAuthClient {
+	clientId: string;
+	clientName: string;
+	scopes: string[];
+}
+
 // 导入服务类型（避免循环依赖，使用类型导入）
 import type { UserService } from "./services/user.service";
 import type { RoleService } from "./services/role.service";
@@ -29,6 +35,7 @@ import type { OrgPermissionRepository } from "./repositories/org-permission.repo
 // 扩展 Hono Context 类型
 export type Variables = {
 	currentUser?: AuthUser;
+	oauthClient?: OAuthClient;
 	userService?: UserService;
 	roleService?: RoleService;
 	menuService?: MenuService;

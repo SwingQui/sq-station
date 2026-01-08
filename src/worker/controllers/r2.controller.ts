@@ -14,7 +14,7 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 // ==================== 文件夹相关路由（固定路径，必须放在前面）====================
 
 // 获取文件夹列表 - 需要文件夹列表权限
-app.get("/folders", requirePermission(Permission.R2_FOLDER_LIST), async (c) => {
+app.get("/folders", requirePermission(Permission.R2_FOLDER_VIEW), async (c) => {
 	try {
 		const prefix = c.req.query("prefix") || undefined;
 
@@ -107,7 +107,7 @@ app.delete("/folder/:path", requirePermission(Permission.R2_FOLDER_DELETE), asyn
 // ==================== 对象相关路由 ====================
 
 // 列出所有对象 - 需要文件列表权限
-app.get("/", requirePermission(Permission.R2_FILE_LIST), async (c) => {
+app.get("/", requirePermission(Permission.R2_FILE_VIEW), async (c) => {
 	try {
 		const limit = parseInt(c.req.query("limit") || "100");
 		const cursor = c.req.query("cursor") || undefined;
@@ -180,7 +180,7 @@ app.get("/:key", requirePermission(Permission.R2_FILE_VIEW), async (c) => {
 
 		// 返回文件内容（需要下载权限）
 		const currentUser = c.get("currentUser");
-		if (!currentUser?.permissions?.includes(Permission.R2_FILE_DOWNLOAD) &&
+		if (!currentUser?.permissions?.includes(Permission.R2_FILE_MANAGE) &&
 		    !currentUser?.permissions?.includes("*:*:*")) {
 			return c.json(fail(403, "无下载权限"), 403);
 		}
@@ -207,7 +207,7 @@ app.get("/:key", requirePermission(Permission.R2_FILE_VIEW), async (c) => {
 });
 
 // 上传对象（支持文件和文本）- 需要上传文件权限
-app.put("/:key", requirePermission(Permission.R2_FILE_UPLOAD), async (c) => {
+app.put("/:key", requirePermission(Permission.R2_FILE_MANAGE), async (c) => {
 	try {
 		const key = c.req.param("key");
 		const contentType = c.req.header("Content-Type") || "application/octet-stream";

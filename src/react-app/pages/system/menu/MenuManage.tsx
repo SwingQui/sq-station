@@ -377,10 +377,10 @@ export default function MenuManage() {
 			fixed: "right" as const,
 			render: (_: any, record: TableRow) => (
 				<Space size="small">
-					<PermissionButton permission="system:menu:add" onClick={() => handleAdd(record.id)} icon={<PlusCircleOutlined />} type="primary" />
-					<PermissionButton permission="system:menu:edit" onClick={() => handleEdit(record)} icon={<EditOutlined />} />
+					<PermissionButton permission="system:menu:create" onClick={() => handleAdd(record.id)} icon={<PlusCircleOutlined />} />
+					<PermissionButton permission="system:menu:update" onClick={() => handleEdit(record)} icon={<EditOutlined />} />
 					<Popconfirm title="确定删除此菜单吗？" onConfirm={() => handleDelete(record.id)}>
-						<PermissionButton permission="system:menu:delete" danger icon={<DeleteOutlined />} />
+						<PermissionButton permission="system:menu:delete" icon={<DeleteOutlined />} />
 					</Popconfirm>
 				</Space>
 			),
@@ -390,7 +390,7 @@ export default function MenuManage() {
 	return (
 		<div style={{ padding: "24px" }}>
 			<div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
-				<PermissionButton permission="system:menu:add" onClick={() => handleAdd(0)} icon={<PlusOutlined />} type="primary">
+				<PermissionButton permission="system:menu:create" onClick={() => handleAdd(0)} icon={<PlusOutlined />}>
 					新增根菜单
 				</PermissionButton>
 				<Popconfirm title="确定删除选中的菜单吗？" onConfirm={handleBatchDelete} disabled={selectedRowKeys.length === 0}>
@@ -398,7 +398,7 @@ export default function MenuManage() {
 						批量删除 ({selectedRowKeys.length})
 					</Button>
 				</Popconfirm>
-				<PermissionButton permission="system:menu:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+				<PermissionButton permission="system:menu:read" onClick={handleExport} icon={<ExportOutlined />}>
 					导出
 				</PermissionButton>
 			</div>
@@ -503,7 +503,7 @@ export default function MenuManage() {
 						</Col>
 						<Col span={12}>
 							<Form.Item label="权限标识" name="permission" labelCol={{ span: 24 }}>
-								<Input placeholder="如: system:user:list" />
+								<Input placeholder="如: system:user:read" />
 							</Form.Item>
 						</Col>
 					</Row>

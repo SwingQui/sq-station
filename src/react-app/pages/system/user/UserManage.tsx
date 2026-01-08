@@ -1,15 +1,64 @@
 import { useEffect, useState } from "react";
-import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
-import { getUserList, createUser, updateUser, deleteUser, getUserRoles, assignUserRoles, getUserDirectPermissions, assignUserPermissions } from "../../../api/user";
-import { getOrganizationList, getUserOrganizations, assignUserOrganizations } from "../../../api/organization";
-import { getRoleList } from "../../../api/role";
-import type { User, Organization, Role } from "../../../types";
-import PermissionButton from "../../../components/PermissionButton";
-import PermissionTree from "../../../components/PermissionTree";
-import { handleError, handleSuccess } from "../../../utils/error-handler";
-import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
+import type { ColumnsType } from "antd/es/table";
+import {
+	Table,
+	Modal,
+	Form,
+	Input,
+	Space,
+	Tag,
+	Row,
+	Col,
+	Radio,
+	Transfer,
+} from "antd";
+import {
+	PlusOutlined,
+	ExportOutlined,
+	EditOutlined,
+	DeleteOutlined,
+	MoreOutlined,
+	UserOutlined,
+	KeyOutlined,
+	ApartmentOutlined,
+} from "@ant-design/icons";
+import {
+	getUserList,
+	createUser,
+	updateUser,
+	deleteUser,
+	getUserRoles,
+	assignUserRoles,
+	getUserDirectPermissions,
+	assignUserPermissions,
+} from "@api/user";
+import { getOrganizationList, getUserOrganizations, assignUserOrganizations } from "@api/organization";
+import { getRoleList } from "@api/role";
+import type { User, Organization, Role } from "@types";
+import PermissionButton from "@components/PermissionButton";
+import PermissionDropdownButton from "@components/PermissionDropdownButton";
+import PermissionTree from "@components/PermissionTree";
+import { handleError, handleSuccess } from "@utils/error-handler";
+import { exportToExcel, ExportEnumMaps } from "@utils/excel-export";
+
+// 用户表单验证规则
+const getUserFormRules = (isEdit: boolean) => ({
+	username: [
+		{ required: true, message: "请输入用户名" },
+		{ min: 3, max: 20, message: "用户名长度为3-20个字符" },
+		{ pattern: /^[a-zA-Z0-9_]+$/, message: "用户名只能包含字母、数字和下划线" },
+	],
+	password: [
+		{ required: !isEdit, message: "请输入密码" },
+		{ min: 6, message: "密码至少6个字符" },
+	],
+	nickname: [{ max: 50, message: "昵称最多50个字符" }],
+	email: [{ type: "email" as const, message: "请输入正确的邮箱格式" }],
+	phone: [{ pattern: /^1[3-9]\d{9}$/, message: "请输入正确的手机号" }],
+});
 
 export default function UserManage() {
+	const [form] = Form.useForm();
 	const [users, setUsers] = useState<User[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -17,6 +66,8 @@ export default function UserManage() {
 	const [showOrgModal, setShowOrgModal] = useState(false);
 	const [showRoleModal, setShowRoleModal] = useState(false);
 	const [showPermModal, setShowPermModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 	const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 	const [currentUserOrgs, setCurrentUserOrgs] = useState<number[]>([]);
 	const [currentUserRoles, setCurrentUserRoles] = useState<number[]>([]);
@@ -40,19 +91,14 @@ export default function UserManage() {
 		}
 	};
 
-	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		const formData = new FormData(e.currentTarget);
-		const userData: any = {
-			username: formData.get("username"),
-			password: formData.get("password"),
-			nickname: formData.get("nickname"),
-			email: formData.get("email"),
-			phone: formData.get("phone"),
-			status: Number(formData.get("status") || 1),
-		};
-
+	const handleSave = async () => {
 		try {
+			const values = await form.validateFields();
+			const userData = {
+				...values,
+				status: values.status ?? 1,
+			};
+
 			if (editingUser) {
 				await updateUser(editingUser.id, userData);
 			} else {
@@ -61,22 +107,44 @@ export default function UserManage() {
 			handleSuccess(editingUser ? "更新成功" : "创建成功");
 			setShowModal(false);
 			setEditingUser(null);
+			form.resetFields();
 			fetchUsers();
-		} catch (e) {
+		} catch (e: any) {
+			// 表单验证失败时不处理，由 Ant Design 自动显示错误
+			if (e?.errorFields) {
+				return;
+			}
 			handleError(e, "保存失败");
 		}
 	};
 
+	const handleCancel = () => {
+		setShowModal(false);
+		setEditingUser(null);
+		form.resetFields();
+	};
+
 	const handleEdit = (user: User) => {
 		setEditingUser(user);
+		form.setFieldsValue({
+			...user,
+			status: user.status ?? 1,
+		});
 		setShowModal(true);
 	};
 
-	const handleDelete = async (id: number) => {
-		if (!confirm("确定删除此用户吗？")) return;
+	const handleDeleteClick = (id: number) => {
+		setDeletingUserId(id);
+		setShowDeleteModal(true);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (deletingUserId === null) return;
 		try {
-			await deleteUser(id);
+			await deleteUser(deletingUserId);
 			handleSuccess("删除成功");
+			setShowDeleteModal(false);
+			setDeletingUserId(null);
 			fetchUsers();
 		} catch (e) {
 			handleError(e, "删除失败");
@@ -85,6 +153,8 @@ export default function UserManage() {
 
 	const handleAdd = () => {
 		setEditingUser(null);
+		form.resetFields();
+		form.setFieldsValue({ status: 1 });
 		setShowModal(true);
 	};
 
@@ -92,7 +162,7 @@ export default function UserManage() {
 		setCurrentUserId(user.id);
 		try {
 			const orgs = await getUserOrganizations(user.id);
-			setCurrentUserOrgs(orgs.map(o => o.id));
+			setCurrentUserOrgs(orgs.map((o) => o.id));
 			// Load all organizations
 			const allOrgsData = await getOrganizationList();
 			setAllOrgs(allOrgsData);
@@ -113,18 +183,11 @@ export default function UserManage() {
 		}
 	};
 
-	const toggleOrg = (orgId: number) => {
-		setCurrentUserOrgs(prev =>
-			prev.includes(orgId) ? prev.filter(id => id !== orgId) : [...prev, orgId]
-		);
-	};
-
-	// 角色分配
 	const handleAssignRoles = async (user: User) => {
 		setCurrentUserId(user.id);
 		try {
 			const roles = await getUserRoles(user.id);
-			setCurrentUserRoles(roles.map(r => r.id));
+			setCurrentUserRoles(roles.map((r) => r.id));
 			// Load all roles
 			const allRolesData = await getRoleList();
 			setAllRoles(allRolesData);
@@ -145,13 +208,6 @@ export default function UserManage() {
 		}
 	};
 
-	const toggleRole = (roleId: number) => {
-		setCurrentUserRoles(prev =>
-			prev.includes(roleId) ? prev.filter(id => id !== roleId) : [...prev, roleId]
-		);
-	};
-
-	// 权限分配
 	const handleAssignPerms = async (user: User) => {
 		setCurrentUserId(user.id);
 		try {
@@ -208,11 +264,18 @@ export default function UserManage() {
 					header: "状态",
 					field: "status",
 					width: 10,
-					formatter: (value) => (value !== undefined ? ExportEnumMaps.status[value as keyof typeof ExportEnumMaps.status] || value : ""),
+					formatter: (value) =>
+						value !== undefined ? ExportEnumMaps.status[value as keyof typeof ExportEnumMaps.status] || value : "",
 				},
 				{
 					header: "创建时间",
 					field: "created_at",
+					width: 20,
+					formatter: (value) => (value ? new Date(value).toLocaleString("zh-CN") : ""),
+				},
+				{
+					header: "更新时间",
+					field: "updated_at",
 					width: 20,
 					formatter: (value) => (value ? new Date(value).toLocaleString("zh-CN") : ""),
 				},
@@ -223,221 +286,302 @@ export default function UserManage() {
 		handleSuccess("导出成功");
 	};
 
+	// 表格列定义
+	const columns: ColumnsType<User> = [
+		{ title: "ID", dataIndex: "id", width: 80, align: "center" },
+		{ title: "用户名", dataIndex: "username", width: 120 },
+		{ title: "昵称", dataIndex: "nickname", width: 120, render: (text: string) => text || "-" },
+		{ title: "邮箱", dataIndex: "email", width: 200, render: (text: string) => text || "-" },
+		{ title: "手机", dataIndex: "phone", width: 150, render: (text: string) => text || "-" },
+		{
+			title: "状态",
+			dataIndex: "status",
+			width: 80,
+			render: (status: number) => (
+				<Tag color={status ? "success" : "error"}>{status ? "正常" : "禁用"}</Tag>
+			),
+		},
+		{
+			title: "创建时间",
+			dataIndex: "created_at",
+			width: 150,
+			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
+		},
+		{
+			title: "更新时间",
+			dataIndex: "updated_at",
+			width: 150,
+			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
+		},
+		{
+			title: "操作",
+			key: "action",
+			width: 200,
+			align: "center" as const,
+			render: (_: any, record: User) => {
+				// 操作按钮统一样式：圆角正方形
+				const actionButtonStyle: React.CSSProperties = {
+					padding: "8px",
+					minWidth: "36px",
+					height: "36px",
+					borderRadius: "8px",
+					justifyContent: "center",
+				};
+
+				return (
+					<Space size="small">
+						<PermissionButton permission="system:user:update" onClick={() => handleEdit(record)} icon={<EditOutlined />} style={actionButtonStyle} />
+						<PermissionButton permission="system:user:delete" onClick={() => handleDeleteClick(record.id)} icon={<DeleteOutlined />} style={actionButtonStyle} />
+						<PermissionDropdownButton
+							icon={<MoreOutlined />}
+							items={[
+								{
+									key: 'roles',
+									permission: 'system:user:assignRoles',
+									label: '分配角色',
+									icon: <UserOutlined />,
+									onClick: () => handleAssignRoles(record),
+								},
+								{
+									key: 'permissions',
+									permission: 'system:user:assignPermissions',
+									label: '分配权限',
+									icon: <KeyOutlined />,
+									onClick: () => handleAssignPerms(record),
+								},
+								{
+									key: 'divider',
+									permission: '',
+									label: '',
+									type: 'divider',
+								},
+								{
+									key: 'organizations',
+									permission: 'system:user:assignOrgs',
+									label: '分配组织',
+									icon: <ApartmentOutlined />,
+									onClick: () => handleAssignOrgs(record),
+								},
+							]}
+						/>
+					</Space>
+				);
+			},
+		},
+	];
+
+	const currentUser = users.find((u) => u.id === currentUserId);
+	const userFormRules = getUserFormRules(!!editingUser?.id);
+
+	// Transfer 数据源需要 key 属性
+	const roleDataSource = allRoles.map((role) => ({ ...role, key: role.id }));
+	const orgDataSource = allOrgs.map((org) => ({ ...org, key: org.id }));
+
 	return (
-		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
-				<PermissionButton permission="system:user:add" onClick={handleAdd} icon={<PlusOutlined />} type="primary">
+		<div style={{ padding: "20px" }}>
+			<Space style={{ marginBottom: 16 }}>
+				<PermissionButton permission="system:user:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增用户
 				</PermissionButton>
-				<PermissionButton permission="system:user:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+				<PermissionButton permission="system:user:read" onClick={handleExport} icon={<ExportOutlined />}>
 					导出
 				</PermissionButton>
-			</div>
+			</Space>
 
-			{loading ? (
-				<div>加载中...</div>
-			) : (
-				<table style={{ width: "100%", borderCollapse: "collapse" }}>
-					<thead>
-						<tr style={{ background: "#f5f5f5" }}>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>ID</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>用户名</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>昵称</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>邮箱</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>手机</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>状态</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>创建时间</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>操作</th>
-						</tr>
-					</thead>
-					<tbody>
-						{users.map((user) => (
-							<tr key={user.id}>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{user.id}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{user.username}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{user.nickname || "-"}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{user.email || "-"}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{user.phone || "-"}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<span style={{ padding: "2px 8px", borderRadius: "4px", background: user.status ? "#52c41a" : "#f5222d", color: "white", fontSize: "12px" }}>
-										{user.status ? "正常" : "禁用"}
-									</span>
-								</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(user.created_at).toLocaleString("zh-CN")}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:user:assignRoles" onClick={() => handleAssignRoles(user)} style={{ padding: "4px 12px", marginRight: "4px", background: "#1890ff" }}>
-										分配角色
-									</PermissionButton>
-									<PermissionButton permission="system:user:assignPermissions" onClick={() => handleAssignPerms(user)} style={{ padding: "4px 12px", marginRight: "4px", background: "#722ed1" }}>
-										分配权限
-									</PermissionButton>
-									<PermissionButton permission="system:user:assignOrgs" onClick={() => handleAssignOrgs(user)} style={{ padding: "4px 12px", marginRight: "4px", background: "#52c41a" }}>
-										分配组织
-									</PermissionButton>
-									<PermissionButton permission="system:user:edit" onClick={() => handleEdit(user)} style={{ padding: "4px 12px", marginRight: "4px" }}>
-										编辑
-									</PermissionButton>
-									<PermissionButton permission="system:user:delete" onClick={() => handleDelete(user.id)} style={{ padding: "4px 12px" }}>
-										删除
-									</PermissionButton>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			)}
+			<Table
+				columns={columns}
+				dataSource={users}
+				rowKey="id"
+				loading={loading}
+				bordered
+				pagination={{ pageSize: 10 }}
+				scroll={{ x: 1200 }}
+			/>
 
-			{showModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
-						<h2 style={{ marginTop: 0 }}>{editingUser ? "编辑用户" : "新增用户"}</h2>
-						<form onSubmit={handleSave}>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>用户名 *</label>
-								<input name="username" defaultValue={editingUser?.username} required style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>密码{editingUser ? " (留空不修改)" : " *"}</label>
-								<input name="password" type="password" required={!editingUser} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>昵称</label>
-								<input name="nickname" defaultValue={editingUser?.nickname || ""} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>邮箱</label>
-								<input name="email" type="email" defaultValue={editingUser?.email || ""} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>手机</label>
-								<input name="phone" defaultValue={editingUser?.phone || ""} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>状态</label>
-								<select name="status" defaultValue={editingUser?.status ?? 1} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}>
-									<option value="1">正常</option>
-									<option value="0">禁用</option>
-								</select>
-							</div>
-							<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-								<button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-									取消
-								</button>
-								<button type="submit" style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-									保存
-								</button>
-							</div>
-						</form>
+			{/* 新增/编辑用户弹窗 */}
+			<Modal
+				title={editingUser?.id ? "编辑用户" : "新增用户"}
+				open={showModal}
+				onOk={handleSave}
+				onCancel={handleCancel}
+				width={700}
+				okText="保存"
+				cancelText="取消"
+			>
+				<Form form={form} layout="vertical">
+					<Row gutter={16}>
+						<Col span={12}>
+							<Form.Item label="用户名" name="username" rules={userFormRules.username}>
+								<Input placeholder="请输入用户名" />
+							</Form.Item>
+						</Col>
+						<Col span={12}>
+							<Form.Item label="密码" name="password" rules={userFormRules.password}>
+								<Input.Password placeholder={editingUser?.id ? "留空不修改" : "请输入密码"} />
+							</Form.Item>
+						</Col>
+					</Row>
+					<Row gutter={16}>
+						<Col span={12}>
+							<Form.Item label="昵称" name="nickname">
+								<Input placeholder="请输入昵称" />
+							</Form.Item>
+						</Col>
+						<Col span={12}>
+							<Form.Item label="邮箱" name="email" rules={userFormRules.email}>
+								<Input placeholder="请输入邮箱" />
+							</Form.Item>
+						</Col>
+					</Row>
+					<Row gutter={16}>
+						<Col span={12}>
+							<Form.Item label="手机" name="phone" rules={userFormRules.phone}>
+								<Input placeholder="请输入手机号" />
+							</Form.Item>
+						</Col>
+						<Col span={12}>
+							<Form.Item label="状态" name="status" initialValue={1}>
+								<Radio.Group buttonStyle="solid">
+									<Radio.Button value={1}>正常</Radio.Button>
+									<Radio.Button value={0}>禁用</Radio.Button>
+								</Radio.Group>
+							</Form.Item>
+						</Col>
+					</Row>
+				</Form>
+			</Modal>
+
+			{/* 分配角色弹窗 */}
+			<Modal
+				title={`分配角色 - ${currentUser?.username}`}
+				open={showRoleModal}
+				onOk={handleSaveRoles}
+				onCancel={() => setShowRoleModal(false)}
+				width={700}
+				okText="保存"
+				cancelText="取消"
+			>
+				{allRoles.length === 0 ? (
+					<div style={{ textAlign: "center", padding: "40px", color: "#888" }}>暂无角色</div>
+				) : (
+					<Transfer
+						dataSource={roleDataSource}
+						targetKeys={currentUserRoles}
+						onChange={(targetKeys) => setCurrentUserRoles(targetKeys as number[])}
+						render={(item) => `${item.role_name} (${item.role_key})`}
+						titles={["可选角色", "已选角色"]}
+						showSearch
+						filterOption={(inputValue, item) =>
+							item.role_name.includes(inputValue) || item.role_key.includes(inputValue)
+						}
+						listStyle={{
+							width: 300,
+							height: 400,
+						}}
+					/>
+				)}
+			</Modal>
+
+			{/* 分配组织弹窗 */}
+			<Modal
+				title={`分配组织 - ${currentUser?.username}`}
+				open={showOrgModal}
+				onOk={handleSaveOrgs}
+				onCancel={() => setShowOrgModal(false)}
+				width={700}
+				okText="保存"
+				cancelText="取消"
+			>
+				{allOrgs.length === 0 ? (
+					<div style={{ textAlign: "center", padding: "40px", color: "#888" }}>暂无组织</div>
+				) : (
+					<Transfer
+						dataSource={orgDataSource}
+						targetKeys={currentUserOrgs}
+						onChange={(targetKeys) => setCurrentUserOrgs(targetKeys as number[])}
+						render={(item) => `${item.org_name} (${item.org_code})`}
+						titles={["可选组织", "已选组织"]}
+						showSearch
+						filterOption={(inputValue, item) =>
+							item.org_name.includes(inputValue) || item.org_code.includes(inputValue)
+						}
+						listStyle={{
+							width: 300,
+							height: 400,
+						}}
+					/>
+				)}
+			</Modal>
+
+			{/* 分配权限弹窗 */}
+			<Modal
+				title={
+					<div>
+						<div>分配权限 - {currentUser?.username}</div>
+						<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: 0 }}>
+							为用户分配额外的直接权限（与角色权限叠加）
+						</p>
 					</div>
-				</div>
-			)}
-
-			{/* 组织分配弹窗 */}
-			{showOrgModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
-						<h2 style={{ marginTop: 0 }}>分配组织 - {users.find(u => u.id === currentUserId)?.username}</h2>
-						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{allOrgs.length === 0 ? (
-								<div style={{ color: "#888", textAlign: "center" }}>暂无组织</div>
-							) : (
-								allOrgs.map(org => (
-									<label key={org.id} style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
-										<input
-											type="checkbox"
-											checked={currentUserOrgs.includes(org.id)}
-											onChange={() => toggleOrg(org.id)}
-											style={{ marginRight: "8px" }}
-										/>
-										<span>
-											<strong>{org.org_name}</strong> ({org.org_code})
-										</span>
-									</label>
-								))
-							)}
-						</div>
-						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-							<button type="button" onClick={() => setShowOrgModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								取消
-							</button>
-							<button type="button" onClick={handleSaveOrgs} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								保存
-							</button>
-						</div>
+				}
+				open={showPermModal}
+				onOk={handleSavePerms}
+				onCancel={() => setShowPermModal(false)}
+				width={700}
+				okText="保存"
+				cancelText="取消"
+			>
+				<>
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+						<label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+							<input
+								type="checkbox"
+								checked={currentUserPerms.includes("*:*:*")}
+								onChange={(e) => {
+									if (e.target.checked) {
+										setCurrentUserPerms(["*:*:*"]);
+									} else {
+										setCurrentUserPerms([]);
+									}
+								}}
+								style={{ marginRight: "6px" }}
+							/>
+							<span style={{ fontSize: "13px" }}>超级管理员（拥有所有权限）</span>
+						</label>
+						<label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+							<span style={{ fontSize: "13px", marginRight: "6px" }}>启用父子级联勾选</span>
+							<input
+								type="checkbox"
+								checked={cascadeEnabled}
+								onChange={(e) => setCascadeEnabled(e.target.checked)}
+							/>
+						</label>
 					</div>
-				</div>
-			)}
-
-			{/* 角色分配弹窗 */}
-			{showRoleModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
-						<h2 style={{ marginTop: 0 }}>分配角色 - {users.find(u => u.id === currentUserId)?.username}</h2>
-						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{allRoles.length === 0 ? (
-								<div style={{ color: "#888", textAlign: "center" }}>暂无角色</div>
-							) : (
-								allRoles.map(role => (
-									<label key={role.id} style={{ display: "flex", alignItems: "center", padding: "8px 0" }}>
-										<input
-											type="checkbox"
-											checked={currentUserRoles.includes(role.id)}
-											onChange={() => toggleRole(role.id)}
-											style={{ marginRight: "8px" }}
-										/>
-										<span>
-											<strong>{role.role_name}</strong> ({role.role_key})
-										</span>
-									</label>
-								))
-							)}
-						</div>
-						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-							<button type="button" onClick={() => setShowRoleModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								取消
-							</button>
-							<button type="button" onClick={handleSaveRoles} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								保存
-							</button>
-						</div>
+					<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+						<PermissionTree
+							permissions={currentUserPerms.includes("*:*:*") ? [] : currentUserPerms.filter(k => k !== "*:*:*")}
+							onChange={setCurrentUserPerms}
+							cascadeEnabled={cascadeEnabled}
+						/>
 					</div>
-				</div>
-			)}
+				</>
+			</Modal>
 
-			{/* 权限分配弹窗 */}
-			{showPermModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "600px", maxWidth: "90%" }}>
-						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-							<div>
-								<h2 style={{ marginTop: 0 }}>分配权限 - {users.find(u => u.id === currentUserId)?.username}</h2>
-								<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>为用户分配额外的直接权限（与角色权限叠加）</p>
-							</div>
-							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>
-								<input
-									type="checkbox"
-									checked={cascadeEnabled}
-									onChange={(e) => setCascadeEnabled(e.target.checked)}
-									style={{ marginRight: "6px" }}
-								/>
-								<span style={{ fontSize: "13px" }}>启用父子级联勾选</span>
-							</label>
-						</div>
-						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{/* 动态权限树 */}
-							<PermissionTree permissions={currentUserPerms} onChange={setCurrentUserPerms} cascadeEnabled={cascadeEnabled} />
-						</div>
-						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-							<button type="button" onClick={() => setShowPermModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								取消
-							</button>
-							<button type="button" onClick={handleSavePerms} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								保存
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			{/* 删除确认弹窗 */}
+			<Modal
+				title="删除用户"
+				open={showDeleteModal}
+				onOk={handleConfirmDelete}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setDeletingUserId(null);
+				}}
+				okText="确定"
+				cancelText="取消"
+				okButtonProps={{ danger: true }}
+				centered={true}
+			>
+				<p>确定删除此用户吗？此操作无法撤销。</p>
+			</Modal>
 		</div>
 	);
 }

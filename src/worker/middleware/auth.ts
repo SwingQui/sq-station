@@ -1,10 +1,11 @@
 /**
  * 认证中间件
  * 验证 JWT token 并将用户信息附加到上下文
+ * 支持用户 Token 和 OAuth 客户端 Token
  */
 
 import type { Context, Next } from "hono";
-import type { Env, Variables, AuthUser } from "../index.d";
+import type { Env, Variables, AuthUser, OAuthClient } from "../index.d";
 import { verifyToken } from "../utils/jwt";
 import { unauthorized } from "../utils/response";
 import { MenuRepository } from "../repositories/menu.repository";
@@ -25,16 +26,20 @@ async function loadUserPermissions(db: D1Database, userId: number): Promise<stri
 /**
  * 认证中间件
  * 验证请求头中的 JWT token
+ * 支持两种 Token 类型：
+ * 1. 用户 Token（包含 userId, username）
+ * 2. OAuth Token（包含 clientId, scopes）
  */
 export const authMiddleware = async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 	// 公开路径白名单（不需要认证的路径）
 	const publicPaths = [
 		"/api/auth/login",
 		"/api/auth/logout",
+		"/oauth/token", // OAuth Token 端点是公开的
 	];
 
 	// 如果是公开路径，直接跳过认证
-	if (publicPaths.includes(c.req.path)) {
+	if (publicPaths.some((path) => c.req.path === path || c.req.path.startsWith(path))) {
 		console.log(`[AuthMiddleware] Public path detected, skipping auth: ${c.req.path}`);
 		return next();
 	}
@@ -62,19 +67,28 @@ export const authMiddleware = async (c: Context<{ Bindings: Env; Variables: Vari
 		return c.json(unauthorized("Token 无效或已过期"), 401);
 	}
 
-	console.log(`[AuthMiddleware] Token verified for user: ${payload.username} (ID: ${payload.userId})`);
+	// 检查 Token 类型
+	if (payload.type === "oauth") {
+		// OAuth Token：设置客户端信息到上下文
+		console.log(`[AuthMiddleware] OAuth Token verified for client: ${payload.clientName} (${payload.clientId})`);
+		c.set("oauthClient", {
+			clientId: payload.clientId!,
+			clientName: payload.clientName!,
+			scopes: payload.scopes || [],
+		} as OAuthClient);
+	} else {
+		// 用户 Token：从数据库加载用户权限
+		console.log(`[AuthMiddleware] User Token verified for user: ${payload.username} (ID: ${payload.userId})`);
+		const permissions = await loadUserPermissions(c.env.DB, payload.userId!);
 
-	// 从数据库加载用户权限（角色权限 + 直接权限）
-	const permissions = await loadUserPermissions(c.env.DB, payload.userId);
+		c.set("currentUser", {
+			userId: payload.userId!,
+			username: payload.username!,
+			permissions: permissions,
+		} as AuthUser);
+	}
 
-	// 将用户信息附加到上下文
-	c.set("currentUser", {
-		userId: payload.userId,
-		username: payload.username,
-		permissions: permissions,
-	} as AuthUser);
-
-	console.log(`[AuthMiddleware] User context set, proceeding to next handler`);
+	console.log(`[AuthMiddleware] Context set, proceeding to next handler`);
 	await next();
 };
 
@@ -90,14 +104,20 @@ export const optionalAuthMiddleware = async (c: Context<{ Bindings: Env; Variabl
 		const payload = await verifyToken(token, c.env.JWT_SECRET || "default-secret-key");
 
 		if (payload) {
-			// 从数据库加载用户权限（角色权限 + 直接权限）
-			const permissions = await loadUserPermissions(c.env.DB, payload.userId);
-
-			c.set("currentUser", {
-				userId: payload.userId,
-				username: payload.username,
-				permissions: permissions,
-			} as AuthUser);
+			if (payload.type === "oauth") {
+				c.set("oauthClient", {
+					clientId: payload.clientId!,
+					clientName: payload.clientName!,
+					scopes: payload.scopes || [],
+				} as OAuthClient);
+			} else {
+				const permissions = await loadUserPermissions(c.env.DB, payload.userId!);
+				c.set("currentUser", {
+					userId: payload.userId!,
+					username: payload.username!,
+					permissions: permissions,
+				} as AuthUser);
+			}
 		}
 	}
 

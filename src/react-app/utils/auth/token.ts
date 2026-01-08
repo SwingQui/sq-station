@@ -3,27 +3,27 @@
  * 负责 JWT token 的存储、解析和验证
  */
 
-const TOKEN_KEY = "auth_token";
+import { STORAGE_KEYS } from "@/config/app.config";
 
 /**
  * 保存 token
  */
 export function setToken(token: string): void {
-	localStorage.setItem(TOKEN_KEY, token);
+	localStorage.setItem(STORAGE_KEYS.TOKEN, token);
 }
 
 /**
  * 获取 token
  */
 export function getToken(): string | null {
-	return localStorage.getItem(TOKEN_KEY);
+	return localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
 
 /**
  * 移除 token
  */
 export function removeToken(): void {
-	localStorage.removeItem(TOKEN_KEY);
+	localStorage.removeItem(STORAGE_KEYS.TOKEN);
 }
 
 /**

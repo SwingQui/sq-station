@@ -182,9 +182,9 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_or
 
 -- 系统管理子菜单
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '用户管理', 'C', '/dashboard/system/user', 'system/user/UserManage', 'user', 1, 'system:user:list', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '角色管理', 'C', '/dashboard/system/role', 'system/role/RoleManage', 'role', 2, 'system:role:list', 1, 1),
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '菜单管理', 'C', '/dashboard/system/menu', 'system/menu/MenuManage', 'menu', 3, 'system:menu:list', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '用户管理', 'C', '/dashboard/system/user', 'system/user/UserManage', 'user', 1, 'system:user:read', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '角色管理', 'C', '/dashboard/system/role', 'system/role/RoleManage', 'role', 2, 'system:role:read', 1, 1),
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '菜单管理', 'C', '/dashboard/system/menu', 'system/menu/MenuManage', 'menu', 3, 'system:menu:read', 1, 1),
 ((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), 'KV管理', 'C', '/dashboard/system/kv', 'system/kv/KVManage', 'database', 4, 'system:kv:view', 1, 1),
 ((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), 'R2存储', 'C', '/dashboard/system/r2', 'system/r2/R2Manage', 'folder-open', 5, 'system:r2:view', 1, 1),
 ((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '表查询', 'C', '/dashboard/system/sql', 'system/sql/SQLSearch', 'database', 6, 'system:sqlSearch', 1, 1);
@@ -217,38 +217,36 @@ INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id) VALUES
 -- ====================================
 -- 用户管理按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '新增用户', 'F', 'system:user:add', 1, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '编辑用户', 'F', 'system:user:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '新增用户', 'F', 'system:user:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '编辑用户', 'F', 'system:user:update', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '删除用户', 'F', 'system:user:delete', 3, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配角色', 'F', 'system:user:assignRoles', 4, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/user'), '分配权限', 'F', 'system:user:assignPermissions', 5, 0, 1);
 
 -- 角色管理按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '新增角色', 'F', 'system:role:add', 1, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '编辑角色', 'F', 'system:role:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '新增角色', 'F', 'system:role:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '编辑角色', 'F', 'system:role:update', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '删除角色', 'F', 'system:role:delete', 3, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '分配菜单', 'F', 'system:role:assignMenus', 4, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/role'), '配置权限', 'F', 'system:role:configPermissions', 5, 0, 1);
 
 -- 菜单管理按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '新增菜单', 'F', 'system:menu:add', 1, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '编辑菜单', 'F', 'system:menu:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '新增菜单', 'F', 'system:menu:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '编辑菜单', 'F', 'system:menu:update', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/menu'), '删除菜单', 'F', 'system:menu:delete', 3, 0, 1);
 
 -- R2存储按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
--- 文件管理权限
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '文件列表', 'F', 'r2:file:list', 1, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '上传文件', 'F', 'r2:file:upload', 2, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '下载文件', 'F', 'r2:file:download', 3, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '删除文件', 'F', 'r2:file:delete', 4, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '查看文件', 'F', 'r2:file:view', 5, 0, 1),
+-- 文件管理权限（简化版）
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '查看文件', 'F', 'r2:file:view', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '文件管理', 'F', 'r2:file:manage', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '删除文件', 'F', 'r2:file:delete', 3, 0, 1),
 -- 文件夹管理权限
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '文件夹列表', 'F', 'r2:folder:list', 6, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '创建文件夹', 'F', 'r2:folder:create', 7, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '删除文件夹', 'F', 'r2:folder:delete', 8, 0, 1);
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '查看文件夹', 'F', 'r2:folder:view', 4, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '创建文件夹', 'F', 'r2:folder:create', 5, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/r2'), '删除文件夹', 'F', 'r2:folder:delete', 6, 0, 1);
 
 -- 确保超级管理员拥有所有权限（包括新添加的按钮权限）
 INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)
@@ -261,14 +259,14 @@ SELECT 1, id FROM sys_menu WHERE NOT EXISTS (
 -- ====================================
 -- 组织管理菜单（在系统管理目录下）
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '组织管理', 'C', '/dashboard/system/organization', 'system/organization/OrganizationManage', 'team', 6, 'system:organization:list', 1, 1);
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '组织管理', 'C', '/dashboard/system/organization', 'system/organization/OrganizationManage', 'team', 6, 'system:organization:read', 1, 1);
 
 -- 组织管理按钮权限
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '新增组织', 'F', 'system:organization:add', 1, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '编辑组织', 'F', 'system:organization:edit', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '新增组织', 'F', 'system:organization:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '编辑组织', 'F', 'system:organization:update', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '删除组织', 'F', 'system:organization:delete', 3, 0, 1),
-((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '分配角色', 'F', 'system:organization:assign', 4, 0, 1);
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/organization'), '分配角色', 'F', 'system:organization:assignRoles', 4, 0, 1);
 
 -- 用户管理按钮权限（添加分配组织权限）
 INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
@@ -287,3 +285,82 @@ INSERT OR IGNORE INTO sys_organization (id, org_name, org_code, sort_order, stat
 (1, '总公司', 'HQ', 1, 1),
 (2, '技术部', 'TECH', 2, 1),
 (3, '市场部', 'MARKET', 3, 1);
+
+-- ====================================
+-- OAuth 客户端管理
+-- ====================================
+
+-- OAuth 客户端表
+CREATE TABLE IF NOT EXISTS sys_oauth_client (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id TEXT NOT NULL UNIQUE,        -- 客户端 ID（公开）
+  client_secret TEXT NOT NULL,           -- 客户端密钥（加密存储）
+  client_name TEXT NOT NULL,             -- 客户端名称
+  description TEXT,                      -- 描述
+  scope TEXT DEFAULT '[]',               -- 授权的权限列表 JSON，如 ["system:user:list","r2:file:upload"]
+  expires_in INTEGER DEFAULT 3600,       -- Token 有效期（秒）
+  status INTEGER DEFAULT 1,              -- 状态：0=禁用 1=正常
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OAuth 客户端管理菜单（在系统管理目录下）
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), 'OAuth客户端', 'C', '/dashboard/system/oauth', 'system/oauth/OAuthClientManage', 'api', 7, 'oauth:client:read', 1, 1);
+
+-- OAuth 客户端管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth'), '新增客户端', 'F', 'oauth:client:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth'), '编辑客户端', 'F', 'oauth:client:update', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth'), '删除客户端', 'F', 'oauth:client:delete', 3, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth'), '重置密钥', 'F', 'oauth:client:resetSecret', 4, 0, 1);
+
+-- 确保超级管理员拥有 OAuth 客户端管理相关权限
+INSERT OR IGNORE INTO sys_role_menu (role_id, menu_id)
+SELECT 1, id FROM sys_menu WHERE NOT EXISTS (
+	SELECT 1 FROM sys_role_menu WHERE role_id = 1 AND menu_id = sys_menu.id
+);
+
+-- ====================================
+-- OAuth 权限组管理
+-- ====================================
+
+-- 权限组表
+CREATE TABLE IF NOT EXISTS sys_oauth_permission_group (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_key TEXT NOT NULL UNIQUE,       -- 权限组标识：user_read, r2_full
+  group_name TEXT NOT NULL,             -- 权限组名称
+  description TEXT,                     -- 描述
+  permissions TEXT NOT NULL,            -- 权限列表 JSON
+  sort_order INTEGER DEFAULT 0,         -- 排序
+  status INTEGER DEFAULT 1,             -- 状态：0=禁用 1=正常
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 为客户端表添加权限组字段（如果不存在）
+-- 客户端可以绑定多个权限组，权限 = 所有绑定权限组的权限并集（无自定义权限）
+-- SQLite 不支持直接 ALTER TABLE ADD COLUMN IF NOT EXISTS，需要使用更复杂的方法
+-- 这里我们假设字段不存在，如果已存在会报错但不影响其他功能
+ALTER TABLE sys_oauth_client ADD COLUMN permission_group_ids TEXT DEFAULT '[]';
+
+-- 初始化权限组数据
+INSERT OR IGNORE INTO sys_oauth_permission_group (group_key, group_name, description, permissions, sort_order) VALUES
+('user_read', '用户只读', '只读访问用户信息', '["system:user:read"]', 1),
+('user_full', '用户管理', '完整的用户管理权限', '["system:user:read","system:user:create","system:user:update","system:user:delete"]', 2),
+('role_read', '角色只读', '只读访问角色信息', '["system:role:read"]', 3),
+('role_full', '角色管理', '完整的角色管理权限', '["system:role:read","system:role:create","system:role:update","system:role:delete","system:role:configPermissions","system:role:assignMenus"]', 4),
+('r2_read', 'R2只读', '只读访问R2文件', '["r2:file:view","r2:folder:view"]', 5),
+('r2_full', 'R2管理', '完整的R2管理权限', '["r2:file:view","r2:file:manage","r2:file:delete","r2:folder:view","r2:folder:create","r2:folder:delete"]', 6),
+('kv_full', 'KV管理', '完整的KV存储权限', '["kv:key:list","kv:key:get","kv:key:set","kv:key:delete"]', 7),
+('admin_all', '全部权限', '所有系统权限', '["*:*:*"]', 100);
+
+-- OAuth 权限组管理菜单
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '系统管理' AND menu_type = 'M' AND parent_id = 0), '权限组', 'C', '/dashboard/system/oauth-groups', 'system/oauth/OAuthPermissionGroupManage', 'team', 8, 'oauth:group:read', 1, 1);
+
+-- 权限组管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth-groups'), '新增权限组', 'F', 'oauth:group:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth-groups'), '编辑权限组', 'F', 'oauth:group:update', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth-groups'), '删除权限组', 'F', 'oauth:group:delete', 3, 0, 1);

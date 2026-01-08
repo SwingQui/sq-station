@@ -24,7 +24,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 获取角色列表（需要权限）
-app.get("/", requirePermission(Permission.SYSTEM_ROLE_LIST), async (c) => {
+app.get("/", requirePermission(Permission.SYSTEM_ROLE_READ), async (c) => {
 	try {
 		const roleService = c.get("roleService") as RoleService;
 		const roles = await roleService.findAll();
@@ -35,7 +35,7 @@ app.get("/", requirePermission(Permission.SYSTEM_ROLE_LIST), async (c) => {
 });
 
 // 获取单个角色（需要权限）
-app.get("/:id", requireAnyPermission([Permission.SYSTEM_ROLE_LIST, Permission.SYSTEM_ROLE_VIEW]), async (c) => {
+app.get("/:id", requireAnyPermission([Permission.SYSTEM_ROLE_READ, Permission.SYSTEM_ROLE_READ]), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -54,7 +54,7 @@ app.get("/:id", requireAnyPermission([Permission.SYSTEM_ROLE_LIST, Permission.SY
 });
 
 // 创建角色（需要权限）
-app.post("/", requirePermission(Permission.SYSTEM_ROLE_ADD), async (c) => {
+app.post("/", requirePermission(Permission.SYSTEM_ROLE_CREATE), async (c) => {
 	try {
 		const data = await c.req.json();
 		const roleService = c.get("roleService") as RoleService;
@@ -69,7 +69,7 @@ app.post("/", requirePermission(Permission.SYSTEM_ROLE_ADD), async (c) => {
 });
 
 // 更新角色（需要权限）
-app.put("/:id", requirePermission(Permission.SYSTEM_ROLE_EDIT), async (c) => {
+app.put("/:id", requirePermission(Permission.SYSTEM_ROLE_UPDATE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

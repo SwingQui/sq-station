@@ -4,13 +4,19 @@
  */
 
 import { Hono } from "hono";
-import type { Env } from "../index.d";
+import type { Env, Variables } from "../index.d";
 import { success, fail } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 // 获取单个 key 的值
-app.get("/:key", async (c) => {
+app.get("/:key", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {
 	try {
 		const key = c.req.param("key");
 		const value = await c.env.KV_BINDING.get(key);
@@ -24,7 +30,7 @@ app.get("/:key", async (c) => {
 });
 
 // 设置 key 的值
-app.put("/:key", async (c) => {
+app.put("/:key", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {
 	try {
 		const key = c.req.param("key");
 		const { value } = await c.req.json();
@@ -36,7 +42,7 @@ app.put("/:key", async (c) => {
 });
 
 // 删除 key
-app.delete("/:key", async (c) => {
+app.delete("/:key", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {
 	try {
 		const key = c.req.param("key");
 		await c.env.KV_BINDING.delete(key);
@@ -47,7 +53,7 @@ app.delete("/:key", async (c) => {
 });
 
 // 列出所有 keys
-app.get("/", async (c) => {
+app.get("/", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {
 	try {
 		const list = await c.env.KV_BINDING.list();
 		return c.json(success(list.keys));

@@ -4,8 +4,12 @@
  */
 
 export interface JWTPayload {
-	userId: number;
-	username: string;
+	userId?: number;
+	username?: string;
+	clientId?: string;
+	clientName?: string;
+	scopes?: string[];
+	type?: "user" | "oauth";
 	exp: number;
 	iat: number;
 }

@@ -8,18 +8,16 @@ import { useAuth } from "../contexts/AuthContext";
 import { navigate } from "../utils/router";
 import CryptoJS from "crypto-js";
 import loginBackground from "../assets/login/Login-background.jpg";
-
-// 加密密钥（实际项目中应该从环境变量获取）
-const ENCRYPTION_KEY = "sq-station-secret-key-2024";
+import { SECURITY, STORAGE_KEYS, APP } from "@/config/app.config";
 
 // 加密函数
 function encrypt(text: string): string {
-	return CryptoJS.AES.encrypt(text, ENCRYPTION_KEY).toString();
+	return CryptoJS.AES.encrypt(text, SECURITY.ENCRYPTION_KEY).toString();
 }
 
 // 解密函数
 function decrypt(ciphertext: string): string {
-	const bytes = CryptoJS.AES.decrypt(ciphertext, ENCRYPTION_KEY);
+	const bytes = CryptoJS.AES.decrypt(ciphertext, SECURITY.ENCRYPTION_KEY);
 	return bytes.toString(CryptoJS.enc.Utf8);
 }
 
@@ -34,7 +32,7 @@ export default function Login() {
 
 	// 从 localStorage 加载记住的密码
 	useEffect(() => {
-		const remembered = localStorage.getItem("sq_remembered_credentials");
+		const remembered = localStorage.getItem(STORAGE_KEYS.REMEMBERED_CREDENTIALS);
 		if (remembered) {
 			try {
 				const decrypted = decrypt(remembered);
@@ -46,7 +44,7 @@ export default function Login() {
 				}
 			} catch (e) {
 				console.error("Failed to decrypt remembered credentials:", e);
-				localStorage.removeItem("sq_remembered_credentials");
+				localStorage.removeItem(STORAGE_KEYS.REMEMBERED_CREDENTIALS);
 			}
 		}
 	}, []);
@@ -72,9 +70,9 @@ export default function Login() {
 			if (rememberMe) {
 				const credentials = `${username}:${password}`;
 				const encrypted = encrypt(credentials);
-				localStorage.setItem("sq_remembered_credentials", encrypted);
+				localStorage.setItem(STORAGE_KEYS.REMEMBERED_CREDENTIALS, encrypted);
 			} else {
-				localStorage.removeItem("sq_remembered_credentials");
+				localStorage.removeItem(STORAGE_KEYS.REMEMBERED_CREDENTIALS);
 			}
 		} catch (err: any) {
 			setError(err.message || "登录失败，请检查用户名和密码");
@@ -169,14 +167,14 @@ export default function Login() {
 						margin: "0 0 6px 0",
 						letterSpacing: "-0.5px",
 					}}>
-						SQ Station
+						{APP.NAME}
 					</h1>
 					<p style={{
 						fontSize: "12px",
 						color: "rgba(255, 255, 255, 0.6)",
 						margin: 0,
 					}}>
-						荡荡秋千的小站
+						{APP.DESCRIPTION}
 					</p>
 				</div>
 

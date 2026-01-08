@@ -50,7 +50,7 @@ export class AuthService {
 		}
 
 		// 检查用户状态
-		if (user.status === appConfig.user.disabledStatus) {
+		if (user.status === appConfig.constants.status.disabled) {
 			throw new Error("账户已被禁用");
 		}
 

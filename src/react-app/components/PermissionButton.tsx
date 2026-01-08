@@ -1,10 +1,12 @@
 /**
  * 权限按钮组件
- * 根据用户权限显示/隐藏按钮
+ * 根据用户权限显示/隐藏按钮，支持自动推断按钮类型
  */
 
 import React from "react";
 import { hasPermission } from "../utils/auth";
+
+type ButtonVariant = "create" | "delete" | "export" | "update" | "special";
 
 interface PermissionButtonProps {
 	permission: string;
@@ -13,10 +15,68 @@ interface PermissionButtonProps {
 	className?: string;
 	onClick?: () => void;
 	disabled?: boolean;
-	type?: "button" | "submit" | "reset" | "primary";
 	icon?: React.ReactNode;
-	danger?: boolean;
+	variant?: ButtonVariant;
 }
+
+/**
+ * 根据权限标识自动推断按钮类型
+ */
+function getVariant(permission: string, children?: React.ReactNode): ButtonVariant {
+	// 检查是否为导出按钮
+	if (children && typeof children === "string" && children.includes("导出")) {
+		return "export";
+	}
+
+	// 根据权限标识推断
+	if (permission.includes(":create")) return "create";
+	if (permission.includes(":delete")) return "delete";
+	if (permission.includes(":update")) return "update";
+	if (permission.includes(":assign")) return "special";
+	if (permission.includes(":config")) return "special";
+	if (permission.includes(":reset")) return "special";
+
+	// 默认返回 update 样式
+	return "update";
+}
+
+/**
+ * 按钮样式配置
+ */
+const buttonStyles: Record<ButtonVariant, React.CSSProperties> = {
+	create: {
+		background: "#1890ff",
+		color: "white",
+	},
+	delete: {
+		background: "#ff4d4f",
+		color: "white",
+	},
+	export: {
+		background: "#8c8c8c",
+		color: "white",
+	},
+	update: {
+		background: "#fa8c16",
+		color: "white",
+	},
+	special: {
+		background: "#13c2c2",
+		color: "white",
+	},
+};
+
+const baseStyle: React.CSSProperties = {
+	padding: "6px 16px",
+	border: "none",
+	borderRadius: "4px",
+	cursor: "pointer",
+	fontSize: "14px",
+	display: "inline-flex",
+	alignItems: "center",
+	gap: "6px",
+	transition: "opacity 0.2s, filter 0.2s",
+};
 
 export default function PermissionButton({
 	permission,
@@ -25,64 +85,45 @@ export default function PermissionButton({
 	className,
 	onClick,
 	disabled,
-	type = "button",
 	icon,
-	danger,
+	variant,
 }: PermissionButtonProps) {
 	// 检查权限
 	if (!hasPermission(permission)) {
 		return null;
 	}
 
-	const buttonStyle: React.CSSProperties = {
-		padding: children ? "6px 16px" : "6px 12px",
-		background: "#1890ff",
-		color: "white",
-		border: "none",
-		borderRadius: "4px",
-		cursor: disabled ? "not-allowed" : "pointer",
+	// 自动推断或使用指定的 variant
+	const buttonVariant = variant || getVariant(permission, children);
+
+	const computedStyle: React.CSSProperties = {
+		...baseStyle,
+		...buttonStyles[buttonVariant],
 		opacity: disabled ? 0.5 : 1,
-		fontSize: "14px",
-		display: "inline-flex",
-		alignItems: "center",
-		gap: "6px",
+		cursor: disabled ? "not-allowed" : "pointer",
 		...style,
 	};
 
-	const dangerStyle: React.CSSProperties = {
-		...buttonStyle,
-		background: "#ff4d4f",
+	// 添加悬停效果
+	const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+		if (!disabled) {
+			e.currentTarget.style.filter = "brightness(1.1)";
+		}
 	};
 
-	const primaryStyle: React.CSSProperties = {
-		...buttonStyle,
-		background: "#1890ff",
-	};
-
-	const defaultStyle: React.CSSProperties = {
-		...buttonStyle,
-		background: "#f0f0f0",
-		color: "#333",
-	};
-
-	// 判断是否为危险操作（删除等）
-	const isDanger = danger !== undefined ? danger : (permission.includes("delete") || permission.includes("remove"));
-	// 判断按钮类型
-	const buttonType = type === "primary" ? "primary" : "default";
-
-	const getStyle = () => {
-		if (isDanger) return dangerStyle;
-		if (buttonType === "primary") return primaryStyle;
-		return defaultStyle;
+	const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+		e.currentTarget.style.filter = "none";
 	};
 
 	return (
 		<button
-			type={type === "primary" ? "button" : type}
-			style={getStyle()}
+			type="button"
+			style={computedStyle}
 			onClick={onClick}
 			disabled={disabled}
 			className={className}
+			onMouseEnter={handleMouseEnter}
+			onMouseLeave={handleMouseLeave}
 		>
 			{icon}
 			{children}

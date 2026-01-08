@@ -158,3 +158,20 @@ export interface SysOrgRole {
 	org_id: number;
 	role_id: number;
 }
+
+// ============================================
+// OAuth 客户端表 (sys_oauth_client)
+// ============================================
+
+export interface SysOAuthClient {
+	id: number;
+	client_id: string;
+	client_secret: string; // 加密存储
+	client_name: string;
+	description: string | null;
+	scope: string; // JSON 数组格式，如 ["system:user:list"]
+	expires_in: number; // Token 有效期（秒）
+	status: number; // 0=禁用 1=正常
+	created_at?: string;
+	updated_at?: string;
+}

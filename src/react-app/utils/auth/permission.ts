@@ -4,28 +4,35 @@
  */
 
 import { findMenuByPath } from "../core/route/matcher";
+import { STORAGE_KEYS } from "@/config/app.config";
 
-const PERMISSIONS_KEY = "auth_permissions";
+// 缓存权限列表，避免频繁读取 localStorage
+let cachedPermissions: string[] | null = null;
 
 /**
  * 保存权限列表
  */
 export function setPermissions(permissions: string[]): void {
-	localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions));
+	localStorage.setItem(STORAGE_KEYS.PERMISSIONS, JSON.stringify(permissions));
+	cachedPermissions = permissions; // 更新缓存
 }
 
 /**
- * 获取权限列表
+ * 获取权限列表（使用缓存）
  */
 export function getPermissionsList(): string[] {
-	const permsStr = localStorage.getItem(PERMISSIONS_KEY);
+	// 如果有缓存，直接返回
+	if (cachedPermissions !== null) {
+		return cachedPermissions;
+	}
+
+	const permsStr = localStorage.getItem(STORAGE_KEYS.PERMISSIONS);
 	if (!permsStr) {
-		console.log("[Auth] No permissions in localStorage");
 		return [];
 	}
 	try {
 		const perms = JSON.parse(permsStr);
-		console.log("[Auth] Loaded permissions:", perms);
+		cachedPermissions = perms; // 缓存权限列表
 		return perms;
 	} catch (e) {
 		console.error("[Auth] Failed to parse permissions:", permsStr, e);
@@ -37,7 +44,8 @@ export function getPermissionsList(): string[] {
  * 移除权限列表
  */
 export function removePermissions(): void {
-	localStorage.removeItem(PERMISSIONS_KEY);
+	localStorage.removeItem(STORAGE_KEYS.PERMISSIONS);
+	cachedPermissions = null; // 清除缓存
 }
 
 /**
@@ -45,9 +53,7 @@ export function removePermissions(): void {
  */
 export function isSuperAdmin(): boolean {
 	const permissions = getPermissionsList();
-	const isAdmin = permissions.includes("*:*:*");
-	console.log("[Auth] isSuperAdmin:", isAdmin, "permissions:", permissions);
-	return isAdmin;
+	return permissions.includes("*:*:*");
 }
 
 /**

@@ -8,8 +8,14 @@ import type { Env, Variables } from "../index.d";
 import { OrganizationService } from "../services/organization.service";
 import { OrganizationRepository } from "../repositories/organization.repository";
 import { success, fail, badRequest, handleError } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 // 中间件：创建服务实例并注入到上下文
 app.use("/*", async (c, next) => {
@@ -20,7 +26,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 查询所有组织
-app.get("/", async (c) => {
+app.get("/", requirePermission(Permission.SYSTEM_ORGANIZATION_READ), async (c) => {
 	try {
 		const orgService = c.get("orgService") as OrganizationService;
 		const result = await orgService.findAll();
@@ -31,7 +37,7 @@ app.get("/", async (c) => {
 });
 
 // 根据 ID 查询组织
-app.get("/:id", async (c) => {
+app.get("/:id", requirePermission(Permission.SYSTEM_ORGANIZATION_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -47,7 +53,7 @@ app.get("/:id", async (c) => {
 });
 
 // 创建组织
-app.post("/", async (c) => {
+app.post("/", requirePermission(Permission.SYSTEM_ORGANIZATION_CREATE), async (c) => {
 	try {
 		const data = await c.req.json();
 		const orgService = c.get("orgService") as OrganizationService;
@@ -59,7 +65,7 @@ app.post("/", async (c) => {
 });
 
 // 更新组织
-app.put("/:id", async (c) => {
+app.put("/:id", requirePermission(Permission.SYSTEM_ORGANIZATION_UPDATE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -76,7 +82,7 @@ app.put("/:id", async (c) => {
 });
 
 // 删除组织
-app.delete("/:id", async (c) => {
+app.delete("/:id", requirePermission(Permission.SYSTEM_ORGANIZATION_DELETE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

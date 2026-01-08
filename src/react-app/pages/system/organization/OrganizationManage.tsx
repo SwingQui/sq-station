@@ -161,10 +161,10 @@ export default function OrganizationManage() {
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
 			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
-				<PermissionButton permission="system:organization:add" onClick={handleAdd} icon={<PlusOutlined />} type="primary">
+				<PermissionButton permission="system:organization:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增组织
 				</PermissionButton>
-				<PermissionButton permission="system:organization:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+				<PermissionButton permission="system:organization:read" onClick={handleExport} icon={<ExportOutlined />}>
 					导出
 				</PermissionButton>
 			</div>
@@ -200,10 +200,10 @@ export default function OrganizationManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{org.remark || "-"}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:organization:assign" onClick={() => handleAssignPermissions(org)} style={{ padding: "4px 12px", marginRight: "4px", background: "#722ed1" }}>
-										分配权限
+									<PermissionButton permission="system:organization:assignRoles" onClick={() => handleAssignPermissions(org)} style={{ padding: "4px 12px", marginRight: "4px" }}>
+										分配角色
 									</PermissionButton>
-									<PermissionButton permission="system:organization:edit" onClick={() => handleEdit(org)} style={{ padding: "4px 12px", marginRight: "4px" }}>
+									<PermissionButton permission="system:organization:update" onClick={() => handleEdit(org)} style={{ padding: "4px 12px", marginRight: "4px" }}>
 										编辑
 									</PermissionButton>
 									<PermissionButton permission="system:organization:delete" onClick={() => handleDelete(org.id)} style={{ padding: "4px 12px" }}>

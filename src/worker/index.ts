@@ -14,7 +14,12 @@ import organizationController from "./controllers/organization.controller";
 import userOrganizationController from "./controllers/user-organization.controller";
 import orgPermissionController from "./controllers/org-permission.controller";
 import configController from "./controllers/config.controller";
+import oauthController from "./controllers/oauth.controller";
+import oauthClientController from "./controllers/oauth-client.controller";
+import oauthPermissionGroupController from "./controllers/oauth-permission-group.controller";
 import { success, fail, badRequest, unauthorized, notFound, handleError } from "./utils/response";
+import { requirePermission } from "./middleware/permission";
+import { Permission } from "./constants/permissions";
 import { createAuthRouter, createPublicRouter } from "./utils/auth-helper";
 import { AuthService } from "./services/auth.service";
 import { UserRepository } from "./repositories/user.repository";
@@ -174,13 +179,17 @@ protectedApiRouter.route("/kv", kvController);
 // ==================== R2 存储路由 ====================
 protectedApiRouter.route("/r2", r2Controller);
 
-// SQL 执行工具 API (支持所有 SQL 操作) - 需要认证+管理员权限
-protectedApiRouter.post("/sql/query", async (c) => {
-	// 检查是否为超级管理员
-	const currentUser = c.get("currentUser");
-	if (!currentUser || (currentUser.userId !== 1 && currentUser.username !== "admin")) {
-		return c.json(fail(403, "权限不足：仅超级管理员可执行 SQL 查询"), 403);
-	}
+// ==================== OAuth 客户端管理路由 ====================
+protectedApiRouter.route("/oauth", oauthClientController);
+
+// ==================== OAuth 权限组管理路由 ====================
+protectedApiRouter.route("/oauth", oauthPermissionGroupController);
+
+// ==================== OAuth Token 端点（公开访问）====================
+app.route("/oauth", oauthController);
+
+// SQL 执行工具 API (支持所有 SQL 操作) - 需要超级管理员权限
+protectedApiRouter.post("/sql/query", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {
 
 	try {
 		const { sql } = await c.req.json();

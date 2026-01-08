@@ -11,10 +11,14 @@ import { MenuRepository } from "../repositories/menu.repository";
 import { RoleRepository } from "../repositories/role.repository";
 import { UserPermissionRepository } from "../repositories/user-permission.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/permission";
 import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 // 中间件：创建服务实例并注入到上下文
 app.use("/*", async (c, next) => {
@@ -27,7 +31,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 获取用户的菜单权限（树形结构）
-app.get("/:id/menus", async (c) => {
+app.get("/:id/menus", requirePermission(Permission.SYSTEM_USER_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -52,7 +56,7 @@ app.get("/:id/menus", async (c) => {
 });
 
 // 获取用户的权限标识列表（角色权限 + 直接权限的并集）
-app.get("/:id/permissions", async (c) => {
+app.get("/:id/permissions", requirePermission(Permission.SYSTEM_USER_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -77,7 +81,7 @@ app.get("/:id/permissions", async (c) => {
 });
 
 // 获取用户的直接权限列表（从 sys_user_permission 表）
-app.get("/:id/direct-permissions", requirePermission(Permission.SYSTEM_USER_LIST), async (c) => {
+app.get("/:id/direct-permissions", requirePermission(Permission.SYSTEM_USER_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

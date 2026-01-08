@@ -30,22 +30,6 @@ function getAllDescendantPermissions(menu: Menu): string[] {
 }
 
 /**
- * 检查父节点的选中状态
- */
-type CheckedState = 'checked' | 'indeterminate' | 'unchecked';
-
-function getParentCheckedState(menu: Menu, selectedPerms: string[]): CheckedState {
-	const allPerms = getAllDescendantPermissions(menu);
-	if (allPerms.length === 0) return 'unchecked';
-
-	const selectedCount = allPerms.filter(p => selectedPerms.includes(p)).length;
-
-	if (selectedCount === 0) return 'unchecked';
-	if (selectedCount === allPerms.length) return 'checked';
-	return 'indeterminate';
-}
-
-/**
  * 递归渲染权限树节点
  */
 function PermissionTreeNode({
@@ -72,12 +56,13 @@ function PermissionTreeNode({
 		>
 			<label
 				style={{
-					display: "inline-flex",
+					display: "flex",
 					alignItems: "center",
 					padding: "4px 8px",
 					cursor: "pointer",
 					borderRadius: "4px",
 					transition: "background 0.2s",
+					width: "100%",
 				}}
 				onMouseEnter={(e) => {
 					e.currentTarget.style.background = "#f0f0f0";
@@ -92,12 +77,24 @@ function PermissionTreeNode({
 					onChange={() => onToggle(menu.permission!)}
 					style={{ marginRight: "6px" }}
 				/>
-				<span style={{ fontSize: "13px" }}>
-					{menu.menu_name}
-					{menu.menu_type === "F" && (
-						<span style={{ color: "#888", fontSize: "12px", marginLeft: "4px" }}>(按钮)</span>
-					)}
-				</span>
+				<div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
+					<span>
+						{menu.menu_name}
+						{menu.menu_type === "F" && (
+							<span style={{ color: "#888", fontSize: "12px", marginLeft: "4px" }}>(按钮)</span>
+						)}
+					</span>
+					<code style={{
+						color: "#666",
+						fontSize: "12px",
+						fontFamily: "monospace",
+						background: "#f5f5f5",
+						padding: "2px 6px",
+						borderRadius: "3px",
+					}}>
+						{menu.permission}
+					</code>
+				</div>
 			</label>
 		</div>
 	);
@@ -221,30 +218,72 @@ function PermissionDirectoryInner({
 		return null;
 	}
 
-	// 只在启用级联时计算父节点的选中状态
-	const checkedState = cascadeEnabled ? getParentCheckedState(menu, selectedPerms) : 'unchecked';
-	const showParentCheckbox = cascadeEnabled;
+	// 获取所有子权限
+	const allChildPerms = getAllDescendantPermissions(menu);
 
-	// 处理父节点复选框变化
-	const handleParentChange = (checked: boolean) => {
-		const allPerms = getAllDescendantPermissions(menu);
-		if (onToggleMultiple) {
+	// 计算复选框的选中状态
+	const getCheckboxState = (): 'checked' | 'indeterminate' | 'unchecked' => {
+		// 如果目录有自己的 permission，检查它是否被选中
+		if (menu.permission) {
+			const ownPermSelected = selectedPerms.includes(menu.permission);
+			// 如果启用级联，还需要检查子权限的状态
+			if (cascadeEnabled && allChildPerms.length > 0) {
+				const selectedChildCount = allChildPerms.filter(p => selectedPerms.includes(p)).length;
+				if (!ownPermSelected && selectedChildCount === 0) return 'unchecked';
+				if (ownPermSelected && selectedChildCount === allChildPerms.length) return 'checked';
+				return 'indeterminate';
+			}
+			return ownPermSelected ? 'checked' : 'unchecked';
+		}
+
+		// 如果目录没有 permission，只检查子权限（仅在启用级联时）
+		if (cascadeEnabled && allChildPerms.length > 0) {
+			const selectedChildCount = allChildPerms.filter(p => selectedPerms.includes(p)).length;
+			if (selectedChildCount === 0) return 'unchecked';
+			if (selectedChildCount === allChildPerms.length) return 'checked';
+			return 'indeterminate';
+		}
+
+		return 'unchecked';
+	};
+
+	const checkboxState = getCheckboxState();
+
+	// 处理复选框变化
+	const handleCheckboxChange = (checked: boolean) => {
+		// 如果目录有自己的 permission，先处理它
+		if (menu.permission) {
 			if (checked) {
-				const newPerms = [...new Set([...selectedPerms, ...allPerms])];
+				// 选择自己的 permission
+				if (!selectedPerms.includes(menu.permission)) {
+					onToggle(menu.permission);
+				}
+			} else {
+				// 取消选择自己的 permission
+				if (selectedPerms.includes(menu.permission)) {
+					onToggle(menu.permission);
+				}
+			}
+		}
+
+		// 如果启用级联，处理所有子权限
+		if (cascadeEnabled && allChildPerms.length > 0 && onToggleMultiple) {
+			if (checked) {
+				const newPerms = [...new Set([...selectedPerms, ...allChildPerms])];
 				onToggleMultiple(newPerms);
 			} else {
-				const newPerms = selectedPerms.filter(p => !allPerms.includes(p));
+				const newPerms = selectedPerms.filter(p => !allChildPerms.includes(p));
 				onToggleMultiple(newPerms);
 			}
 		}
 	};
 
-	// 更新复选框的 indeterminate 状态（只在启用级联时）
+	// 更新复选框的 indeterminate 状态
 	useEffect(() => {
-		if (checkboxRef.current && cascadeEnabled) {
-			checkboxRef.current.indeterminate = checkedState === 'indeterminate';
+		if (checkboxRef.current) {
+			checkboxRef.current.indeterminate = checkboxState === 'indeterminate';
 		}
-	}, [checkedState, cascadeEnabled]);
+	}, [checkboxState]);
 
 	return (
 		<div key={menu.id} style={{ marginBottom: "12px" }}>
@@ -254,6 +293,7 @@ function PermissionDirectoryInner({
 				style={{
 					display: "flex",
 					alignItems: "center",
+					justifyContent: "space-between",
 					padding: "6px 8px",
 					cursor: "pointer",
 					background: "#e8f4ff",
@@ -264,31 +304,44 @@ function PermissionDirectoryInner({
 					userSelect: "none",
 				}}
 			>
-				{/* 只在启用级联时显示父节点复选框 */}
-				{showParentCheckbox && (
+				<div style={{ display: "flex", alignItems: "center" }}>
+					{/* 始终显示复选框 */}
 					<input
 						ref={checkboxRef}
 						type="checkbox"
-						checked={checkedState === 'checked'}
+						checked={checkboxState === 'checked'}
 						onChange={(e) => {
 							e.stopPropagation();
-							handleParentChange(e.target.checked);
+							handleCheckboxChange(e.target.checked);
 						}}
 						onClick={(e) => e.stopPropagation()}
 						style={{ marginRight: "8px" }}
 					/>
+					<span style={{
+						marginRight: "6px",
+						fontSize: "14px",
+						fontWeight: "bold",
+						width: "16px",
+						display: "inline-flex",
+						justifyContent: "center"
+					}}>
+						{isExpanded ? "−" : "+"}
+					</span>
+					<span>{menu.menu_name}</span>
+				</div>
+				{/* 如果目录有权限标识，显示在右侧 */}
+				{menu.permission && (
+					<code style={{
+						color: "#666",
+						fontSize: "12px",
+						fontFamily: "monospace",
+						background: "#f5f5f5",
+						padding: "2px 6px",
+						borderRadius: "3px",
+					}}>
+						{menu.permission}
+					</code>
 				)}
-				<span style={{
-					marginRight: "6px",
-					fontSize: "14px",
-					fontWeight: "bold",
-					width: "16px",
-					display: "inline-flex",
-					justifyContent: "center"
-				}}>
-					{isExpanded ? "−" : "+"}
-				</span>
-				{menu.menu_name}
 			</div>
 
 			{/* 子项 */}

@@ -7,11 +7,17 @@ import { Hono } from "hono";
 import type { Env, Variables } from "../index.d";
 import { UserOrganizationRepository } from "../repositories/user-organization.repository";
 import { success, fail, badRequest, handleError } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
+
 // 查询用户的组织列表
-app.get("/:userId", async (c) => {
+app.get("/:userId", requirePermission(Permission.SYSTEM_USER_READ), async (c) => {
 	try {
 		const userId = parseInt(c.req.param("userId"));
 		if (isNaN(userId)) {
@@ -27,7 +33,7 @@ app.get("/:userId", async (c) => {
 });
 
 // 为用户分配组织
-app.put("/:userId", async (c) => {
+app.put("/:userId", requirePermission(Permission.SYSTEM_USER_ASSIGN_ORGS), async (c) => {
 	try {
 		const userId = parseInt(c.req.param("userId"));
 		if (isNaN(userId)) {

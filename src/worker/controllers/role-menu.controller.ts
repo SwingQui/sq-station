@@ -10,8 +10,14 @@ import { RoleRepository } from "../repositories/role.repository";
 import { MenuRepository } from "../repositories/menu.repository";
 import { RoleMenuRepository } from "../repositories/role-menu.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 // 中间件：创建服务实例并注入到上下文
 app.use("/*", async (c, next) => {
@@ -24,7 +30,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 获取角色的菜单列表
-app.get("/:id/menus", async (c) => {
+app.get("/:id/menus", requirePermission(Permission.SYSTEM_ROLE_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -43,7 +49,7 @@ app.get("/:id/menus", async (c) => {
 });
 
 // 获取角色的菜单 ID 列表
-app.get("/:id/menuIds", async (c) => {
+app.get("/:id/menuIds", requirePermission(Permission.SYSTEM_ROLE_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -62,7 +68,7 @@ app.get("/:id/menuIds", async (c) => {
 });
 
 // 为角色分配菜单
-app.put("/:id/menus", async (c) => {
+app.put("/:id/menus", requirePermission(Permission.SYSTEM_ROLE_ASSIGN_MENUS), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

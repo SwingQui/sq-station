@@ -7,8 +7,12 @@ import { Hono } from "hono";
 import type { Env, Variables } from "../index.d";
 import { success } from "../utils/response";
 import { PermissionMeta, PermissionGroups, Permission } from "../constants/permissions";
+import { authMiddleware } from "../middleware/auth";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 /**
  * GET /api/config/permissions
@@ -16,9 +20,18 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
  * 用于前端权限配置界面
  */
 app.get("/permissions", (c) => {
+	// 将 PermissionGroups 转换为数组格式，以匹配前端期望的 PermissionGroup[] 接口
+	const groupsArray = Object.entries(PermissionGroups).map(([name, permissionKeys]) => ({
+		name,
+		permissions: permissionKeys.map((key) => ({
+			key,
+			...PermissionMeta[key]
+		}))
+	}));
+
 	return c.json(success({
 		permissions: PermissionMeta,
-		groups: PermissionGroups,
+		groups: groupsArray,
 		version: Date.now(), // 版本号，用于缓存失效
 	}));
 });

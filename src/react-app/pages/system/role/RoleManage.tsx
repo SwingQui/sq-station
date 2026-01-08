@@ -1,12 +1,84 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
-import { getRoleList, createRole, updateRole, deleteRole, getRoleMenus, assignRoleMenus } from "../../../api/role";
+import { Tree } from "antd";
+import { getRoleList, createRole, updateRole, deleteRole } from "../../../api/role";
 import { getMenuList } from "../../../api/menu";
 import type { Role, Menu } from "../../../types";
 import PermissionButton from "../../../components/PermissionButton";
-import PermissionTree from "../../../components/PermissionTree";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
 import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
+
+// 权限树节点类型
+interface PermissionTreeNode {
+	title: string | ReactNode;
+	key: string;
+	children?: PermissionTreeNode[];
+}
+
+// 从菜单数据构建权限树（供 Ant Design Tree 使用）
+function buildPermissionTreeFromMenus(menus: Menu[]): PermissionTreeNode[] {
+	const result: PermissionTreeNode[] = [];
+
+	for (const menu of menus) {
+		// 检查此菜单或其后代是否有权限
+		const hasPerm = hasPermissionInChildren(menu);
+
+		if (!hasPerm) {
+			continue; // 跳过没有权限的菜单分支
+		}
+
+		const node: PermissionTreeNode = {
+			title: menu.permission
+				? `${menu.menu_name} ${menu.menu_type === "F" ? "(按钮)" : ""} `
+				: menu.menu_name,
+			key: menu.permission || `menu_${menu.id}`, // 有权限用 permission，否则用唯一 ID
+		};
+
+		// 如果有权限标识，在标题中显示
+		if (menu.permission) {
+			node.title = (
+				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", paddingRight: "8px" }}>
+					<span>
+						{menu.menu_name}
+						{menu.menu_type === "F" && <span style={{ color: "#888", fontSize: "12px", marginLeft: "4px" }}>(按钮)</span>}
+					</span>
+					<code style={{
+						color: "#666",
+						fontSize: "12px",
+						fontFamily: "monospace",
+						background: "#f5f5f5",
+						padding: "2px 6px",
+						borderRadius: "3px",
+					}}>
+						{menu.permission}
+					</code>
+				</div>
+			);
+		}
+
+		// 递归处理子菜单
+		if (menu.children && menu.children.length > 0) {
+			const children = buildPermissionTreeFromMenus(menu.children);
+			if (children.length > 0) {
+				node.children = children;
+			}
+		}
+
+		result.push(node);
+	}
+
+	return result;
+}
+
+// 检查菜单树中是否有权限标识
+function hasPermissionInChildren(menu: Menu): boolean {
+	if (menu.permission) return true;
+	if (menu.children) {
+		return menu.children.some((child) => hasPermissionInChildren(child));
+	}
+	return false;
+}
 
 export default function RoleManage() {
 	const [roles, setRoles] = useState<Role[]>([]);
@@ -14,12 +86,10 @@ export default function RoleManage() {
 	const [loading, setLoading] = useState(true);
 	const [editingRole, setEditingRole] = useState<Role | null>(null);
 	const [showModal, setShowModal] = useState(false);
-	const [showMenuModal, setShowMenuModal] = useState(false);
 	const [showPermModal, setShowPermModal] = useState(false);
 	const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-	const [selectedMenus, setSelectedMenus] = useState<number[]>([]);
 	const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
-	const [cascadeEnabled, setCascadeEnabled] = useState(true);
+	const [permissionTreeData, setPermissionTreeData] = useState<PermissionTreeNode[]>([]);
 
 	useEffect(() => {
 		fetchRoles();
@@ -92,55 +162,6 @@ export default function RoleManage() {
 		setShowModal(true);
 	};
 
-	const handleMenuAssign = async (role: Role) => {
-		setSelectedRole(role);
-		try {
-			const data = await getRoleMenus(role.id);
-			const menuIds = data.map((m: Menu) => m.id);
-			setSelectedMenus(menuIds);
-			setShowMenuModal(true);
-		} catch (e) {
-			handleError(e, "获取菜单失败");
-		}
-	};
-
-	const handleSaveMenus = async () => {
-		if (!selectedRole) return;
-		try {
-			await assignRoleMenus(selectedRole.id, selectedMenus);
-			handleSuccess("菜单分配成功");
-			setShowMenuModal(false);
-			setSelectedRole(null);
-		} catch (e) {
-			handleError(e, "保存失败");
-		}
-	};
-
-	const toggleMenu = (menuId: number) => {
-		setSelectedMenus((prev) =>
-			prev.includes(menuId) ? prev.filter((id) => id !== menuId) : [...prev, menuId]
-		);
-	};
-
-	const renderMenuTree = (menuList: Menu[], level = 0) => {
-		return menuList.map((menu) => (
-			<div key={menu.id} style={{ marginLeft: level * 20 }}>
-				<label style={{ display: "flex", alignItems: "center", padding: "4px 0" }}>
-					<input
-						type="checkbox"
-						checked={selectedMenus.includes(menu.id)}
-						onChange={() => toggleMenu(menu.id)}
-						style={{ marginRight: "8px" }}
-					/>
-					<span style={{ fontSize: level === 0 ? "14px" : "13px" }}>
-						{menu.menu_name} ({menu.menu_type === "M" ? "目录" : menu.menu_type === "C" ? "菜单" : "按钮"})
-					</span>
-				</label>
-				{menu.children && renderMenuTree(menu.children, level + 1)}
-			</div>
-		));
-	};
-
 	// 权限配置
 	const handlePermConfig = (role: Role) => {
 		setSelectedRole(role);
@@ -152,6 +173,9 @@ export default function RoleManage() {
 			console.error("Failed to parse permissions:", role.permissions);
 		}
 		setSelectedPerms(perms);
+		// 构建权限树数据
+		const treeData = buildPermissionTreeFromMenus(menus);
+		setPermissionTreeData(treeData);
 		setShowPermModal(true);
 	};
 
@@ -229,10 +253,10 @@ export default function RoleManage() {
 	return (
 		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
 			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
-				<PermissionButton permission="system:role:add" onClick={handleAdd} icon={<PlusOutlined />} type="primary">
+				<PermissionButton permission="system:role:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增角色
 				</PermissionButton>
-				<PermissionButton permission="system:role:export" onClick={handleExport} icon={<ExportOutlined />} type="primary" style={{ backgroundColor: "#52c41a" }}>
+				<PermissionButton permission="system:role:read" onClick={handleExport} icon={<ExportOutlined />}>
 					导出
 				</PermissionButton>
 			</div>
@@ -268,14 +292,11 @@ export default function RoleManage() {
 								</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(role.created_at).toLocaleString("zh-CN")}</td>
 								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:role:edit" onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "4px" }}>
+									<PermissionButton permission="system:role:update" onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "4px" }}>
 										编辑
 									</PermissionButton>
-									<PermissionButton permission="system:role:configPermissions" onClick={() => handlePermConfig(role)} style={{ padding: "4px 12px", marginRight: "4px", background: "#722ed1" }}>
+									<PermissionButton permission="system:role:configPermissions" onClick={() => handlePermConfig(role)} style={{ padding: "4px 12px", marginRight: "4px" }}>
 										配置权限
-									</PermissionButton>
-									<PermissionButton permission="system:role:assignMenus" onClick={() => handleMenuAssign(role)} style={{ padding: "4px 12px", marginRight: "4px", background: "#52c41a" }}>
-										菜单
 									</PermissionButton>
 									<PermissionButton permission="system:role:delete" onClick={() => handleDelete(role.id)} style={{ padding: "4px 12px" }}>
 										删除
@@ -330,66 +351,52 @@ export default function RoleManage() {
 				</div>
 			)}
 
-			{/* 菜单分配弹窗 */}
-			{showMenuModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "500px", maxWidth: "90%" }}>
-						<h2 style={{ marginTop: 0 }}>分配菜单 - {selectedRole?.role_name}</h2>
-						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{renderMenuTree(menus)}
-						</div>
-						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-							<button type="button" onClick={() => setShowMenuModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								取消
-							</button>
-							<button type="button" onClick={handleSaveMenus} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								保存
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-
 			{/* 权限配置弹窗 */}
 			{showPermModal && (
 				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "600px", maxWidth: "90%" }}>
-						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-							<div>
-								<h2 style={{ marginTop: 0 }}>配置权限 - {selectedRole?.role_name}</h2>
-								<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>配置该角色拥有的权限列表</p>
-							</div>
-							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", whiteSpace: "nowrap" }}>
+					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "700px", maxWidth: "90%" }}>
+						<div>
+							<h2 style={{ marginTop: 0 }}>配置权限 - {selectedRole?.role_name}</h2>
+							<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>配置该角色拥有的权限列表</p>
+						</div>
+						<div style={{ maxHeight: "450px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+							{/* 超级管理员通配符 */}
+							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", marginBottom: "16px" }}>
 								<input
 									type="checkbox"
-									checked={cascadeEnabled}
-									onChange={(e) => setCascadeEnabled(e.target.checked)}
+									checked={selectedPerms.includes("*:*:*")}
+									onChange={(e) => {
+										if (e.target.checked) {
+											setSelectedPerms(["*:*:*"]);
+										} else {
+											setSelectedPerms([]);
+										}
+									}}
 									style={{ marginRight: "6px" }}
 								/>
-								<span style={{ fontSize: "13px" }}>启用父子级联勾选</span>
+								<span style={{ fontSize: "13px", fontWeight: "bold", color: "#f5222d" }}>*:*:* (所有权限)</span>
 							</label>
-						</div>
-						<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{/* 动态权限树 */}
-							<PermissionTree permissions={selectedPerms} onChange={setSelectedPerms} cascadeEnabled={cascadeEnabled} />
 
-							{/* 超级管理员通配符 */}
-							<div style={{ marginTop: "16px", borderTop: "1px solid #e0e0e0", paddingTop: "16px" }}>
-								<label style={{ display: "inline-flex", alignItems: "center", padding: "4px 8px", cursor: "pointer" }}>
-									<input
-										type="checkbox"
-										checked={selectedPerms.includes("*:*:*")}
-										onChange={() => {
-											if (selectedPerms.includes("*:*:*")) {
-												setSelectedPerms(selectedPerms.filter((p) => p !== "*:*:*"));
-											} else {
-												setSelectedPerms([...selectedPerms, "*:*:*"]);
-											}
-										}}
-										style={{ marginRight: "6px" }}
-									/>
-									<span style={{ fontSize: "13px", fontWeight: "bold", color: "#f5222d" }}>*:*:* (所有权限)</span>
-								</label>
+							{/* Ant Design Tree */}
+							<div style={{ width: "100%" }}>
+								<Tree
+									checkable
+									blockNode={true}
+									checkedKeys={selectedPerms.includes("*:*:*") ? [] : selectedPerms.filter(k => k !== "*:*:*")}
+									onCheck={(checkedKeys) => {
+										const keys = checkedKeys as string[];
+										// 如果选中了超级管理员，只保留超级管理员权限
+										if (keys.includes("*:*:*")) {
+											setSelectedPerms(["*:*:*"]);
+										} else {
+											setSelectedPerms(keys);
+										}
+									}}
+									treeData={permissionTreeData}
+									defaultExpandAll
+									showLine={{ showLeafIcon: false }}
+									style={{ fontSize: "13px", width: "100%" }}
+								/>
 							</div>
 						</div>
 						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>

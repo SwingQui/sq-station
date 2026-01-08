@@ -111,7 +111,7 @@ export class MenuService {
 		if (isAdmin) {
 			// 超级管理员获取所有启用的菜单
 			const allMenus = await this.menuRepo.findAll();
-			menus = allMenus.filter(m => m.menu_status === appConfig.menu.enabledStatus);
+			menus = allMenus.filter(m => m.menu_status === appConfig.constants.status.enabled);
 		} else {
 			// 普通用户按角色查询
 			menus = await this.menuRepo.findByUserId(userId);

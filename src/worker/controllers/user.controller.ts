@@ -30,7 +30,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 获取用户列表（需要权限）
-app.get("/", requirePermission(Permission.SYSTEM_USER_LIST), async (c) => {
+app.get("/", requirePermission(Permission.SYSTEM_USER_READ), async (c) => {
 	try {
 		const userService = c.get("userService") as UserService;
 		const users = await userService.findAll();
@@ -41,7 +41,7 @@ app.get("/", requirePermission(Permission.SYSTEM_USER_LIST), async (c) => {
 });
 
 // 获取单个用户（需要权限）
-app.get("/:id", requireAnyPermission([Permission.SYSTEM_USER_LIST, Permission.SYSTEM_USER_VIEW]), async (c) => {
+app.get("/:id", requireAnyPermission([Permission.SYSTEM_USER_READ, Permission.SYSTEM_USER_READ]), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -60,7 +60,7 @@ app.get("/:id", requireAnyPermission([Permission.SYSTEM_USER_LIST, Permission.SY
 });
 
 // 创建用户（需要权限）
-app.post("/", requirePermission(Permission.SYSTEM_USER_ADD), async (c) => {
+app.post("/", requirePermission(Permission.SYSTEM_USER_CREATE), async (c) => {
 	try {
 		const data = await c.req.json();
 		const userService = c.get("userService") as UserService;
@@ -75,7 +75,7 @@ app.post("/", requirePermission(Permission.SYSTEM_USER_ADD), async (c) => {
 });
 
 // 更新用户（需要权限）
-app.put("/:id", requirePermission(Permission.SYSTEM_USER_EDIT), async (c) => {
+app.put("/:id", requirePermission(Permission.SYSTEM_USER_UPDATE), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

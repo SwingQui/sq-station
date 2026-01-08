@@ -10,8 +10,14 @@ import { UserRepository } from "../repositories/user.repository";
 import { RoleRepository } from "../repositories/role.repository";
 import { UserRoleRepository } from "../repositories/user-role.repository";
 import { success, fail, badRequest, notFound } from "../utils/response";
+import { authMiddleware } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
+import { Permission } from "../constants/permissions";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 认证中间件：所有路由需要认证
+app.use("*", authMiddleware);
 
 // 中间件：创建服务实例并注入到上下文
 app.use("/*", async (c, next) => {
@@ -24,7 +30,7 @@ app.use("/*", async (c, next) => {
 });
 
 // 获取用户的角色列表
-app.get("/:id/roles", async (c) => {
+app.get("/:id/roles", requirePermission(Permission.SYSTEM_USER_READ), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {
@@ -43,7 +49,7 @@ app.get("/:id/roles", async (c) => {
 });
 
 // 为用户分配角色
-app.put("/:id/roles", async (c) => {
+app.put("/:id/roles", requirePermission(Permission.SYSTEM_USER_ASSIGN_ROLES), async (c) => {
 	try {
 		const id = parseInt(c.req.param("id"));
 		if (isNaN(id)) {

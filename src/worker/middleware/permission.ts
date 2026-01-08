@@ -1,10 +1,11 @@
 /**
  * 权限中间件
  * 检查用户是否拥有指定权限
+ * 支持用户权限和 OAuth scope 权限
  */
 
 import type { Context, Next } from "hono";
-import type { Env, Variables, AuthUser } from "../index.d";
+import type { Env, Variables, AuthUser, OAuthClient } from "../index.d";
 import { unauthorized, forbidden } from "../utils/response";
 
 /**
@@ -21,7 +22,22 @@ function isSuperAdmin(permissions: string[]): boolean {
 export const requirePermission = (permission: string) => {
 	return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
+		const oauthClient = c.get("oauthClient") as OAuthClient | undefined;
 
+		// OAuth 客户端权限检查
+		if (oauthClient) {
+			const scopes = oauthClient.scopes || [];
+
+			// 检查 scope 是否包含所需权限
+			if (!scopes.includes(permission)) {
+				return c.json(forbidden("无权限访问"));
+			}
+
+			await next();
+			return;
+		}
+
+		// 用户权限检查
 		if (!currentUser) {
 			return c.json(unauthorized("未登录"));
 		}
@@ -48,7 +64,23 @@ export const requirePermission = (permission: string) => {
 export const requireAnyPermission = (permissions: string[]) => {
 	return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
+		const oauthClient = c.get("oauthClient") as OAuthClient | undefined;
 
+		// OAuth 客户端权限检查
+		if (oauthClient) {
+			const scopes = oauthClient.scopes || [];
+
+			// 检查 scope 是否包含任一所需权限
+			const hasPermission = permissions.some(p => scopes.includes(p));
+			if (!hasPermission) {
+				return c.json(forbidden("无权限访问"));
+			}
+
+			await next();
+			return;
+		}
+
+		// 用户权限检查
 		if (!currentUser) {
 			return c.json(unauthorized("未登录"));
 		}
@@ -76,6 +108,12 @@ export const requireAnyPermission = (permissions: string[]) => {
 export const requireRole = (roleKey: string) => {
 	return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
 		const currentUser = c.get("currentUser") as AuthUser | undefined;
+		const oauthClient = c.get("oauthClient") as OAuthClient | undefined;
+
+		// OAuth 客户端不支持角色检查
+		if (oauthClient) {
+			return c.json(forbidden("OAuth 客户端不支持角色检查"));
+		}
 
 		if (!currentUser) {
 			return c.json(unauthorized("未登录"));

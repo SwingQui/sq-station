@@ -22,6 +22,16 @@ export const appConfig = {
 		enabledStatus: 1, // 启用状态
 		disabledStatus: 0, // 禁用状态
 	},
+
+	// 接口缓存配置
+	cache: {
+		enabled: true,           // 是否启用缓存
+		defaultTTL: 2000,       // 默认缓存时间（毫秒）
+		excludeRoutes: [         // 排除的路由（支持通配符）
+			"/api/r2/*",         // 排除所有 R2 接口
+			"/api/kv/*",         // 排除所有 KV 接口
+		],
+	},
 } as const;
 
 export type AppConfig = typeof appConfig;

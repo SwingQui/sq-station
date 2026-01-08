@@ -19,6 +19,9 @@ import { createAuthRouter, createPublicRouter } from "./utils/auth-helper";
 import { AuthService } from "./services/auth.service";
 import { UserRepository } from "./repositories/user.repository";
 import { MenuRepository } from "./repositories/menu.repository";
+import { cacheMiddleware } from "./core/middleware/cache.middleware";
+import { cacheService } from "./core/cache/cache.service";
+import { appConfig } from "./config/app.config";
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
@@ -81,6 +84,9 @@ app.route("/api/auth", publicApiRouter);
 
 // ==================== 受保护 API 路由器（需要认证）====================
 const protectedApiRouter = createAuthRouter();
+
+// 应用缓存中间件（仅对 GET 请求生效）
+protectedApiRouter.all("/*", cacheMiddleware);
 
 // ==================== 认证相关 API（登录后可访问）====================
 // 获取用户信息（需要认证）
@@ -212,6 +218,32 @@ protectedApiRouter.post("/sql/query", async (c) => {
 	} catch (e: any) {
 		return c.json(fail(400, e.message || "执行失败"));
 	}
+});
+
+// ==================== 缓存测试接口 ====================
+// 缓存统计（需要认证）
+protectedApiRouter.get("/cache/stats", (c) => {
+	const stats = cacheService.getStats();
+	return c.json(success({
+		...stats,
+		enabled: appConfig.cache.enabled,
+		ttl: appConfig.cache.defaultTTL,
+		excludeRoutes: appConfig.cache.excludeRoutes,
+	}));
+});
+
+// 清除所有缓存（需要认证）
+protectedApiRouter.post("/cache/clear", (c) => {
+	cacheService.clearAll();
+	return c.json(success(null, "缓存已清空"));
+});
+
+// 缓存测试接口（返回当前时间戳，用于测试缓存是否生效）
+protectedApiRouter.get("/cache/test", (c) => {
+	return c.json(success({
+		timestamp: Date.now(),
+		message: "如果缓存生效，相同参数请求会返回相同的时间戳",
+	}));
 });
 
 // 将受保护路由挂载到 /api（应用 authMiddleware）

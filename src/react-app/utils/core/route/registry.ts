@@ -108,6 +108,6 @@ export function clearComponentCacheItem(path: string): void {
  * 开发环境：验证组件映射
  */
 if (import.meta.env.DEV) {
-	console.log('[RouteRegistry] Auto-registered components:', Object.keys(componentRegistry).length);
-	console.log('[RouteRegistry] Available paths:', Object.keys(componentRegistry));
+	console.log('[前端路由] 已注册组件数:', Object.keys(componentRegistry).length);
+	console.log('[前端路由] 已加载页面:', Object.keys(componentRegistry));
 }

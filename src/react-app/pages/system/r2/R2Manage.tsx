@@ -8,12 +8,16 @@ import {
 	deleteR2Object,
 	batchDeleteR2Objects,
 	downloadR2Object,
+	getR2Folders,
+	createR2Folder,
+	deleteR2Folder,
 	type R2Object,
 } from "../../../api/r2";
 import { handleError, handleSuccess } from "../../../utils/error-handler";
 
 export default function TestR2() {
 	const [objects, setObjects] = useState<R2Object[]>([]);
+	const [folders, setFolders] = useState<string[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [keyInput, setKeyInput] = useState("");
 	const [valueInput, setValueInput] = useState("");
@@ -21,14 +25,30 @@ export default function TestR2() {
 	const [selectedMetadata, setSelectedMetadata] = useState<R2Object | null>(null);
 	const [uploadProgress, setUploadProgress] = useState(0);
 	const [contentType, setContentType] = useState("text/plain");
+	const [currentPath, setCurrentPath] = useState("");
+	const [newFolderName, setNewFolderName] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	// 加载所有对象
-	const loadObjects = async () => {
+	// 加载对象和文件夹列表
+	const loadData = async () => {
 		setLoading(true);
 		try {
-			const data = await getR2List(100);
-			setObjects(data.objects || []);
+			// 计算前缀
+			const prefix = currentPath ? `${currentPath}/` : undefined;
+
+			// 加载对象列表
+			const objectsData = await getR2List(100, undefined, prefix);
+
+			// 过滤掉文件夹标记文件
+			const filteredObjects = (objectsData.objects || []).filter(
+				obj => obj.customMetadata?.isFolder !== "true"
+			);
+
+			setObjects(filteredObjects);
+
+			// 加载文件夹列表
+			const foldersData = await getR2Folders(prefix);
+			setFolders(foldersData.folders || []);
 		} catch (e) {
 			console.error("加载失败", e);
 		}
@@ -46,18 +66,93 @@ export default function TestR2() {
 		}
 	};
 
+	// 进入文件夹
+	const enterFolder = (folderName: string) => {
+		const newPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+		setCurrentPath(newPath);
+	};
+
+	// 面包屑导航
+	const navigateToPath = (index: number) => {
+		const pathParts = currentPath.split("/").filter(p => p);
+		const newPath = pathParts.slice(0, index + 1).join("/");
+		setCurrentPath(newPath);
+	};
+
+	// 获取面包屑数组
+	const getBreadcrumbs = () => {
+		if (!currentPath) return [{ name: "根目录", path: "" }];
+		const parts = currentPath.split("/").filter(p => p);
+		return parts.map((part, index) => ({
+			name: part,
+			path: parts.slice(0, index + 1).join("/"),
+		}));
+	};
+
+	// 创建文件夹
+	const createFolder = async () => {
+		if (!newFolderName.trim()) {
+			handleError(new Error("请输入文件夹名称"), "创建失败");
+			return;
+		}
+
+		// 验证文件夹名称（不允许包含特殊字符）
+		if (/[<>:"|?*\\/]/.test(newFolderName)) {
+			handleError(new Error("文件夹名称不能包含以下字符: < > : \" | ? * / \\"), "创建失败");
+			return;
+		}
+
+		try {
+			// 构建完整路径
+			const fullPath = currentPath ? `${currentPath}/${newFolderName}` : newFolderName;
+			await createR2Folder(fullPath);
+			setNewFolderName("");
+			loadData();
+			handleSuccess(`文件夹 "${newFolderName}" 创建成功`);
+		} catch (e) {
+			handleError(e, "创建文件夹失败");
+		}
+	};
+
+	// 删除文件夹
+	const deleteFolder = async (folderName: string) => {
+		const fullPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+
+		Modal.confirm({
+			title: "确认删除文件夹",
+			content: `确定要删除文件夹 "${folderName}" 及其所有内容吗？此操作不可恢复！`,
+			okText: "确定",
+			cancelText: "取消",
+			okButtonProps: { danger: true },
+			onOk: async () => {
+				try {
+					const result = await deleteR2Folder(fullPath);
+					loadData();
+					handleSuccess(`文件夹 "${folderName}" 及其 ${result.deletedCount} 个文件删除成功`);
+				} catch (e) {
+					handleError(e, "删除文件夹失败");
+				}
+			},
+		});
+	};
+
 	// 上传文本值
 	const saveValue = async () => {
 		if (!keyInput.trim()) return;
+
+		// 构建完整路径
+		const fullKey = currentPath ? `${currentPath}/${keyInput}` : keyInput;
+
 		try {
-			await uploadR2Value(keyInput, valueInput, {
+			await uploadR2Value(fullKey, valueInput, {
 				httpMetadata: { contentType },
 			});
 			setKeyInput("");
 			setValueInput("");
-			loadObjects();
+			loadData();
+			handleSuccess(`文本 "${fullKey}" 保存成功`);
 		} catch (e) {
-			console.error("保存失败", e);
+			handleError(e, "保存失败");
 		}
 	};
 
@@ -70,19 +165,16 @@ export default function TestR2() {
 			return;
 		}
 
-		// 生成固定格式的文件名：sq-原文件名-日期
-		const originalName = file.name.replace(/\.[^/.]+$/, ""); // 去掉扩展名
-		const extension = file.name.substring(file.name.lastIndexOf(".")); // 获取扩展名
-		const date = new Date().toISOString().split("T")[0].replace(/-/g, ""); // YYYYMMDD
-		const fixedKeyName = `sq-${originalName}-${date}${extension}`;
+		// 构建完整路径
+		const fullKey = currentPath ? `${currentPath}/${file.name}` : file.name;
 
 		try {
 			setUploadProgress(0);
-			await uploadR2File(fixedKeyName, file);
+			await uploadR2File(fullKey, file);
 			setUploadProgress(100);
 			setKeyInput("");
-			loadObjects();
-			handleSuccess(`文件 "${fixedKeyName}" 上传成功`);
+			loadData();
+			handleSuccess(`文件 "${fullKey}" 上传成功`);
 			setTimeout(() => setUploadProgress(0), 1000);
 		} catch (e) {
 			setUploadProgress(0);
@@ -105,7 +197,7 @@ export default function TestR2() {
 						setSelectedKey(null);
 						setSelectedMetadata(null);
 					}
-					loadObjects();
+					loadData();
 					handleSuccess(`对象 "${key}" 删除成功`);
 				} catch (e) {
 					handleError(e, "删除失败");
@@ -114,12 +206,12 @@ export default function TestR2() {
 		});
 	};
 
-	// 批量删除
+	// 批量删除当前目录下的所有对象
 	const batchDelete = async () => {
 		const keysToDelete = objects.map((o) => o.key);
 		Modal.confirm({
 			title: "确认批量删除",
-			content: `确定要删除全部 ${keysToDelete.length} 个对象吗？此操作不可恢复！`,
+			content: `确定要删除当前目录下的全部 ${keysToDelete.length} 个对象吗？此操作不可恢复！`,
 			okText: "确定",
 			cancelText: "取消",
 			okButtonProps: { danger: true },
@@ -128,7 +220,7 @@ export default function TestR2() {
 					await batchDeleteR2Objects(keysToDelete);
 					setSelectedKey(null);
 					setSelectedMetadata(null);
-					loadObjects();
+					loadData();
 					handleSuccess(`成功删除 ${keysToDelete.length} 个对象`);
 				} catch (e) {
 					handleError(e, "批量删除失败");
@@ -155,14 +247,54 @@ export default function TestR2() {
 		}
 	};
 
-	// 组件挂载时加载数据
+	// 组件挂载或路径变化时加载数据
 	useEffect(() => {
-		loadObjects();
-	}, []);
+		loadData();
+	}, [currentPath]);
+
+	// 获取显示用的文件名（去掉路径前缀）
+	const getDisplayName = (key: string): string => {
+		if (!currentPath) return key;
+		const prefix = currentPath + "/";
+		if (key.startsWith(prefix)) {
+			return key.substring(prefix.length);
+		}
+		return key;
+	};
 
 	return (
 		<div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
 			<h2>R2 对象存储管理</h2>
+
+			{/* 面包屑导航 */}
+			<div style={{ marginBottom: "20px", padding: "10px", background: "#f5f5f5", borderRadius: "8px" }}>
+				<div style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "14px" }}>
+					<span style={{ color: "#666" }}>当前位置:</span>
+					{getBreadcrumbs().map((crumb, index, arr) => (
+						<span key={crumb.path} style={{ display: "flex", alignItems: "center" }}>
+							{index > 0 && <span style={{ margin: "0 5px", color: "#999" }}>/</span>}
+							<span
+								style={{
+									cursor: index === arr.length - 1 ? "default" : "pointer",
+									color: index === arr.length - 1 ? "#333" : "#0066cc",
+									fontWeight: index === arr.length - 1 ? "bold" : "normal",
+								}}
+								onClick={() => index < arr.length - 1 && navigateToPath(index)}
+							>
+								{crumb.name}
+							</span>
+						</span>
+					))}
+					{currentPath && (
+						<button
+							onClick={() => setCurrentPath("")}
+							style={{ marginLeft: "10px", padding: "2px 8px", fontSize: "12px" }}
+						>
+							返回根目录
+						</button>
+					)}
+				</div>
+			</div>
 
 			{/* 上传区域 */}
 			<div style={{ marginBottom: "30px", padding: "15px", background: "#f5f5f5", borderRadius: "8px" }}>
@@ -170,7 +302,7 @@ export default function TestR2() {
 				<div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
 					<input
 						type="text"
-						placeholder="对象键名 (如: path/to/file.txt)"
+						placeholder={`对象键名 (当前路径: ${currentPath || "根目录"})`}
 						value={keyInput}
 						onChange={(e) => setKeyInput(e.target.value)}
 						style={{ flex: 1, padding: "8px" }}
@@ -202,7 +334,7 @@ export default function TestR2() {
 					/>
 				</div>
 
-				<div style={{ display: "flex", gap: "10px" }}>
+				<div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
 					<button onClick={saveValue} style={{ padding: "8px 16px" }}>
 						保存文本
 					</button>
@@ -229,12 +361,77 @@ export default function TestR2() {
 				</div>
 			</div>
 
+			{/* 创建文件夹 */}
+			<div style={{ marginBottom: "20px", padding: "15px", background: "#f0f7ff", borderRadius: "8px" }}>
+				<h3>创建文件夹</h3>
+				<div style={{ display: "flex", gap: "10px" }}>
+					<input
+						type="text"
+						placeholder="文件夹名称"
+						value={newFolderName}
+						onChange={(e) => setNewFolderName(e.target.value)}
+						onKeyDown={(e) => e.key === "Enter" && createFolder()}
+						style={{ flex: 1, padding: "8px" }}
+					/>
+					<button onClick={createFolder} style={{ padding: "8px 16px" }}>
+						创建文件夹
+					</button>
+				</div>
+			</div>
+
+			{/* 文件夹列表 */}
+			{folders.length > 0 && (
+				<div style={{ marginBottom: "20px" }}>
+					<h3>文件夹 ({folders.length})</h3>
+					<div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+						{folders.map((folder) => {
+							const folderName = folder.split("/").pop() || folder;
+							return (
+								<div
+									key={folder}
+									style={{
+										padding: "10px 15px",
+										background: "#fff3cd",
+										border: "1px solid #ffc107",
+										borderRadius: "8px",
+										display: "flex",
+										alignItems: "center",
+										gap: "10px",
+										cursor: "pointer",
+									}}
+									onClick={() => enterFolder(folderName)}
+								>
+									<span style={{ fontSize: "18px" }}>📁</span>
+									<span>{folderName}</span>
+									<button
+										onClick={(e) => {
+											e.stopPropagation();
+											deleteFolder(folderName);
+										}}
+										style={{
+											padding: "2px 8px",
+											background: "#ff4444",
+											color: "white",
+											border: "none",
+											borderRadius: "4px",
+											fontSize: "12px",
+										}}
+									>
+										删除
+									</button>
+								</div>
+							);
+						})}
+					</div>
+				</div>
+			)}
+
 			{/* 对象列表 */}
 			<div style={{ marginBottom: "30px" }}>
 				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-					<h3>对象列表 ({objects.length})</h3>
+					<h3>文件列表 ({objects.length})</h3>
 					<div style={{ display: "flex", gap: "10px" }}>
-						<button onClick={loadObjects} style={{ padding: "6px 12px", fontSize: "12px" }}>
+						<button onClick={loadData} style={{ padding: "6px 12px", fontSize: "12px" }}>
 							刷新
 						</button>
 						{objects.length > 0 && (
@@ -251,14 +448,14 @@ export default function TestR2() {
 					<p>加载中...</p>
 				) : objects.length === 0 ? (
 					<p style={{ color: "#999", padding: "20px", textAlign: "center", background: "#f9f9f9", borderRadius: "8px" }}>
-						暂无对象，请上传文件或文本
+						{folders.length === 0 ? "暂无对象，请上传文件或文本" : "当前目录下暂无文件"}
 					</p>
 				) : (
 					<div style={{ border: "1px solid #ddd", borderRadius: "8px", overflow: "hidden" }}>
 						<table style={{ width: "100%", borderCollapse: "collapse" }}>
 							<thead>
 								<tr style={{ background: "#f5f5f5" }}>
-									<th style={{ padding: "10px", textAlign: "left", borderBottom: "1px solid #ddd" }}>键名</th>
+									<th style={{ padding: "10px", textAlign: "left", borderBottom: "1px solid #ddd" }}>文件名</th>
 									<th style={{ padding: "10px", textAlign: "left", borderBottom: "1px solid #ddd" }}>大小</th>
 									<th style={{ padding: "10px", textAlign: "left", borderBottom: "1px solid #ddd" }}>类型</th>
 									<th style={{ padding: "10px", textAlign: "left", borderBottom: "1px solid #ddd" }}>操作</th>
@@ -272,7 +469,7 @@ export default function TestR2() {
 												style={{ cursor: "pointer", color: "#0066cc" }}
 												onClick={() => loadMetadata(obj.key)}
 											>
-												{obj.key}
+												{getDisplayName(obj.key)}
 											</span>
 										</td>
 										<td style={{ padding: "10px" }}>{formatSize(obj.size)}</td>
@@ -304,6 +501,7 @@ export default function TestR2() {
 				<div style={{ padding: "15px", background: "#e8f4f8", borderRadius: "8px" }}>
 					<h3>对象详情: {selectedKey}</h3>
 					<div style={{ marginBottom: "10px", fontSize: "14px" }}>
+						<p><strong>完整路径:</strong> {selectedKey}</p>
 						<p><strong>大小:</strong> {formatSize(selectedMetadata.size)}</p>
 						<p><strong>类型:</strong> {selectedMetadata.httpMetadata?.contentType || "未知"}</p>
 						{selectedMetadata.customMetadata?.filename && (

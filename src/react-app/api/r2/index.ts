@@ -18,6 +18,7 @@ export interface R2Object {
 	customMetadata?: {
 		filename?: string;
 		uploadedAt?: string;
+		isFolder?: string;
 	};
 }
 
@@ -38,6 +39,7 @@ export interface R2Metadata {
 	customMetadata?: {
 		filename?: string;
 		uploadedAt?: string;
+		isFolder?: string;
 	};
 }
 
@@ -172,4 +174,34 @@ export function getR2PublicUrl(key: string, baseUrl?: string): string {
 	// 如果配置了 R2 自定义域名，使用自定义域名
 	// 否则返回通过代理访问的 URL
 	return baseUrl ? `${baseUrl}/${key}` : `/api/r2/${encodeURIComponent(key)}`;
+}
+
+/**
+ * 文件夹相关接口
+ */
+
+export interface R2FolderResult {
+	folders: string[];
+}
+
+/**
+ * 获取文件夹列表
+ */
+export async function getR2Folders(prefix?: string): Promise<R2FolderResult> {
+	const params = prefix ? `?prefix=${encodeURIComponent(prefix)}` : "";
+	return await apiRequest<R2FolderResult>("GET", `/api/r2/folders${params}`);
+}
+
+/**
+ * 创建文件夹
+ */
+export async function createR2Folder(path: string): Promise<{ path: string }> {
+	return await apiRequest<{ path: string }>("PUT", `/api/r2/folder/${encodeURIComponent(path)}`);
+}
+
+/**
+ * 删除文件夹（递归删除所有内容）
+ */
+export async function deleteR2Folder(path: string): Promise<{ path: string; deletedCount: number }> {
+	return await apiRequest<{ path: string; deletedCount: number }>("DELETE", `/api/r2/folder/${encodeURIComponent(path)}`);
 }

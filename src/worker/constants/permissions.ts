@@ -46,6 +46,19 @@ export const Permission = {
 	// SQL 查询工具（仅超级管理员）
 	SYSTEM_SQL_QUERY: 'system:sql:query',
 
+	// ==================== R2 图床模块 ====================
+	// 文件管理
+	R2_FILE_LIST: 'r2:file:list',
+	R2_FILE_UPLOAD: 'r2:file:upload',
+	R2_FILE_DOWNLOAD: 'r2:file:download',
+	R2_FILE_DELETE: 'r2:file:delete',
+	R2_FILE_VIEW: 'r2:file:view',
+
+	// 文件夹管理
+	R2_FOLDER_LIST: 'r2:folder:list',
+	R2_FOLDER_CREATE: 'r2:folder:create',
+	R2_FOLDER_DELETE: 'r2:folder:delete',
+
 	// ==================== 内容管理模块 ====================
 	// 文章管理
 	CONTENT_ARTICLE_LIST: 'content:article:list',
@@ -125,6 +138,18 @@ export const PermissionMeta: Record<PermissionKey, { name: string; module: strin
 	// 系统管理 - SQL 查询
 	[Permission.SYSTEM_SQL_QUERY]: { name: 'SQL 查询', module: '系统管理', description: '执行 SQL 查询（仅超级管理员）' },
 
+	// R2 - 文件管理
+	[Permission.R2_FILE_LIST]: { name: '文件列表', module: 'R2', description: '查看文件列表' },
+	[Permission.R2_FILE_UPLOAD]: { name: '上传文件', module: 'R2', description: '上传新文件' },
+	[Permission.R2_FILE_DOWNLOAD]: { name: '下载文件', module: 'R2', description: '下载文件' },
+	[Permission.R2_FILE_DELETE]: { name: '删除文件', module: 'R2', description: '删除文件' },
+	[Permission.R2_FILE_VIEW]: { name: '查看文件', module: 'R2', description: '查看文件详情' },
+
+	// R2 - 文件夹管理
+	[Permission.R2_FOLDER_LIST]: { name: '文件夹列表', module: 'R2', description: '查看文件夹列表' },
+	[Permission.R2_FOLDER_CREATE]: { name: '创建文件夹', module: 'R2', description: '创建新文件夹' },
+	[Permission.R2_FOLDER_DELETE]: { name: '删除文件夹', module: 'R2', description: '删除文件夹' },
+
 	// 内容管理 - 文章管理
 	[Permission.CONTENT_ARTICLE_LIST]: { name: '文章列表', module: '内容管理', description: '查看文章列表' },
 	[Permission.CONTENT_ARTICLE_ADD]: { name: '新增文章', module: '内容管理', description: '创建新文章' },
@@ -186,6 +211,16 @@ export const PermissionGroups: Record<string, PermissionKey[]> = {
 		Permission.SYSTEM_ORG_DELETE,
 		Permission.SYSTEM_ORG_VIEW,
 		Permission.SYSTEM_SQL_QUERY,
+	],
+	'R2': [
+		Permission.R2_FILE_LIST,
+		Permission.R2_FILE_UPLOAD,
+		Permission.R2_FILE_DOWNLOAD,
+		Permission.R2_FILE_DELETE,
+		Permission.R2_FILE_VIEW,
+		Permission.R2_FOLDER_LIST,
+		Permission.R2_FOLDER_CREATE,
+		Permission.R2_FOLDER_DELETE,
 	],
 	'内容管理': [
 		Permission.CONTENT_ARTICLE_LIST,

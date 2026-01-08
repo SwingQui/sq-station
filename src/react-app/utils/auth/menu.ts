@@ -4,6 +4,7 @@
  */
 
 import { handleError } from "../error-handler";
+import { STORAGE_KEYS } from "@/config/app.config";
 
 const MENUS_KEY = "auth_menus";
 const PERMISSION_META_KEY = "permission_meta";
@@ -147,8 +148,7 @@ export function getAllModules(): string[] {
 
 // 导出 getPermissions 供 permission.ts 使用
 export function getPermissions(): string[] {
-	const PERMISSIONS_KEY = "auth_permissions";
-	const permsStr = localStorage.getItem(PERMISSIONS_KEY);
+	const permsStr = localStorage.getItem(STORAGE_KEYS.PERMISSIONS);
 	if (!permsStr) return [];
 	try {
 		return JSON.parse(permsStr);

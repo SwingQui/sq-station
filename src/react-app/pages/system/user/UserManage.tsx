@@ -474,9 +474,11 @@ export default function UserManage() {
 						filterOption={(inputValue, item) =>
 							item.role_name.includes(inputValue) || item.role_key.includes(inputValue)
 						}
-						listStyle={{
-							width: 300,
-							height: 400,
+						styles={{
+							section: {
+								width: 300,
+								height: 400,
+							},
 						}}
 					/>
 				)}
@@ -505,9 +507,11 @@ export default function UserManage() {
 						filterOption={(inputValue, item) =>
 							item.org_name.includes(inputValue) || item.org_code.includes(inputValue)
 						}
-						listStyle={{
-							width: 300,
-							height: 400,
+						styles={{
+							section: {
+								width: 300,
+								height: 400,
+							},
 						}}
 					/>
 				)}

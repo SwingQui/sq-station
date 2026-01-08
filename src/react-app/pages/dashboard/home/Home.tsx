@@ -43,7 +43,7 @@ export default function DashboardHome() {
 					<div style={{ padding: "12px", background: "#f5f5f5", borderRadius: "4px" }}>
 						<div style={{ fontWeight: "bold", marginBottom: "8px", color: "#1890ff" }}>前端</div>
 						<div style={{ fontSize: "14px", color: "#666" }}>
-							React 18 + TypeScript<br />
+							React 19 + TypeScript<br />
 							Vite + Ant Design<br />
 							React Router
 						</div>
@@ -65,11 +65,11 @@ export default function DashboardHome() {
 						</div>
 					</div>
 					<div style={{ padding: "12px", background: "#f5f5f5", borderRadius: "4px" }}>
-						<div style={{ fontWeight: "bold", marginBottom: "8px", color: "#722ed1" }}>特性</div>
+						<div style={{ fontWeight: "bold", marginBottom: "8px", color: "#722ed1" }}>存储</div>
 						<div style={{ fontSize: "14px", color: "#666" }}>
-							动态菜单配置<br />
-							按钮级权限控制<br />
-							KV 存储支持
+							KV 键值存储<br />
+							R2 对象存储<br />
+							文件夹管理支持
 						</div>
 					</div>
 				</div>
@@ -113,6 +113,11 @@ export default function DashboardHome() {
 						<div style={{ fontSize: "13px", color: "#999" }}>键值存储管理</div>
 					</div>
 					<div style={{ padding: "16px", border: "1px solid #e8e8e8", borderRadius: "6px", textAlign: "center" }}>
+						<div style={{ fontSize: "32px", marginBottom: "8px" }}>📁</div>
+						<div style={{ fontWeight: "bold", marginBottom: "4px" }}>R2 存储</div>
+						<div style={{ fontSize: "13px", color: "#999" }}>对象存储管理</div>
+					</div>
+					<div style={{ padding: "16px", border: "1px solid #e8e8e8", borderRadius: "6px", textAlign: "center" }}>
 						<div style={{ fontSize: "32px", marginBottom: "8px" }}>🔍</div>
 						<div style={{ fontWeight: "bold", marginBottom: "4px" }}>表查询</div>
 						<div style={{ fontSize: "13px", color: "#999" }}>SQL 查询工具</div>
@@ -137,15 +142,19 @@ export default function DashboardHome() {
 					</p>
 					<p style={{ marginBottom: "12px" }}>
 						<strong>2. 权限配置：</strong> 在角色管理中点击"配置权限"按钮，可以为角色分配详细的权限。
-						系统支持到按钮级别的权限控制，父级目录可以级联勾选子权限。
+						系统支持到按钮级别的权限控制，包括 R2 存储的文件和文件夹操作权限。
 					</p>
 					<p style={{ marginBottom: "12px" }}>
 						<strong>3. 菜单管理：</strong> 在"菜单管理"页面可以动态配置系统菜单结构，
 						支持多级目录、菜单和按钮，每个菜单项可以配置对应的权限标识。
 					</p>
-					<p style={{ marginBottom: "0" }}>
+					<p style={{ marginBottom: "12px" }}>
 						<strong>4. 组织管理：</strong> 支持按组织架构管理用户，用户可以属于多个组织，
 						组织可以拥有独立的权限配置，组织成员会自动继承组织权限。
+					</p>
+					<p style={{ marginBottom: "0" }}>
+						<strong>5. R2 对象存储：</strong> 在"R2 存储"页面可以管理文件和文件夹，
+						支持上传、下载、删除操作，以及创建和管理文件夹结构，实现类似图床的功能。
 					</p>
 				</div>
 			</div>

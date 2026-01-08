@@ -86,10 +86,14 @@ export class UserService {
 			throw new Error("用户不存在");
 		}
 
-		// 业务规则：不能修改拥有超级管理员角色的用户
-		const isAdmin = await this.roleRepo.hasAdminRoleByUserId(id);
-		if (isAdmin) {
-			throw new Error("不能修改拥有超级管理员权限的用户");
+		// 业务规则：ID=1 的系统管理员不能被禁用
+		if (id === 1 && data.status !== undefined && data.status !== 1) {
+			throw new Error("系统管理员不能被禁用");
+		}
+
+		// 业务规则：ID=1 的系统管理员用户名不能修改
+		if (id === 1 && data.username && data.username !== "admin") {
+			throw new Error("系统管理员用户名不能修改");
 		}
 
 		// 检查用户名是否被其他用户占用
@@ -116,10 +120,9 @@ export class UserService {
 	 * 删除用户
 	 */
 	async delete(id: number): Promise<void> {
-		// 业务规则：不能删除拥有超级管理员角色的用户
-		const isAdmin = await this.roleRepo.hasAdminRoleByUserId(id);
-		if (isAdmin) {
-			throw new Error("不能删除拥有超级管理员权限的用户");
+		// 业务规则：ID=1 的系统管理员不能删除
+		if (id === 1) {
+			throw new Error("系统管理员不能删除");
 		}
 
 		// 检查用户是否存在
@@ -162,6 +165,14 @@ export class UserService {
 		const user = await this.userRepo.findById(userId);
 		if (!user) {
 			throw new Error("用户不存在");
+		}
+
+		// 业务规则：ID=1 的系统管理员必须保留 admin 角色
+		if (userId === 1) {
+			const adminRole = await this.roleRepo.findByRoleKey("admin");
+			if (adminRole && !roleIds.includes(adminRole.id)) {
+				throw new Error("系统管理员必须保留 admin 角色");
+			}
 		}
 
 		await this.userRoleRepo.updateUserRoles(userId, roleIds);

@@ -47,7 +47,7 @@ export class UserRepository extends BaseRepository {
 	 */
 	async findById(id: number): Promise<Omit<SysUser, "password"> | null> {
 		const sql = `
-			SELECT id, username, nickname, email, phone, avatar, status, remark, created_at
+			SELECT id, username, nickname, email, phone, avatar, status, roles, remark, created_at
 			FROM sys_user
 			WHERE id = ?
 		`;

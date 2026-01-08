@@ -100,23 +100,15 @@ export const STORAGE_KEYS = {
 	REMEMBERED_CREDENTIALS: "sq_remembered_credentials",
 
 	/**
-	 * 用户权限列表
+	 * 用户认证信息统一存储（加密）
 	 *
 	 * @description
-	 * 存储格式：JSON 字符串数组，如 '["system:user:create", "system:user:update"]'
+	 * 存储格式：AES 加密的 JSON 字符串
+	 * 包含：user, permissions, menus, timestamp
 	 *
-	 * @scope 权限验证系统、路由守卫
-	 * @usage @utils/auth/permission.ts 中的 hasPermission() 函数
-	 */
-	PERMISSIONS: "auth_permissions",
-
-	/**
-	 * 用户基本信息
+	 * 使用 SECURITY.ENCRYPTION_KEY 进行 AES 加密
 	 *
-	 * @description
-	 * 存储格式：JSON 字符串，包含用户名、昵称、头像等
-	 *
-	 * @scope 用户信息展示、个人中心
+	 * @scope 统一认证存储
 	 */
 	USER_INFO: "auth_user_info",
 
@@ -124,7 +116,7 @@ export const STORAGE_KEYS = {
 	 * 访问令牌（JWT Token）
 	 *
 	 * @description
-	 * 存储格式：JWT 字符串
+	 * 存储格式：JWT 字符串（明文存储）
 	 *
 	 * @scope API 请求认证、登录状态维持
 	 * @warning 此 token 应该设置合理的过期时间

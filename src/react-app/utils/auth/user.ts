@@ -1,18 +1,19 @@
 /**
  * 用户信息管理
- * 负责用户信息的存储和获取
+ * 从统一加密存储中读取用户信息
  */
 
-const USER_KEY = "auth_user";
+import { getUser as getUserFromStorage } from "./storage";
 
 /**
- * 认证用户接口
+ * 用户信息接口
  */
 export interface AuthUser {
 	id: number;
 	username: string;
 	nickname?: string;
 	avatar?: string;
+	roles?: string[];
 	is_admin?: boolean;
 }
 
@@ -25,28 +26,8 @@ export interface LoginResponse {
 }
 
 /**
- * 保存用户信息
- */
-export function setUser(user: AuthUser): void {
-	localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-/**
- * 获取用户信息
+ * 获取用户信息（从统一存储）
  */
 export function getUser(): AuthUser | null {
-	const userStr = localStorage.getItem(USER_KEY);
-	if (!userStr) return null;
-	try {
-		return JSON.parse(userStr);
-	} catch {
-		return null;
-	}
-}
-
-/**
- * 移除用户信息
- */
-export function removeUser(): void {
-	localStorage.removeItem(USER_KEY);
+	return getUserFromStorage();
 }

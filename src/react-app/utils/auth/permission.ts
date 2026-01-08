@@ -1,59 +1,16 @@
 /**
  * 权限管理
- * 负责权限的存储、检查和路由权限验证
+ * 从统一加密存储中读取权限
  */
 
 import { findMenuByPath } from "../core/route/matcher";
-import { STORAGE_KEYS } from "@/config/app.config";
-
-// 缓存权限列表，避免频繁读取 localStorage
-let cachedPermissions: string[] | null = null;
+import { getPermissions as getPermissionsFromStorage, isSuperAdmin } from "./storage";
 
 /**
- * 保存权限列表
- */
-export function setPermissions(permissions: string[]): void {
-	localStorage.setItem(STORAGE_KEYS.PERMISSIONS, JSON.stringify(permissions));
-	cachedPermissions = permissions; // 更新缓存
-}
-
-/**
- * 获取权限列表（使用缓存）
+ * 获取权限列表（从统一存储）
  */
 export function getPermissionsList(): string[] {
-	// 如果有缓存，直接返回
-	if (cachedPermissions !== null) {
-		return cachedPermissions;
-	}
-
-	const permsStr = localStorage.getItem(STORAGE_KEYS.PERMISSIONS);
-	if (!permsStr) {
-		return [];
-	}
-	try {
-		const perms = JSON.parse(permsStr);
-		cachedPermissions = perms; // 缓存权限列表
-		return perms;
-	} catch (e) {
-		console.error("[Auth] Failed to parse permissions:", permsStr, e);
-		return [];
-	}
-}
-
-/**
- * 移除权限列表
- */
-export function removePermissions(): void {
-	localStorage.removeItem(STORAGE_KEYS.PERMISSIONS);
-	cachedPermissions = null; // 清除缓存
-}
-
-/**
- * 检查是否为超级管理员（拥有 *:*:* 通配符权限）
- */
-export function isSuperAdmin(): boolean {
-	const permissions = getPermissionsList();
-	return permissions.includes("*:*:*");
+	return getPermissionsFromStorage();
 }
 
 /**
@@ -101,3 +58,6 @@ export function hasRoutePermission(path: string): boolean {
 	// 检查用户是否有该权限
 	return hasPermission(menu.permission);
 }
+
+// 重新导出 isSuperAdmin 从 storage.ts
+export { isSuperAdmin };

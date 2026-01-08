@@ -9,9 +9,7 @@ import {
 	getToken,
 	setToken,
 	getUser,
-	setUser as setUserStorage,
-	setPermissions,
-	setMenus,
+	setUserInfo,
 	logout as authLogout
 } from "../utils/auth";
 import { navigate } from "../utils/router";
@@ -61,9 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			console.log("[AuthContext] Login successful, token:", token ? "exists" : "missing");
 			console.log("[AuthContext] User info:", user);
 
-			// 保存到 localStorage
+			// 保存 token（单独存储）
 			setToken(token);
-			setUserStorage(user);
 
 			console.log("[AuthContext] Token saved to localStorage");
 			console.log("[AuthContext] Token from localStorage:", getToken());
@@ -73,10 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			try {
 				const meData = await getUserInfo();
 				console.log("[AuthContext] /api/auth/me response:", meData);
-				console.log("[AuthContext] Saving permissions:", meData.permissions);
-				console.log("[AuthContext] Saving menus:", meData.menus);
-				setPermissions(meData.permissions || []);
-				setMenus(meData.menus || []);
+
+				// 统一加密存储用户信息、权限、菜单
+				setUserInfo({
+					user: meData.user || user,
+					permissions: meData.permissions || [],
+					menus: meData.menus || []
+				});
+
 				// 清除菜单索引缓存，以便重新构建
 				clearMenuIndexCache();
 			} catch {
@@ -110,9 +111,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 		try {
 			const meData = await getUserInfo();
-			setUserStorage(meData.user);
-			setPermissions(meData.permissions || []);
-			setMenus(meData.menus || []);
+
+			// 统一加密存储用户信息、权限、菜单
+			setUserInfo({
+				user: meData.user,
+				permissions: meData.permissions || [],
+				menus: meData.menus || []
+			});
+
 			// 清除菜单索引缓存，以便重新构建
 			clearMenuIndexCache();
 			setUser(meData.user);
@@ -129,8 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 		try {
 			const meData = await getUserInfo();
-			setPermissions(meData.permissions || []);
-			setMenus(meData.menus || []);
+
+			// 统一加密存储用户信息、权限、菜单
+			setUserInfo({
+				user: meData.user,
+				permissions: meData.permissions || [],
+				menus: meData.menus || []
+			});
+
 			// 清除菜单索引缓存
 			clearMenuIndexCache();
 		} catch (error) {

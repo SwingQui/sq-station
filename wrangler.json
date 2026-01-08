@@ -39,6 +39,9 @@
 	},
 	"vars": {
 		"JWT_SECRET": "SwingQuiDTY1465477749-sq-station-jwt-secret-key-2026",
-		"JWT_EXPIRES_IN": "24 * 60 * 60"
+		"JWT_EXPIRES_IN": "24 * 60 * 60",
+		"ADMIN_USERNAME": "admin",
+		"ADMIN_PASSWORD": "admin13672210421",
+		"ADMIN_NICKNAME": "系统管理员"
 	}
 }

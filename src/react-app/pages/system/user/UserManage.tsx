@@ -11,6 +11,7 @@ import {
 	Col,
 	Radio,
 	Transfer,
+	message,
 } from "antd";
 import {
 	PlusOutlined,
@@ -319,6 +320,11 @@ export default function UserManage() {
 			width: 200,
 			align: "center" as const,
 			render: (_: any, record: User) => {
+				// admin 用户（ID=1）不允许编辑、删除、降权
+				if (record.id === 1) {
+					return <span style={{ color: "#999" }}>系统管理员</span>;
+				}
+
 				// 操作按钮统一样式：圆角正方形
 				const actionButtonStyle: React.CSSProperties = {
 					padding: "8px",
@@ -441,10 +447,15 @@ export default function UserManage() {
 						</Col>
 						<Col span={12}>
 							<Form.Item label="状态" name="status" initialValue={1}>
-								<Radio.Group buttonStyle="solid">
-									<Radio.Button value={1}>正常</Radio.Button>
-									<Radio.Button value={0}>禁用</Radio.Button>
-								</Radio.Group>
+								{editingUser?.id === 1 ? (
+									// admin 用户不允许禁用
+									<span style={{ color: "#52c41a", fontWeight: 500 }}>正常（系统管理员不可禁用）</span>
+								) : (
+									<Radio.Group buttonStyle="solid">
+										<Radio.Button value={1}>正常</Radio.Button>
+										<Radio.Button value={0}>禁用</Radio.Button>
+									</Radio.Group>
+								)}
 							</Form.Item>
 						</Col>
 					</Row>
@@ -464,23 +475,44 @@ export default function UserManage() {
 				{allRoles.length === 0 ? (
 					<div style={{ textAlign: "center", padding: "40px", color: "#888" }}>暂无角色</div>
 				) : (
-					<Transfer
-						dataSource={roleDataSource}
-						targetKeys={currentUserRoles}
-						onChange={(targetKeys) => setCurrentUserRoles(targetKeys as number[])}
-						render={(item) => `${item.role_name} (${item.role_key})`}
-						titles={["可选角色", "已选角色"]}
-						showSearch
-						filterOption={(inputValue, item) =>
-							item.role_name.includes(inputValue) || item.role_key.includes(inputValue)
-						}
-						styles={{
-							section: {
-								width: 300,
-								height: 400,
-							},
-						}}
-					/>
+					<>
+						{currentUserId === 1 && (
+							<div style={{ marginBottom: 12, color: "#faad14", fontSize: 14 }}>
+								⚠️ 系统管理员必须保留 admin 角色
+							</div>
+						)}
+						<Transfer
+							dataSource={roleDataSource.map((role) => ({
+								...role,
+								// admin 用户不能移除 admin 角色
+								disabled: currentUserId === 1 && role.role_key === "admin",
+							}))}
+							targetKeys={currentUserRoles}
+							onChange={(targetKeys) => {
+								// admin 用户必须保留 admin 角色
+								if (currentUserId === 1) {
+									const adminRole = allRoles.find(r => r.role_key === "admin");
+									if (adminRole && !targetKeys.includes(adminRole.id)) {
+										message.warning("系统管理员必须保留 admin 角色");
+										return;
+									}
+								}
+								setCurrentUserRoles(targetKeys as number[]);
+							}}
+							render={(item) => `${item.role_name} (${item.role_key})`}
+							titles={["可选角色", "已选角色"]}
+							showSearch
+							filterOption={(inputValue, item) =>
+								item.role_name.includes(inputValue) || item.role_key.includes(inputValue)
+							}
+							styles={{
+								section: {
+									width: 300,
+									height: 400,
+								},
+							}}
+						/>
+					</>
 				)}
 			</Modal>
 

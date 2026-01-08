@@ -21,7 +21,7 @@ export interface LoginResult {
 }
 
 export interface UserInfoResult {
-	user: Omit<SysUser, "password"> & { is_admin?: boolean };
+	user: Omit<SysUser, "password" | "roles"> & { is_admin?: boolean; roles: string[] };
 	permissions: string[];
 	menus: SysMenu[];
 }
@@ -96,6 +96,17 @@ export class AuthService {
 		const permissions = await this.menuRepo.findPermissionsByUserId(userId);
 		const isAdmin = permissions.includes("*:*:*");
 
+		// 解析用户角色字段
+		let roles: string[] = [];
+		if (user.roles) {
+			try {
+				roles = JSON.parse(user.roles);
+			} catch (e) {
+				console.error("Failed to parse user roles:", user.roles, e);
+				roles = [];
+			}
+		}
+
 		// 获取所有菜单（不过滤状态和可见性，用于权限检查）
 		const allMenus = await this.menuRepo.findAll();
 
@@ -111,9 +122,12 @@ export class AuthService {
 			menuTree = this.buildMenuTree(visibleMenus);
 		}
 
+		// 返回用户信息（包含角色）
+		const { roles: _roles, ...userWithoutRoles } = user;
 		return {
 			user: {
-				...user,
+				...userWithoutRoles,
+				roles,
 				is_admin: isAdmin
 			},
 			permissions,

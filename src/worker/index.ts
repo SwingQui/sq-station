@@ -27,8 +27,26 @@ import { MenuRepository } from "./repositories/menu.repository";
 import { cacheMiddleware } from "./core/middleware/cache.middleware";
 import { cacheService } from "./core/cache/cache.service";
 import { appConfig } from "./config/app.config";
+import { initializeSystem } from "./utils/init-admin";
+
+// 系统初始化标志
+let isInitialized = false;
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// 系统初始化中间件（在第一个请求时执行）
+app.use("/*", async (c, next) => {
+	if (!isInitialized) {
+		try {
+			await initializeSystem(c.env);
+			isInitialized = true;
+		} catch (error) {
+			console.error("[System] 初始化失败:", error);
+			// 初始化失败不影响请求处理
+		}
+	}
+	await next();
+});
 
 // CORS 配置（允许前端携带 Authorization header）
 app.use("/*", cors({

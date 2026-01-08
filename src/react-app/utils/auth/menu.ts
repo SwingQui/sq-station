@@ -1,12 +1,11 @@
 /**
  * 菜单和权限元数据管理
- * 负责菜单的存储、获取和权限元数据的管理
+ * 从统一加密存储中读取菜单数据
  */
 
 import { handleError } from "../error-handler";
-import { STORAGE_KEYS } from "@/config/app.config";
+import { getMenus as getMenusFromStorage } from "./storage";
 
-const MENUS_KEY = "auth_menus";
 const PERMISSION_META_KEY = "permission_meta";
 
 /**
@@ -29,30 +28,10 @@ export interface MenuItem {
 }
 
 /**
- * 保存菜单列表
- */
-export function setMenus(menus: any[]): void {
-	localStorage.setItem(MENUS_KEY, JSON.stringify(menus));
-}
-
-/**
- * 获取菜单列表
+ * 获取菜单列表（从统一存储）
  */
 export function getMenus(): any[] {
-	const menusStr = localStorage.getItem(MENUS_KEY);
-	if (!menusStr) return [];
-	try {
-		return JSON.parse(menusStr);
-	} catch {
-		return [];
-	}
-}
-
-/**
- * 移除菜单列表
- */
-export function removeMenus(): void {
-	localStorage.removeItem(MENUS_KEY);
+	return getMenusFromStorage();
 }
 
 /**
@@ -144,15 +123,4 @@ export function getAllModules(): string[] {
 	const meta = getPermissionMeta();
 	if (!meta?.groups) return [];
 	return Object.keys(meta.groups);
-}
-
-// 导出 getPermissions 供 permission.ts 使用
-export function getPermissions(): string[] {
-	const permsStr = localStorage.getItem(STORAGE_KEYS.PERMISSIONS);
-	if (!permsStr) return [];
-	try {
-		return JSON.parse(permsStr);
-	} catch {
-		return [];
-	}
 }

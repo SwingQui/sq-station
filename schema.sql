@@ -3,8 +3,13 @@
 -- ====================================
 
 -- 删除旧表（重新创建时使用）
+-- 注意：按依赖关系倒序删除
 DROP TABLE IF EXISTS sys_org_role;
+DROP TABLE IF EXISTS sys_org_permission;
 DROP TABLE IF EXISTS sys_user_organization;
+DROP TABLE IF EXISTS sys_oauth_permission_group;
+DROP TABLE IF EXISTS sys_oauth_client;
+DROP TABLE IF EXISTS sys_user_permission;
 DROP TABLE IF EXISTS sys_role_menu;
 DROP TABLE IF EXISTS sys_user_role;
 DROP TABLE IF EXISTS sys_organization;
@@ -150,11 +155,14 @@ CREATE INDEX IF NOT EXISTS idx_org_permission_org_id ON sys_org_permission(org_i
 -- ====================================
 
 -- 初始化管理员账号
--- 密码已使用 PBKDF2-SHA256 加密（username 作为 salt）
--- admin 密码: admin13672210421
--- user 密码: user123
+-- 注意：管理员账户由初始化脚本创建，密码在 wrangler.json 中配置
+-- 密码使用 PBKDF2-SHA256 加密，username 作为 salt
+-- 默认配置: username=admin, password=admin
 INSERT OR IGNORE INTO sys_user (id, username, password, nickname, status, roles) VALUES
-(1, 'admin', 'admin$9e97f7ff5e604b010c3ab72e59c239044e12e227016291f55f2cebb022943a10', '管理员', 1, '["admin"]'),
+(1, 'admin', 'placeholder', '系统管理员', 1, '["admin"]');
+
+-- 普通测试用户（可选）
+INSERT OR IGNORE INTO sys_user (id, username, password, nickname, status, roles) VALUES
 (2, 'user', 'user$a52197d73c0a6a5bec9a30fb0342759f1920ac154b0244376fa874f639338bec', '普通用户', 1, '["user"]');
 
 -- 初始化角色
@@ -298,6 +306,7 @@ CREATE TABLE IF NOT EXISTS sys_oauth_client (
   client_name TEXT NOT NULL,             -- 客户端名称
   description TEXT,                      -- 描述
   scope TEXT DEFAULT '[]',               -- 授权的权限列表 JSON，如 ["system:user:list","r2:file:upload"]
+  permission_group_ids TEXT DEFAULT '[]', -- 绑定的权限组 ID 列表 JSON
   expires_in INTEGER DEFAULT 3600,       -- Token 有效期（秒）
   status INTEGER DEFAULT 1,              -- 状态：0=禁用 1=正常
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -337,12 +346,6 @@ CREATE TABLE IF NOT EXISTS sys_oauth_permission_group (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
--- 为客户端表添加权限组字段（如果不存在）
--- 客户端可以绑定多个权限组，权限 = 所有绑定权限组的权限并集（无自定义权限）
--- SQLite 不支持直接 ALTER TABLE ADD COLUMN IF NOT EXISTS，需要使用更复杂的方法
--- 这里我们假设字段不存在，如果已存在会报错但不影响其他功能
-ALTER TABLE sys_oauth_client ADD COLUMN permission_group_ids TEXT DEFAULT '[]';
 
 -- 初始化权限组数据
 INSERT OR IGNORE INTO sys_oauth_permission_group (group_key, group_name, description, permissions, sort_order) VALUES

@@ -5,6 +5,7 @@
  * @module utils/auth
  * @description 按职责拆分为独立模块：
  * - token: Token 管理
+ * - storage: 统一加密存储
  * - user: 用户信息管理
  * - permission: 权限检查
  * - menu: 菜单和权限元数据管理
@@ -19,21 +20,28 @@ export {
 	isTokenExpired,
 } from "./token";
 
+// ==================== 统一加密存储 ====================
+export {
+	setUserInfo,
+	getUserInfo,
+	clearUserInfo,
+	enableStorageSync,
+	destroyStorageSync,
+	isSuperAdmin,
+	type StoredUserInfo,
+} from "./storage";
+
 // ==================== 用户信息管理 ====================
 export {
-	setUser,
 	getUser,
-	removeUser,
 	type AuthUser,
 	type LoginResponse,
 } from "./user";
 
 // ==================== 权限检查 ====================
 export {
-	setPermissions,
 	getPermissionsList,
-	removePermissions,
-	isSuperAdmin,
+	isSuperAdmin as checkSuperAdmin,
 	hasPermission,
 	hasAnyPermission,
 	hasRoutePermission,
@@ -41,9 +49,7 @@ export {
 
 // ==================== 菜单和权限元数据管理 ====================
 export {
-	setMenus,
 	getMenus,
-	removeMenus,
 	fetchPermissionMeta,
 	getPermissionMeta,
 	getPermissionName,
@@ -59,9 +65,7 @@ export {
 
 import { getToken } from "./token";
 import { removeToken } from "./token";
-import { removeUser } from "./user";
-import { removePermissions } from "./permission";
-import { removeMenus } from "./menu";
+import { clearUserInfo } from "./storage";
 
 /**
  * 检查是否已登录
@@ -81,7 +85,5 @@ export function isAuthenticated(): boolean {
  */
 export function logout(): void {
 	removeToken();
-	removeUser();
-	removePermissions();
-	removeMenus();
+	clearUserInfo();
 }

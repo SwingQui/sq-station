@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Select, Space, Popconfirm, message, Tag, Row, Col, Radio } from "antd";
+import { Table, Button, Modal, Form, Input, Select, Space, message, Tag, Row, Col, Radio } from "antd";
 import { PlusOutlined, DeleteOutlined, ExportOutlined, EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { getMenuList, createMenu, updateMenu, deleteMenu } from "../../../api/menu";
 import type { Menu } from "../../../types";
@@ -23,6 +23,9 @@ export default function MenuManage() {
 	const [showModal, setShowModal] = useState(false);
 	const [parentOptions, setParentOptions] = useState<Menu[]>([]);
 	const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [deletingMenuId, setDeletingMenuId] = useState<number | null>(null);
+	const [showBatchDeleteModal, setShowBatchDeleteModal] = useState(false);
 	const [form] = Form.useForm();
 
 	useEffect(() => {
@@ -52,6 +55,60 @@ export default function MenuManage() {
 		} finally {
 			setLoading(false);
 		}
+	};
+
+	// 检查菜单是否有子菜单（包括目录、菜单、按钮等所有类型）
+	const hasChildren = (menuId: number, menuList: TableRow[]): boolean => {
+		for (const menu of menuList) {
+			if (menu.id === menuId) {
+				// children 包含所有类型的子菜单：目录(M)、菜单(C)、按钮(F)
+				return !!(menu.children && menu.children.length > 0);
+			}
+			if (menu.children) {
+				const found = hasChildren(menuId, menu.children);
+				if (found !== undefined) return found;
+			}
+		}
+		return false;
+	};
+
+	// 获取菜单的所有子菜单ID（递归）
+	const getAllChildIds = (menuId: number, menuList: TableRow[]): number[] => {
+		const ids: number[] = [];
+		for (const menu of menuList) {
+			if (menu.id === menuId) {
+				if (menu.children) {
+					for (const child of menu.children) {
+						ids.push(child.id);
+						ids.push(...getAllChildIds(child.id, menuList));
+					}
+				}
+				break;
+			}
+			if (menu.children) {
+				ids.push(...getAllChildIds(menuId, menu.children));
+			}
+		}
+		return ids;
+	};
+
+	// 检查批量删除时是否有未选中的子菜单
+	const validateBatchDelete = (): { valid: boolean; message?: string } => {
+		for (const id of selectedRowKeys) {
+			const numId = Number(id);
+			const childIds = getAllChildIds(numId, menus);
+			if (childIds.length > 0) {
+				// 检查是否所有子菜单都被选中
+				const unselectedChildren = childIds.filter(childId => !selectedRowKeys.includes(childId));
+				if (unselectedChildren.length > 0) {
+					return {
+						valid: false,
+						message: `菜单及其所有子菜单必须全部选中才能删除。请确保选中所有子菜单。`
+					};
+				}
+			}
+		}
+		return { valid: true };
 	};
 
 	const handleSave = async () => {
@@ -85,10 +142,23 @@ export default function MenuManage() {
 		setShowModal(true);
 	};
 
-	const handleDelete = async (id: number) => {
+	const handleDeleteClick = (id: number) => {
+		// 检查是否有子菜单
+		if (hasChildren(id, menus)) {
+			message.warning("菜单下没有任何子节点才可以删除");
+			return;
+		}
+		setDeletingMenuId(id);
+		setShowDeleteModal(true);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (!deletingMenuId) return;
 		try {
-			await deleteMenu(id);
+			await deleteMenu(deletingMenuId);
 			handleSuccess("删除成功");
+			setShowDeleteModal(false);
+			setDeletingMenuId(null);
 			fetchMenus();
 		} catch (e) {
 			handleError(e, "删除失败");
@@ -97,21 +167,34 @@ export default function MenuManage() {
 
 	const handleAdd = (parentId = 0) => {
 		setEditingMenu({ id: 0, parent_id: parentId, menu_name: "", menu_type: "C", route_path: null, component_path: null, icon: null, sort_order: 0, permission: null, menu_visible: 1, menu_status: 1 } as Menu);
-		form.setFieldsValue({ parent_id: parentId, menu_type: "C", menu_visible: 1, menu_status: 1 });
+		form.setFieldsValue({ parent_id: parentId, menu_type: "C", menu_visible: 1, menu_status: 1, is_frame: 0, is_cache: 0 });
 		setShowModal(true);
 	};
 
-	const handleBatchDelete = async () => {
+	const handleBatchDeleteClick = () => {
 		if (selectedRowKeys.length === 0) {
 			message.warning("请先选择要删除的菜单");
 			return;
 		}
+
+		// 验证：选中了有子菜单的菜单时，必须同时选中所有子菜单
+		const validation = validateBatchDelete();
+		if (!validation.valid) {
+			message.warning(validation.message);
+			return;
+		}
+
+		setShowBatchDeleteModal(true);
+	};
+
+	const handleConfirmBatchDelete = async () => {
 		try {
 			for (const id of selectedRowKeys) {
 				await deleteMenu(Number(id));
 			}
 			handleSuccess(`成功删除 ${selectedRowKeys.length} 个菜单`);
 			setSelectedRowKeys([]);
+			setShowBatchDeleteModal(false);
 			fetchMenus();
 		} catch (e) {
 			handleError(e, "删除失败");
@@ -230,8 +313,8 @@ export default function MenuManage() {
 			render: () => null,
 		},
 		{
-			title: "ID",
-			dataIndex: "id",
+			title: "排序",
+			dataIndex: "sort_order",
 			width: 48,
 			align: "center" as const,
 		},
@@ -257,7 +340,7 @@ export default function MenuManage() {
 					F: { color: "orange", text: "按钮" },
 				};
 				const { color, text } = config[type] || { color: "default", text: type };
-				return <Tag color={color}>{text}</Tag>;
+				return <Tag color={color} style={{ display: "inline-flex", alignItems: "center" }}>{text}</Tag>;
 			},
 		},
 		{
@@ -353,12 +436,6 @@ export default function MenuManage() {
 			},
 		},
 		{
-			title: "排序",
-			dataIndex: "sort_order",
-			width: 48,
-			align: "center" as const,
-		},
-		{
 			title: "状态",
 			dataIndex: "menu_status",
 			width: 48,
@@ -379,9 +456,7 @@ export default function MenuManage() {
 				<Space size="small">
 					<PermissionButton permission="system:menu:create" onClick={() => handleAdd(record.id)} icon={<PlusCircleOutlined />} />
 					<PermissionButton permission="system:menu:update" onClick={() => handleEdit(record)} icon={<EditOutlined />} />
-					<Popconfirm title="确定删除此菜单吗？" onConfirm={() => handleDelete(record.id)}>
-						<PermissionButton permission="system:menu:delete" icon={<DeleteOutlined />} />
-					</Popconfirm>
+					<PermissionButton permission="system:menu:delete" onClick={() => handleDeleteClick(record.id)} icon={<DeleteOutlined />} />
 				</Space>
 			),
 		},
@@ -393,11 +468,9 @@ export default function MenuManage() {
 				<PermissionButton permission="system:menu:create" onClick={() => handleAdd(0)} icon={<PlusOutlined />}>
 					新增根菜单
 				</PermissionButton>
-				<Popconfirm title="确定删除选中的菜单吗？" onConfirm={handleBatchDelete} disabled={selectedRowKeys.length === 0}>
-					<Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0} danger>
-						批量删除 ({selectedRowKeys.length})
-					</Button>
-				</Popconfirm>
+				<Button icon={<DeleteOutlined />} disabled={selectedRowKeys.length === 0} danger onClick={handleBatchDeleteClick}>
+					批量删除 ({selectedRowKeys.length})
+				</Button>
 				<PermissionButton permission="system:menu:read" onClick={handleExport} icon={<ExportOutlined />}>
 					导出
 				</PermissionButton>
@@ -417,7 +490,8 @@ export default function MenuManage() {
 				defaultExpandAllRows
 				size="small"
 				bordered
-				scroll={{ x: 1090 }}
+				tableLayout="fixed"
+				scroll={{ x: "max-content" }}
 			/>
 
 			<Modal
@@ -534,6 +608,35 @@ export default function MenuManage() {
 						</Col>
 					</Row>
 				</Form>
+			</Modal>
+
+			<Modal
+				title="删除确认"
+				open={showDeleteModal}
+				onOk={handleConfirmDelete}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setDeletingMenuId(null);
+				}}
+				okText="确定"
+				cancelText="取消"
+				okButtonProps={{ danger: true }}
+				centered={true}
+			>
+				<p>确定删除此菜单吗？此操作无法撤销。</p>
+			</Modal>
+
+			<Modal
+				title="批量删除确认"
+				open={showBatchDeleteModal}
+				onOk={handleConfirmBatchDelete}
+				onCancel={() => setShowBatchDeleteModal(false)}
+				okText="确定"
+				cancelText="取消"
+				okButtonProps={{ danger: true }}
+				centered={true}
+			>
+				<p>确定删除选中的 {selectedRowKeys.length} 个菜单吗？此操作无法撤销。</p>
 			</Modal>
 		</div>
 	);

@@ -223,39 +223,47 @@ export default function RoleManage() {
 
 	// 表格列定义
 	const columns: ColumnsType<Role> = [
-		{ title: "ID", dataIndex: "id", width: 80, align: "center" },
-		{ title: "角色名称", dataIndex: "role_name", width: 150 },
+		{ title: "ID", dataIndex: "id", width: 60, align: "center" as const },
+		{ title: "角色名称", dataIndex: "role_name", width: 150, align: "center" as const },
 		{
 			title: "权限标识",
 			dataIndex: "role_key",
-			width: 150,
+			width: 100,
 			align: "center" as const,
 			render: (text: string) => (
-				<Tag color="blue">{text}</Tag>
+				<Tag color="blue" style={{ display: "inline-flex", alignItems: "center" }}>{text}</Tag>
 			),
 		},
 		{
 			title: "状态",
 			dataIndex: "status",
-			width: 100,
+			width: 80,
 			align: "center" as const,
 			render: (status: number) => (
-				<Tag color={status ? "success" : "error"}>{status ? "正常" : "禁用"}</Tag>
+				<Tag color={status ? "success" : "error"} style={{ display: "inline-flex", alignItems: "center" }}>{status ? "正常" : "禁用"}</Tag>
 			),
 		},
 		{
 			title: "创建时间",
 			dataIndex: "created_at",
-			width: 180,
+			width: 150,
 			align: "center" as const,
 			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
 		},
 		{
 			title: "更新时间",
 			dataIndex: "updated_at",
-			width: 180,
+			width: 150,
 			align: "center" as const,
 			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
+		},
+		{
+			title: "备注",
+			dataIndex: "remark",
+			width: 150,
+			ellipsis: true,
+			align: "center" as const,
+			render: (text: string | null) => text || "-",
 		},
 		{
 			title: "操作",
@@ -306,7 +314,9 @@ export default function RoleManage() {
 				loading={loading}
 				bordered
 				pagination={{ pageSize: 10 }}
-				scroll={{ x: 1000 }}
+				tableLayout="fixed"
+				size="small"
+				scroll={{ x: "max-content" }}
 			/>
 
 			{/* 新增/编辑角色弹窗 */}

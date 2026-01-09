@@ -290,36 +290,46 @@ export default function UserManage() {
 
 	// 表格列定义
 	const columns: ColumnsType<User> = [
-		{ title: "ID", dataIndex: "id", width: 80, align: "center" },
-		{ title: "用户名", dataIndex: "username", width: 120 },
-		{ title: "昵称", dataIndex: "nickname", width: 120, render: (text: string) => text || "-" },
-		{ title: "邮箱", dataIndex: "email", width: 200, render: (text: string) => text || "-" },
-		{ title: "手机", dataIndex: "phone", width: 150, render: (text: string) => text || "-" },
+		{ title: "ID", dataIndex: "id", width: 60, align: "center" as const },
+		{ title: "用户名", dataIndex: "username", width: 100, align: "center" as const },
+		{ title: "昵称", dataIndex: "nickname", width: 100, align: "center" as const, render: (text: string) => text || "-" },
+		{ title: "邮箱", dataIndex: "email", width: 130, align: "center" as const, render: (text: string) => text || "-" },
+		{ title: "手机", dataIndex: "phone", width: 110, align: "center" as const, render: (text: string) => text || "-" },
 		{
 			title: "状态",
 			dataIndex: "status",
-			width: 80,
+			width: 70,
 			align: "center" as const,
 			render: (status: number) => (
-				<Tag color={status ? "success" : "error"}>{status ? "正常" : "禁用"}</Tag>
+				<Tag color={status ? "success" : "error"} style={{ display: "inline-flex", alignItems: "center" }}>{status ? "正常" : "禁用"}</Tag>
 			),
 		},
 		{
 			title: "创建时间",
 			dataIndex: "created_at",
-			width: 150,
+			width: 130,
+			align: "center" as const,
 			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
 		},
 		{
 			title: "更新时间",
 			dataIndex: "updated_at",
-			width: 150,
+			width: 130,
+			align: "center" as const,
 			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
+		},
+		{
+			title: "备注",
+			dataIndex: "remark",
+			width: 120,
+			ellipsis: true,
+			align: "center" as const,
+			render: (text: string | null) => text || "-",
 		},
 		{
 			title: "操作",
 			key: "action",
-			width: 200,
+			width: 180,
 			align: "center" as const,
 			render: (_: any, record: User) => {
 				// admin 用户（ID=1）不允许编辑、删除、降权
@@ -339,7 +349,6 @@ export default function UserManage() {
 				return (
 					<Space size="small">
 						<PermissionButton permission="system:user:update" onClick={() => handleEdit(record)} icon={<EditOutlined />} style={actionButtonStyle} />
-						<PermissionButton permission="system:user:delete" onClick={() => handleDeleteClick(record.id)} icon={<DeleteOutlined />} style={actionButtonStyle} />
 						<PermissionDropdownButton
 							icon={<MoreOutlined />}
 							items={[
@@ -372,6 +381,7 @@ export default function UserManage() {
 								},
 							]}
 						/>
+						<PermissionButton permission="system:user:delete" onClick={() => handleDeleteClick(record.id)} icon={<DeleteOutlined />} style={actionButtonStyle} />
 					</Space>
 				);
 			},
@@ -403,7 +413,7 @@ export default function UserManage() {
 				loading={loading}
 				bordered
 				pagination={{ pageSize: 10 }}
-				scroll={{ x: 1200 }}
+				size="small"
 			/>
 
 			{/* 新增/编辑用户弹窗 */}

@@ -213,7 +213,7 @@ export default function OrganizationManage() {
 			width: 150,
 			align: "center" as const,
 			render: (text: string) => (
-				<Tag color="blue">{text}</Tag>
+				<Tag color="blue" style={{ display: "inline-flex", alignItems: "center" }}>{text}</Tag>
 			),
 		},
 		{
@@ -222,7 +222,7 @@ export default function OrganizationManage() {
 			width: 80,
 			align: "center" as const,
 			render: (status: number) => (
-				<Tag color={status ? "success" : "error"}>{status ? "正常" : "禁用"}</Tag>
+				<Tag color={status ? "success" : "error"} style={{ display: "inline-flex", alignItems: "center" }}>{status ? "正常" : "禁用"}</Tag>
 			),
 		},
 		{
@@ -264,8 +264,8 @@ export default function OrganizationManage() {
 
 				return (
 					<Space size="small">
-						<PermissionButton permission="system:organization:update" onClick={() => handleAssignPermissions(record)} icon={<span style={{ fontSize: "14px", fontWeight: "bold" }}>权</span>} style={actionButtonStyle} variant="special" />
 						<PermissionButton permission="system:organization:update" onClick={() => handleEdit(record)} icon={<EditOutlined />} style={actionButtonStyle} />
+						<PermissionButton permission="system:organization:update" onClick={() => handleAssignPermissions(record)} icon={<span style={{ fontSize: "14px", fontWeight: "bold" }}>权</span>} style={actionButtonStyle} variant="special" />
 						<PermissionButton permission="system:organization:delete" onClick={() => handleDeleteClick(record.id)} icon={<DeleteOutlined />} style={actionButtonStyle} />
 					</Space>
 				);
@@ -291,7 +291,9 @@ export default function OrganizationManage() {
 				loading={loading}
 				bordered
 				pagination={{ pageSize: 10 }}
-				scroll={{ x: 1000 }}
+				tableLayout="fixed"
+				size="small"
+				scroll={{ x: "max-content" }}
 			/>
 
 			{/* 新增/编辑组织弹窗 */}

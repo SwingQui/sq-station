@@ -1,5 +1,14 @@
 /* MenuManage 页面专属样式 */
 
+/* 强制表格使用固定布局，防止侧边栏展开/收起时列宽变化 */
+.menu-manage-table .ant-table-container table {
+	table-layout: fixed !important;
+}
+
+.menu-manage-table .ant-table-body {
+	overflow-x: auto !important;
+}
+
 /* 展开按钮居中 - 修复版本 */
 .menu-manage-table .ant-table-cell-with-append {
 	position: relative;

@@ -3,7 +3,7 @@
  * 根据用户权限显示下拉菜单，支持多个选项配置
  */
 
-import React from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { Dropdown, Button } from "antd";
 import type { MenuProps } from "antd";
 import { hasPermission } from "@utils/auth";
@@ -19,7 +19,7 @@ export interface DropdownMenuItem {
 	/** 显示文本 */
 	label?: string;
 	/** 图标 */
-	icon?: React.ReactNode;
+	icon?: ReactNode;
 	/** 点击事件处理函数（divider 类型不需要） */
 	onClick?: () => void;
 	/** 是否为分割线 */
@@ -30,11 +30,11 @@ interface PermissionDropdownButtonProps {
 	/** 菜单项配置 */
 	items: DropdownMenuItem[];
 	/** 按钮图标 */
-	icon?: React.ReactNode;
+	icon?: ReactNode;
 	/** 按钮文字（默认为"更多"） */
-	children?: React.ReactNode;
+	children?: ReactNode;
 	/** 按钮样式 */
-	style?: React.CSSProperties;
+	style?: CSSProperties;
 	/** 按钮自定义样式类名 */
 	className?: string;
 	/** 按钮背景色（默认为青色 #13c2c2） */
@@ -98,7 +98,7 @@ export default function PermissionDropdownButton({
 	}
 
 	// 默认按钮样式
-	const defaultButtonStyle: React.CSSProperties = {
+	const defaultButtonStyle: CSSProperties = {
 		padding: "8px",
 		minWidth: "36px",
 		height: "36px",

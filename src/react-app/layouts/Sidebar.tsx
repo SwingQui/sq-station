@@ -2,7 +2,7 @@
  * 侧边栏组件
  */
 
-import React from "react";
+import React, { type CSSProperties } from "react";
 import { getMenus, isSuperAdmin, hasRoutePermission } from "../utils/auth";
 import MenuTree from "./MenuTree";
 import { SIDEBAR, HEADER_HEIGHT } from "../config/layout.config";
@@ -75,7 +75,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 		return filterMenus(allMenus);
 	}, [allMenus]);
 
-	const sidebarStyle: React.CSSProperties = {
+	const sidebarStyle: CSSProperties = {
 		position: "fixed",
 		left: 0,
 		top: 0,
@@ -87,7 +87,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 		zIndex: 100,
 	};
 
-	const headerStyle: React.CSSProperties = {
+	const headerStyle: CSSProperties = {
 		height: `${HEADER_HEIGHT}px`,
 		display: "flex",
 		alignItems: "center",
@@ -96,7 +96,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 		borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
 	};
 
-	const titleStyle: React.CSSProperties = {
+	const titleStyle: CSSProperties = {
 		color: "white",
 		fontSize: "18px",
 		fontWeight: "bold",
@@ -104,13 +104,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 		overflow: "hidden",
 	};
 
-	const toggleStyle: React.CSSProperties = {
+	const toggleStyle: CSSProperties = {
 		color: "rgba(255, 255, 255, 0.65)",
 		cursor: "pointer",
 		fontSize: "18px",
 	};
 
-	const contentStyle: React.CSSProperties = {
+	const contentStyle: CSSProperties = {
 		height: `calc(100vh - ${HEADER_HEIGHT}px)`,
 		overflow: "auto",
 		paddingTop: "10px",

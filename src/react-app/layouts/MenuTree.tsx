@@ -3,7 +3,7 @@
  * 递归渲染菜单，支持图标显示
  */
 
-import React, { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { navigate } from "../utils/router";
 import Icon from "../components/Icon";
 
@@ -46,11 +46,11 @@ export default function MenuTree({ items, collapsed = false, level = 0 }: MenuTr
 		return path && window.location.pathname === path;
 	};
 
-	const containerStyle: React.CSSProperties = {
+	const containerStyle: CSSProperties = {
 		userSelect: "none",
 	};
 
-	const itemStyle: React.CSSProperties = {
+	const itemStyle: CSSProperties = {
 		paddingLeft: collapsed ? "0" : `${level * 16 + 20}px`,
 		justifyContent: collapsed ? "center" : "flex-start",
 	};
@@ -157,7 +157,7 @@ export default function MenuTree({ items, collapsed = false, level = 0 }: MenuTr
 	);
 }
 
-const menuItemStyle: React.CSSProperties = {
+const menuItemStyle: CSSProperties = {
 	height: "40px",
 	display: "flex",
 	alignItems: "center",
@@ -167,7 +167,7 @@ const menuItemStyle: React.CSSProperties = {
 	cursor: "pointer",
 };
 
-const activeMenuItemStyle: React.CSSProperties = {
+const activeMenuItemStyle: CSSProperties = {
 	color: "white",
 	background: "#1890ff",
 };

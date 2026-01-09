@@ -3,7 +3,7 @@
  * 显示已打开的页面，支持切换和关闭
  */
 
-import React, { useState } from "react";
+import React, { useState, type CSSProperties } from "react";
 import { useTagsView } from "../contexts/TagsViewContext";
 import { navigate } from "../utils/router";
 import { TAGS_VIEW_HEIGHT } from "../config/layout.config";
@@ -50,7 +50,7 @@ export default function TagsView() {
 		}
 	}, [contextMenu]);
 
-	const tagsViewStyle: React.CSSProperties = {
+	const tagsViewStyle: CSSProperties = {
 		height: `${TAGS_VIEW_HEIGHT}px`,
 		flexShrink: 0,
 		background: "#f5f5f5",
@@ -64,14 +64,14 @@ export default function TagsView() {
 		userSelect: "none",
 	};
 
-	const tabsContainerStyle: React.CSSProperties = {
+	const tabsContainerStyle: CSSProperties = {
 		display: "flex",
 		gap: "6px",
 		flex: 1,
 		overflowX: "auto",
 	};
 
-	const tabStyle: React.CSSProperties = {
+	const tabStyle: CSSProperties = {
 		display: "inline-flex",
 		alignItems: "center",
 		gap: "8px",
@@ -85,14 +85,14 @@ export default function TagsView() {
 		whiteSpace: "nowrap",
 	};
 
-	const activeTabStyle: React.CSSProperties = {
+	const activeTabStyle: CSSProperties = {
 		...tabStyle,
 		background: "white",
 		border: "1px solid #1890ff",
 		color: "#1890ff",
 	};
 
-	const closeBtnStyle: React.CSSProperties = {
+	const closeBtnStyle: CSSProperties = {
 		width: "16px",
 		height: "16px",
 		display: "flex",
@@ -102,7 +102,7 @@ export default function TagsView() {
 		fontSize: "12px",
 	};
 
-	const contextMenuStyle: React.CSSProperties = {
+	const contextMenuStyle: CSSProperties = {
 		position: "fixed",
 		left: contextMenu?.x ?? 0,
 		top: contextMenu?.y ?? 0,
@@ -114,7 +114,7 @@ export default function TagsView() {
 		minWidth: "120px",
 	};
 
-	const menuItemStyle: React.CSSProperties = {
+	const menuItemStyle: CSSProperties = {
 		padding: "8px 16px",
 		cursor: "pointer",
 		fontSize: "13px",

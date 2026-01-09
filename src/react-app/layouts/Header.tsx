@@ -2,7 +2,7 @@
  * 顶部导航栏组件
  */
 
-import React, { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import Avatar from "../components/Avatar";
 import UserDropdown from "../components/UserDropdown";
@@ -16,7 +16,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 	const { logout } = useAuth();
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
-	const headerStyle: React.CSSProperties = {
+	const headerStyle: CSSProperties = {
 		height: `${HEADER_HEIGHT}px`,
 		flexShrink: 0,
 		background: "white",
@@ -27,24 +27,24 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 		padding: "0 20px",
 	};
 
-	const leftStyle: React.CSSProperties = {
+	const leftStyle: CSSProperties = {
 		display: "flex",
 		alignItems: "center",
 	};
 
-	const rightStyle: React.CSSProperties = {
+	const rightStyle: CSSProperties = {
 		display: "flex",
 		alignItems: "center",
 		gap: "16px",
 	};
 
-	const toggleButtonStyle: React.CSSProperties = {
+	const toggleButtonStyle: CSSProperties = {
 		fontSize: "18px",
 		cursor: "pointer",
 		padding: "8px",
 	};
 
-	const userAreaStyle: React.CSSProperties = {
+	const userAreaStyle: CSSProperties = {
 		position: "relative",
 	};
 

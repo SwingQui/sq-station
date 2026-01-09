@@ -3,7 +3,7 @@
  * 显示用户昵称首字母或头像图片
  */
 
-import React from "react";
+import type { CSSProperties } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 interface AvatarProps {
@@ -14,7 +14,7 @@ interface AvatarProps {
 export default function Avatar({ size = 32, onClick }: AvatarProps) {
 	const { user } = useAuth();
 
-	const avatarStyle: React.CSSProperties = {
+	const avatarStyle: CSSProperties = {
 		width: `${size}px`,
 		height: `${size}px`,
 		borderRadius: "50%",

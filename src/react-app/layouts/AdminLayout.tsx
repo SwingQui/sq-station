@@ -3,7 +3,7 @@
  * 左侧边栏 + 右侧内容区（Header、TagsView、Breadcrumb、主内容）
  */
 
-import React, { useState } from "react";
+import React, { useState, type CSSProperties } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import TagsView from "../components/TagsView";
@@ -18,13 +18,13 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-	const layoutStyle: React.CSSProperties = {
+	const layoutStyle: CSSProperties = {
 		width: "100vw",
 		height: "100vh",
 		overflow: "hidden",
 	};
 
-	const contentStyle: React.CSSProperties = {
+	const contentStyle: CSSProperties = {
 		position: "absolute",
 		left: sidebarCollapsed ? `${SIDEBAR.COLLAPSED_WIDTH}px` : `${SIDEBAR.EXPANDED_WIDTH}px`,
 		right: 0,
@@ -36,7 +36,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 		overflow: "hidden",
 	};
 
-	const mainContentStyle: React.CSSProperties = {
+	const mainContentStyle: CSSProperties = {
 		width: `calc(100vw - ${sidebarCollapsed ? SIDEBAR.COLLAPSED_WIDTH : SIDEBAR.EXPANDED_WIDTH}px)`,
 		height: `calc(100vh - ${FIXED_HEADER_HEIGHT}px)`,
 		overflow: "auto",

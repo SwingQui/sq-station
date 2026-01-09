@@ -2,7 +2,7 @@
  * 404 页面未找到页面
  */
 
-import React from "react";
+import { type CSSProperties } from "react";
 import { navigate } from "../utils/router";
 
 export default function NotFound() {
@@ -10,7 +10,7 @@ export default function NotFound() {
 		navigate("/");
 	};
 
-	const containerStyle: React.CSSProperties = {
+	const containerStyle: CSSProperties = {
 		minHeight: "100vh",
 		display: "flex",
 		alignItems: "center",
@@ -18,7 +18,7 @@ export default function NotFound() {
 		background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
 	};
 
-	const cardStyle: React.CSSProperties = {
+	const cardStyle: CSSProperties = {
 		background: "white",
 		padding: "50px",
 		borderRadius: "8px",
@@ -28,26 +28,26 @@ export default function NotFound() {
 		textAlign: "center",
 	};
 
-	const iconStyle: React.CSSProperties = {
+	const iconStyle: CSSProperties = {
 		fontSize: "64px",
 		marginBottom: "20px",
 	};
 
-	const titleStyle: React.CSSProperties = {
+	const titleStyle: CSSProperties = {
 		fontSize: "28px",
 		fontWeight: "bold",
 		marginBottom: "15px",
 		color: "#333",
 	};
 
-	const messageStyle: React.CSSProperties = {
+	const messageStyle: CSSProperties = {
 		fontSize: "16px",
 		color: "#666",
 		marginBottom: "25px",
 		lineHeight: "1.6",
 	};
 
-	const pathStyle: React.CSSProperties = {
+	const pathStyle: CSSProperties = {
 		background: "#f8f9fa",
 		padding: "12px",
 		borderRadius: "4px",
@@ -57,7 +57,7 @@ export default function NotFound() {
 		fontFamily: "monospace",
 	};
 
-	const buttonStyle: React.CSSProperties = {
+	const buttonStyle: CSSProperties = {
 		padding: "12px 30px",
 		background: "#667eea",
 		color: "white",

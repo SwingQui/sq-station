@@ -3,7 +3,7 @@
  * 点击头像显示个人中心、修改密码、退出登录等选项
  */
 
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 
 interface UserDropdownProps {
 	visible: boolean;
@@ -31,7 +31,7 @@ export default function UserDropdown({ visible, onClose, onLogout, onProfile }: 
 
 	if (!visible) return null;
 
-	const containerStyle: React.CSSProperties = {
+	const containerStyle: CSSProperties = {
 		position: "absolute",
 		top: "100%",
 		right: 0,
@@ -44,7 +44,7 @@ export default function UserDropdown({ visible, onClose, onLogout, onProfile }: 
 		zIndex: 1000,
 	};
 
-	const itemStyle: React.CSSProperties = {
+	const itemStyle: CSSProperties = {
 		padding: "10px 16px",
 		fontSize: "13px",
 		color: "#333",
@@ -52,7 +52,7 @@ export default function UserDropdown({ visible, onClose, onLogout, onProfile }: 
 		transition: "background 0.2s",
 	};
 
-	const dividerStyle: React.CSSProperties = {
+	const dividerStyle: CSSProperties = {
 		height: "1px",
 		background: "#e8e8e8",
 		margin: "4px 0",

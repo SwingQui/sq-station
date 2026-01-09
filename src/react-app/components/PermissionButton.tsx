@@ -3,26 +3,26 @@
  * 根据用户权限显示/隐藏按钮，支持自动推断按钮类型
  */
 
-import React from "react";
+import React, { type CSSProperties, type ReactNode } from "react";
 import { hasPermission } from "../utils/auth";
 
 type ButtonVariant = "create" | "delete" | "export" | "update" | "special";
 
 interface PermissionButtonProps {
 	permission: string;
-	children?: React.ReactNode;
-	style?: React.CSSProperties;
+	children?: ReactNode;
+	style?: CSSProperties;
 	className?: string;
 	onClick?: () => void;
 	disabled?: boolean;
-	icon?: React.ReactNode;
+	icon?: ReactNode;
 	variant?: ButtonVariant;
 }
 
 /**
  * 根据权限标识自动推断按钮类型
  */
-function getVariant(permission: string, children?: React.ReactNode): ButtonVariant {
+function getVariant(permission: string, children?: ReactNode): ButtonVariant {
 	// 检查是否为导出按钮
 	if (children && typeof children === "string" && children.includes("导出")) {
 		return "export";
@@ -43,7 +43,7 @@ function getVariant(permission: string, children?: React.ReactNode): ButtonVaria
 /**
  * 按钮样式配置
  */
-const buttonStyles: Record<ButtonVariant, React.CSSProperties> = {
+const buttonStyles: Record<ButtonVariant, CSSProperties> = {
 	create: {
 		background: "#1890ff",
 		color: "white",
@@ -66,7 +66,7 @@ const buttonStyles: Record<ButtonVariant, React.CSSProperties> = {
 	},
 };
 
-const baseStyle: React.CSSProperties = {
+const baseStyle: CSSProperties = {
 	padding: "6px 16px",
 	border: "none",
 	borderRadius: "4px",
@@ -96,7 +96,7 @@ export default function PermissionButton({
 	// 自动推断或使用指定的 variant
 	const buttonVariant = variant || getVariant(permission, children);
 
-	const computedStyle: React.CSSProperties = {
+	const computedStyle: CSSProperties = {
 		...baseStyle,
 		...buttonStyles[buttonVariant],
 		opacity: disabled ? 0.5 : 1,
@@ -137,8 +137,8 @@ export default function PermissionButton({
 interface PermissionLinkProps {
 	permission: string;
 	href: string;
-	children: React.ReactNode;
-	style?: React.CSSProperties;
+	children: ReactNode;
+	style?: CSSProperties;
 }
 
 export function PermissionLink({ permission, href, children, style }: PermissionLinkProps) {
@@ -146,7 +146,7 @@ export function PermissionLink({ permission, href, children, style }: Permission
 		return null;
 	}
 
-	const linkStyle: React.CSSProperties = {
+	const linkStyle: CSSProperties = {
 		color: "#1890ff",
 		textDecoration: "none",
 		cursor: "pointer",

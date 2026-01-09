@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
 	Table,
@@ -268,7 +269,7 @@ export default function RoleManage() {
 				}
 
 				// 操作按钮统一样式：圆角正方形
-				const actionButtonStyle: React.CSSProperties = {
+				const actionButtonStyle: CSSProperties = {
 					padding: "8px",
 					minWidth: "36px",
 					height: "36px",

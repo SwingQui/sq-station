@@ -4,7 +4,7 @@
  * /dashboard 首页不显示面包屑
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, type CSSProperties } from "react";
 import { getMenus } from "../utils/auth";
 import { navigate } from "../utils/router";
 import { BREADCRUMB_HEIGHT } from "../config/layout.config";
@@ -71,7 +71,7 @@ export default function Breadcrumb() {
 		return null;
 	}
 
-	const containerStyle: React.CSSProperties = {
+	const containerStyle: CSSProperties = {
 		height: `${BREADCRUMB_HEIGHT}px`,
 		flexShrink: 0,
 		display: "flex",
@@ -81,18 +81,18 @@ export default function Breadcrumb() {
 		borderBottom: "1px solid #f0f0f0",
 	};
 
-	const itemStyle: React.CSSProperties = {
+	const itemStyle: CSSProperties = {
 		fontSize: "13px",
 		color: "#666",
 		cursor: "pointer",
 	};
 
-	const separatorStyle: React.CSSProperties = {
+	const separatorStyle: CSSProperties = {
 		margin: "0 8px",
 		color: "#999",
 	};
 
-	const lastItemStyle: React.CSSProperties = {
+	const lastItemStyle: CSSProperties = {
 		fontSize: "13px",
 		color: "#333",
 		fontWeight: 500,

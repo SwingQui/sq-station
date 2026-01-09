@@ -1,99 +1,45 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import { PlusOutlined, ExportOutlined } from "@ant-design/icons";
-import { Tree } from "antd";
-import { getRoleList, createRole, updateRole, deleteRole } from "../../../api/role";
-import { getMenuList } from "../../../api/menu";
-import type { Role, Menu } from "../../../types";
-import PermissionButton from "../../../components/PermissionButton";
-import { handleError, handleSuccess } from "../../../utils/error-handler";
-import { exportToExcel, ExportEnumMaps } from "../../../utils/excel-export";
-
-// 权限树节点类型
-interface PermissionTreeNode {
-	title: string | ReactNode;
-	key: string;
-	children?: PermissionTreeNode[];
-}
-
-// 从菜单数据构建权限树（供 Ant Design Tree 使用）
-function buildPermissionTreeFromMenus(menus: Menu[]): PermissionTreeNode[] {
-	const result: PermissionTreeNode[] = [];
-
-	for (const menu of menus) {
-		// 检查此菜单或其后代是否有权限
-		const hasPerm = hasPermissionInChildren(menu);
-
-		if (!hasPerm) {
-			continue; // 跳过没有权限的菜单分支
-		}
-
-		const node: PermissionTreeNode = {
-			title: menu.permission
-				? `${menu.menu_name} ${menu.menu_type === "F" ? "(按钮)" : ""} `
-				: menu.menu_name,
-			key: menu.permission || `menu_${menu.id}`, // 有权限用 permission，否则用唯一 ID
-		};
-
-		// 如果有权限标识，在标题中显示
-		if (menu.permission) {
-			node.title = (
-				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", paddingRight: "8px" }}>
-					<span>
-						{menu.menu_name}
-						{menu.menu_type === "F" && <span style={{ color: "#888", fontSize: "12px", marginLeft: "4px" }}>(按钮)</span>}
-					</span>
-					<code style={{
-						color: "#666",
-						fontSize: "12px",
-						fontFamily: "monospace",
-						background: "#f5f5f5",
-						padding: "2px 6px",
-						borderRadius: "3px",
-					}}>
-						{menu.permission}
-					</code>
-				</div>
-			);
-		}
-
-		// 递归处理子菜单
-		if (menu.children && menu.children.length > 0) {
-			const children = buildPermissionTreeFromMenus(menu.children);
-			if (children.length > 0) {
-				node.children = children;
-			}
-		}
-
-		result.push(node);
-	}
-
-	return result;
-}
-
-// 检查菜单树中是否有权限标识
-function hasPermissionInChildren(menu: Menu): boolean {
-	if (menu.permission) return true;
-	if (menu.children) {
-		return menu.children.some((child) => hasPermissionInChildren(child));
-	}
-	return false;
-}
+import type { ColumnsType } from "antd/es/table";
+import {
+	Table,
+	Modal,
+	Form,
+	Input,
+	Space,
+	Tag,
+	Row,
+	Col,
+	Select,
+} from "antd";
+import {
+	PlusOutlined,
+	ExportOutlined,
+	EditOutlined,
+	DeleteOutlined,
+} from "@ant-design/icons";
+import { getRoleList, createRole, updateRole, deleteRole, getRoleMenus, assignRoleMenus } from "@api/role";
+import { getMenuList } from "@api/menu";
+import type { Role, Menu } from "@types";
+import PermissionButton from "@components/PermissionButton";
+import PermissionTree from "@components/PermissionTree";
+import { handleError, handleSuccess } from "@utils/error-handler";
+import { exportToExcel, ExportEnumMaps } from "@utils/excel-export";
 
 export default function RoleManage() {
+	const [form] = Form.useForm();
 	const [roles, setRoles] = useState<Role[]>([]);
-	const [menus, setMenus] = useState<Menu[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [editingRole, setEditingRole] = useState<Role | null>(null);
 	const [showModal, setShowModal] = useState(false);
 	const [showPermModal, setShowPermModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [deletingRoleId, setDeletingRoleId] = useState<number | null>(null);
 	const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 	const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
-	const [permissionTreeData, setPermissionTreeData] = useState<PermissionTreeNode[]>([]);
+	const [cascadeEnabled, setCascadeEnabled] = useState(true);
 
 	useEffect(() => {
 		fetchRoles();
-		fetchMenus();
 	}, []);
 
 	const fetchRoles = async () => {
@@ -101,56 +47,67 @@ export default function RoleManage() {
 			const data = await getRoleList();
 			setRoles(data);
 		} catch (e) {
-			console.error(e);
+			handleError(e, "加载失败");
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	const fetchMenus = async () => {
+	const handleSave = async () => {
 		try {
-			const data = await getMenuList();
-			setMenus(data);
-		} catch (e) {
-			console.error(e);
-		}
-	};
+			const values = await form.validateFields();
+			const roleData = {
+				...values,
+				sort_order: values.sort_order ?? 0,
+				status: values.status ?? 1,
+			};
 
-	const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		const formData = new FormData(e.currentTarget);
-		const roleData: any = {
-			role_name: formData.get("role_name"),
-			role_key: formData.get("role_key"),
-			sort_order: Number(formData.get("sort_order") || 0),
-			status: Number(formData.get("status") || 1),
-			remark: formData.get("remark"),
-		};
-
-		try {
 			if (editingRole) {
 				await updateRole(editingRole.id, roleData);
 			} else {
 				await createRole(roleData);
 			}
+			handleSuccess(editingRole ? "更新成功" : "创建成功");
 			setShowModal(false);
 			setEditingRole(null);
+			form.resetFields();
 			fetchRoles();
-		} catch (e) {
+		} catch (e: any) {
+			// 表单验证失败时不处理，由 Ant Design 自动显示错误
+			if (e?.errorFields) {
+				return;
+			}
 			handleError(e, "保存失败");
 		}
 	};
 
+	const handleCancel = () => {
+		setShowModal(false);
+		setEditingRole(null);
+		form.resetFields();
+	};
+
 	const handleEdit = (role: Role) => {
 		setEditingRole(role);
+		form.setFieldsValue({
+			...role,
+			status: role.status ?? 1,
+		});
 		setShowModal(true);
 	};
 
-	const handleDelete = async (id: number) => {
-		if (!confirm("确定删除此角色吗？")) return;
+	const handleDeleteClick = (id: number) => {
+		setDeletingRoleId(id);
+		setShowDeleteModal(true);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (deletingRoleId === null) return;
 		try {
-			await deleteRole(id);
+			await deleteRole(deletingRoleId);
 			handleSuccess("删除成功");
+			setShowDeleteModal(false);
+			setDeletingRoleId(null);
 			fetchRoles();
 		} catch (e) {
 			handleError(e, "删除失败");
@@ -159,39 +116,52 @@ export default function RoleManage() {
 
 	const handleAdd = () => {
 		setEditingRole(null);
+		form.resetFields();
+		form.setFieldsValue({ status: 1 });
 		setShowModal(true);
 	};
 
 	// 权限配置
-	const handlePermConfig = (role: Role) => {
+	const handlePermConfig = async (role: Role) => {
 		setSelectedRole(role);
-		// Parse existing permissions
-		let perms: string[] = [];
 		try {
-			perms = role.permissions ? JSON.parse(role.permissions) : [];
+			// 获取角色已分配的菜单
+			const roleMenus = await getRoleMenus(role.id);
+			// 从菜单中提取权限标识
+			const perms = roleMenus
+				.filter((m) => m.permission)
+				.map((m) => m.permission!);
+
+			setSelectedPerms(perms);
+			setShowPermModal(true);
 		} catch (e) {
-			console.error("Failed to parse permissions:", role.permissions);
+			handleError(e, "加载权限失败");
 		}
-		setSelectedPerms(perms);
-		// 构建权限树数据
-		const treeData = buildPermissionTreeFromMenus(menus);
-		setPermissionTreeData(treeData);
-		setShowPermModal(true);
 	};
 
 	const handleSavePerms = async () => {
 		if (!selectedRole) return;
 		try {
-			const updateData: any = {
-				role_name: selectedRole.role_name,
-				role_key: selectedRole.role_key,
-				permissions: JSON.stringify(selectedPerms),
-			};
-			if (selectedRole.sort_order !== undefined) updateData.sort_order = selectedRole.sort_order;
-			if (selectedRole.status !== undefined) updateData.status = selectedRole.status;
-			if (selectedRole.remark !== undefined) updateData.remark = selectedRole.remark;
+			// 从权限标识反推菜单 ID
+			const allMenus = await getMenuList();
 
-			await updateRole(selectedRole.id, updateData);
+			// 递归查找包含特定权限的菜单 ID
+			function findMenuIdsByPermissions(menus: Menu[], permissions: string[]): number[] {
+				const ids: number[] = [];
+				for (const menu of menus) {
+					if (menu.permission && permissions.includes(menu.permission)) {
+						ids.push(menu.id);
+					}
+					if (menu.children) {
+						ids.push(...findMenuIdsByPermissions(menu.children, permissions));
+					}
+				}
+				return ids;
+			}
+
+			const menuIds = findMenuIdsByPermissions(allMenus, selectedPerms);
+
+			await assignRoleMenus(selectedRole.id, menuIds);
 			handleSuccess("权限配置成功");
 			setShowPermModal(false);
 			setSelectedRole(null);
@@ -250,166 +220,216 @@ export default function RoleManage() {
 		handleSuccess("导出成功");
 	};
 
+	// 表格列定义
+	const columns: ColumnsType<Role> = [
+		{ title: "ID", dataIndex: "id", width: 80, align: "center" },
+		{ title: "角色名称", dataIndex: "role_name", width: 150 },
+		{
+			title: "权限标识",
+			dataIndex: "role_key",
+			width: 150,
+			align: "center" as const,
+			render: (text: string) => (
+				<Tag color="blue">{text}</Tag>
+			),
+		},
+		{
+			title: "状态",
+			dataIndex: "status",
+			width: 100,
+			align: "center" as const,
+			render: (status: number) => (
+				<Tag color={status ? "success" : "error"}>{status ? "正常" : "禁用"}</Tag>
+			),
+		},
+		{
+			title: "创建时间",
+			dataIndex: "created_at",
+			width: 180,
+			align: "center" as const,
+			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
+		},
+		{
+			title: "更新时间",
+			dataIndex: "updated_at",
+			width: 180,
+			align: "center" as const,
+			render: (text: string) => (text ? new Date(text).toLocaleString("zh-CN") : "-"),
+		},
+		{
+			title: "操作",
+			key: "action",
+			width: 200,
+			align: "center" as const,
+			render: (_: any, record: Role) => {
+				// ID=1 的系统管理员角色不允许编辑、删除、配置权限
+				if (record.id === 1) {
+					return <span style={{ color: "#999" }}>系统角色</span>;
+				}
+
+				// 操作按钮统一样式：圆角正方形
+				const actionButtonStyle: React.CSSProperties = {
+					padding: "8px",
+					minWidth: "36px",
+					height: "36px",
+					borderRadius: "8px",
+					justifyContent: "center",
+				};
+
+				return (
+					<Space size="small">
+						<PermissionButton permission="system:role:update" onClick={() => handleEdit(record)} icon={<EditOutlined />} style={actionButtonStyle} />
+						<PermissionButton permission="system:role:configPermissions" onClick={() => handlePermConfig(record)} icon={<span style={{ fontSize: "14px", fontWeight: "bold" }}>权</span>} style={actionButtonStyle} />
+						<PermissionButton permission="system:role:delete" onClick={() => handleDeleteClick(record.id)} icon={<DeleteOutlined />} style={actionButtonStyle} />
+					</Space>
+				);
+			},
+		},
+	];
+
 	return (
-		<div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-			<div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
+		<div style={{ padding: "20px" }}>
+			<Space style={{ marginBottom: 16 }}>
 				<PermissionButton permission="system:role:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增角色
 				</PermissionButton>
 				<PermissionButton permission="system:role:read" onClick={handleExport} icon={<ExportOutlined />}>
 					导出
 				</PermissionButton>
-			</div>
+			</Space>
 
-			{loading ? (
-				<div>加载中...</div>
-			) : (
-				<table style={{ width: "100%", borderCollapse: "collapse" }}>
-					<thead>
-						<tr style={{ background: "#f5f5f5" }}>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>ID</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>角色名称</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>权限标识</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>排序</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>状态</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>创建时间</th>
-							<th style={{ padding: "12px", textAlign: "left", borderBottom: "1px solid #ddd" }}>操作</th>
-						</tr>
-					</thead>
-					<tbody>
-						{roles.map((role) => (
-							<tr key={role.id}>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{role.id}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{role.role_name}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<code style={{ padding: "2px 6px", background: "#f5f5f5", borderRadius: "4px", fontSize: "12px" }}>{role.role_key}</code>
-								</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{role.sort_order}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<span style={{ padding: "2px 8px", borderRadius: "4px", background: role.status ? "#52c41a" : "#f5222d", color: "white", fontSize: "12px" }}>
-										{role.status ? "正常" : "禁用"}
-									</span>
-								</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>{new Date(role.created_at).toLocaleString("zh-CN")}</td>
-								<td style={{ padding: "12px", borderBottom: "1px solid #eee" }}>
-									<PermissionButton permission="system:role:update" onClick={() => handleEdit(role)} style={{ padding: "4px 12px", marginRight: "4px" }}>
-										编辑
-									</PermissionButton>
-									<PermissionButton permission="system:role:configPermissions" onClick={() => handlePermConfig(role)} style={{ padding: "4px 12px", marginRight: "4px" }}>
-										配置权限
-									</PermissionButton>
-									<PermissionButton permission="system:role:delete" onClick={() => handleDelete(role.id)} style={{ padding: "4px 12px" }}>
-										删除
-									</PermissionButton>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			)}
+			<Table
+				columns={columns}
+				dataSource={roles}
+				rowKey="id"
+				loading={loading}
+				bordered
+				pagination={{ pageSize: 10 }}
+				scroll={{ x: 1000 }}
+			/>
 
-			{/* 角色编辑弹窗 */}
-			{showModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "400px", maxWidth: "90%" }}>
-						<h2 style={{ marginTop: 0 }}>{editingRole ? "编辑角色" : "新增角色"}</h2>
-						<form onSubmit={handleSave}>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>角色名称 *</label>
-								<input name="role_name" defaultValue={editingRole?.role_name} required style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>权限标识 *</label>
-								<input name="role_key" defaultValue={editingRole?.role_key} required style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-								<small style={{ color: "#888" }}>如: admin, user, editor</small>
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>排序</label>
-								<input name="sort_order" type="number" defaultValue={editingRole?.sort_order ?? 0} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }} />
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>状态</label>
-								<select name="status" defaultValue={editingRole?.status ?? 1} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}>
-									<option value="1">正常</option>
-									<option value="0">禁用</option>
-								</select>
-							</div>
-							<div style={{ marginBottom: "16px" }}>
-								<label style={{ display: "block", marginBottom: "8px" }}>备注</label>
-								<textarea name="remark" defaultValue={editingRole?.remark || ""} style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px", minHeight: "60px" }} />
-							</div>
-							<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-								<button type="button" onClick={() => setShowModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-									取消
-								</button>
-								<button type="submit" style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-									保存
-								</button>
-							</div>
-						</form>
-					</div>
-				</div>
-			)}
+			{/* 新增/编辑角色弹窗 */}
+			<Modal
+				title={editingRole?.id ? "编辑角色" : "新增角色"}
+				open={showModal}
+				onOk={handleSave}
+				onCancel={handleCancel}
+				width={600}
+				okText="保存"
+				cancelText="取消"
+			>
+				<Form form={form} layout="vertical">
+					<Row gutter={16}>
+						<Col span={12}>
+							<Form.Item
+								label="角色名称"
+								name="role_name"
+								rules={[{ required: true, message: "请输入角色名称" }]}
+							>
+								<Input placeholder="请输入角色名称" />
+							</Form.Item>
+						</Col>
+						<Col span={12}>
+							<Form.Item
+								label="权限标识"
+								name="role_key"
+								rules={[{ required: true, message: "请输入权限标识" }]}
+							>
+								<Input placeholder="如: admin, user, editor" />
+							</Form.Item>
+						</Col>
+					</Row>
+					<Form.Item
+						label="状态"
+						name="status"
+						initialValue={1}
+					>
+						<Select>
+							<Select.Option value={1}>正常</Select.Option>
+							<Select.Option value={0}>禁用</Select.Option>
+						</Select>
+					</Form.Item>
+					<Form.Item
+						label="备注"
+						name="remark"
+					>
+						<Input.TextArea placeholder="请输入备注" rows={3} />
+					</Form.Item>
+				</Form>
+			</Modal>
 
 			{/* 权限配置弹窗 */}
-			{showPermModal && (
-				<div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-					<div style={{ background: "white", padding: "24px", borderRadius: "8px", width: "700px", maxWidth: "90%" }}>
-						<div>
-							<h2 style={{ marginTop: 0 }}>配置权限 - {selectedRole?.role_name}</h2>
-							<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: "16px" }}>配置该角色拥有的权限列表</p>
-						</div>
-						<div style={{ maxHeight: "450px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
-							{/* 超级管理员通配符 */}
-							<label style={{ display: "flex", alignItems: "center", cursor: "pointer", marginBottom: "16px" }}>
-								<input
-									type="checkbox"
-									checked={selectedPerms.includes("*:*:*")}
-									onChange={(e) => {
-										if (e.target.checked) {
-											setSelectedPerms(["*:*:*"]);
-										} else {
-											setSelectedPerms([]);
-										}
-									}}
-									style={{ marginRight: "6px" }}
-								/>
-								<span style={{ fontSize: "13px", fontWeight: "bold", color: "#f5222d" }}>*:*:* (所有权限)</span>
-							</label>
-
-							{/* Ant Design Tree */}
-							<div style={{ width: "100%" }}>
-								<Tree
-									checkable
-									blockNode={true}
-									checkedKeys={selectedPerms.includes("*:*:*") ? [] : selectedPerms.filter(k => k !== "*:*:*")}
-									onCheck={(checkedKeys) => {
-										const keys = checkedKeys as string[];
-										// 如果选中了超级管理员，只保留超级管理员权限
-										if (keys.includes("*:*:*")) {
-											setSelectedPerms(["*:*:*"]);
-										} else {
-											setSelectedPerms(keys);
-										}
-									}}
-									treeData={permissionTreeData}
-									defaultExpandAll
-									showLine={{ showLeafIcon: false }}
-									style={{ fontSize: "13px", width: "100%" }}
-								/>
-							</div>
-						</div>
-						<div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "16px" }}>
-							<button type="button" onClick={() => setShowPermModal(false)} style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								取消
-							</button>
-							<button type="button" onClick={handleSavePerms} style={{ padding: "8px 16px", background: "#1890ff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}>
-								保存
-							</button>
-						</div>
+			<Modal
+				title={
+					<div>
+						<div>配置权限 - {selectedRole?.role_name}</div>
+						<p style={{ color: "#666", fontSize: "14px", marginTop: "-8px", marginBottom: 0 }}>
+							配置该角色拥有的权限列表
+						</p>
 					</div>
-				</div>
-			)}
+				}
+				open={showPermModal}
+				onOk={handleSavePerms}
+				onCancel={() => {
+					setShowPermModal(false);
+					setSelectedRole(null);
+				}}
+				width={700}
+				okText="保存"
+				cancelText="取消"
+			>
+				<>
+					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+						<label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+							<input
+								type="checkbox"
+								checked={selectedPerms.includes("*:*:*")}
+								onChange={(e) => {
+									if (e.target.checked) {
+										setSelectedPerms(["*:*:*"]);
+									} else {
+										setSelectedPerms([]);
+									}
+								}}
+								style={{ marginRight: "6px" }}
+							/>
+							<span style={{ fontSize: "13px" }}>超级管理员（拥有所有权限）</span>
+						</label>
+						<label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+							<span style={{ fontSize: "13px", marginRight: "6px" }}>启用父子级联勾选</span>
+							<input
+								type="checkbox"
+								checked={cascadeEnabled}
+								onChange={(e) => setCascadeEnabled(e.target.checked)}
+							/>
+						</label>
+					</div>
+					<div style={{ maxHeight: "400px", overflowY: "auto", padding: "16px", background: "#f9f9f9", borderRadius: "4px" }}>
+						<PermissionTree
+							permissions={selectedPerms.includes("*:*:*") ? [] : selectedPerms.filter(k => k !== "*:*:*")}
+							onChange={setSelectedPerms}
+							cascadeEnabled={cascadeEnabled}
+						/>
+					</div>
+				</>
+			</Modal>
+
+			{/* 删除确认弹窗 */}
+			<Modal
+				title="删除角色"
+				open={showDeleteModal}
+				onOk={handleConfirmDelete}
+				onCancel={() => {
+					setShowDeleteModal(false);
+					setDeletingRoleId(null);
+				}}
+				okText="确定"
+				cancelText="取消"
+				okButtonProps={{ danger: true }}
+				centered={true}
+			>
+				<p>确定删除此角色吗？此操作无法撤销。</p>
+			</Modal>
 		</div>
 	);
 }

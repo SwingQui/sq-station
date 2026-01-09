@@ -42,7 +42,6 @@ export const Permission = {
 	SYSTEM_ORGANIZATION_CREATE: 'system:organization:create',
 	SYSTEM_ORGANIZATION_UPDATE: 'system:organization:update',
 	SYSTEM_ORGANIZATION_DELETE: 'system:organization:delete',
-	SYSTEM_ORGANIZATION_ASSIGN_ROLES: 'system:organization:assignRoles',
 
 	// SQL 查询工具（仅超级管理员）
 	SYSTEM_SQL_QUERY: 'system:sql:query',
@@ -141,7 +140,6 @@ export const PermissionMeta: Record<PermissionKey, { name: string; module: strin
 	[Permission.SYSTEM_ORGANIZATION_CREATE]: { name: '新增组织', module: '系统管理', description: '创建新组织' },
 	[Permission.SYSTEM_ORGANIZATION_UPDATE]: { name: '编辑组织', module: '系统管理', description: '编辑组织信息' },
 	[Permission.SYSTEM_ORGANIZATION_DELETE]: { name: '删除组织', module: '系统管理', description: '删除组织' },
-	[Permission.SYSTEM_ORGANIZATION_ASSIGN_ROLES]: { name: '分配角色', module: '系统管理', description: '为组织分配角色' },
 
 	// 系统管理 - SQL 查询
 	[Permission.SYSTEM_SQL_QUERY]: { name: 'SQL 查询', module: '系统管理', description: '执行 SQL 查询（仅超级管理员）' },
@@ -224,7 +222,6 @@ export const PermissionGroups: Record<string, PermissionKey[]> = {
 		Permission.SYSTEM_ORGANIZATION_CREATE,
 		Permission.SYSTEM_ORGANIZATION_UPDATE,
 		Permission.SYSTEM_ORGANIZATION_DELETE,
-		Permission.SYSTEM_ORGANIZATION_ASSIGN_ROLES,
 		Permission.SYSTEM_SQL_QUERY,
 	],
 	'OAuth': [

@@ -16,7 +16,6 @@ const TABLES = [
 	"sys_role_menu",
 	"sys_organization",
 	"sys_user_organization",
-	"sys_org_role",
 	"sys_org_permission",
 	"sys_user_permission",
 ];

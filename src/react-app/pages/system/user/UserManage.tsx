@@ -298,6 +298,7 @@ export default function UserManage() {
 			title: "状态",
 			dataIndex: "status",
 			width: 80,
+			align: "center" as const,
 			render: (status: number) => (
 				<Tag color={status ? "success" : "error"}>{status ? "正常" : "禁用"}</Tag>
 			),

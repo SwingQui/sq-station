@@ -42,6 +42,7 @@
 	"scripts": {
 		"build": "tsc -b && vite build",
 		"cf-typegen": "wrangler types",
+		"fulldev": "pkill -f 'wrangler dev' 2>/dev/null || true && npm run build && npm run wrangler",
 		"check": "tsc && vite build && wrangler deploy --dry-run",
 		"deploy": "node scripts/load-env.mjs npm run deploy:raw",
 		"deploy:raw": "wrangler deploy",

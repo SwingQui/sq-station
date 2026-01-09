@@ -53,8 +53,6 @@ export interface SysRole {
 	id: number;
 	role_name: string;
 	role_key: string;
-	role_sort: number;
-	sort_order: number; // 排序
 	status: number; // 1=启用, 0=禁用
 	is_admin: number; // 1=超级管理员角色, 0=普通角色
 	permissions: string; // JSON 数组格式，如 ["system:user:list"] 或 ["*:*:*"]
@@ -148,15 +146,6 @@ export interface SysOrganization {
 export interface SysUserOrganization {
 	user_id: number;
 	org_id: number;
-}
-
-// ============================================
-// 组织角色关联表 (sys_org_role)
-// ============================================
-
-export interface SysOrgRole {
-	org_id: number;
-	role_id: number;
 }
 
 // ============================================

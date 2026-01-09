@@ -146,34 +146,23 @@ export class MenuRepository extends BaseRepository {
 	}
 
 	/**
-	 * 根据用户 ID 查询菜单（合并直接角色 + 组织角色菜单）
+	 * 根据用户 ID 查询菜单（仅用户直接角色菜单）
 	 */
 	async findByUserId(userId: number): Promise<SysMenu[]> {
 		const sql = `
 			SELECT DISTINCT m.*
 			FROM sys_menu m
 			WHERE m.menu_status = 1
-			AND (
+			AND m.id IN (
 				-- 用户直接角色的菜单
-				m.id IN (
-					SELECT rm.menu_id
-					FROM sys_role_menu rm
-					INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-					WHERE ur.user_id = ?
-				)
-				OR
-				-- 用户所属组织的角色菜单
-				m.id IN (
-					SELECT rm.menu_id
-					FROM sys_role_menu rm
-					INNER JOIN sys_org_role ore ON rm.role_id = ore.role_id
-					INNER JOIN sys_user_organization uo ON ore.org_id = uo.org_id
-					WHERE uo.user_id = ?
-				)
+				SELECT rm.menu_id
+				FROM sys_role_menu rm
+				INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+				WHERE ur.user_id = ?
 			)
 			ORDER BY m.sort_order ASC
 		`;
-		const result = await this.executeQuery<SysMenu>(sql, [userId, userId]);
+		const result = await this.executeQuery<SysMenu>(sql, [userId]);
 		return result.results;
 	}
 
@@ -184,27 +173,16 @@ export class MenuRepository extends BaseRepository {
 		const sql = `
 			SELECT DISTINCT m.*
 			FROM sys_menu m
-			WHERE (
+			WHERE m.id IN (
 				-- 用户直接角色的菜单
-				m.id IN (
-					SELECT rm.menu_id
-					FROM sys_role_menu rm
-					INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
-					WHERE ur.user_id = ?
-				)
-				OR
-				-- 用户所属组织的角色菜单
-				m.id IN (
-					SELECT rm.menu_id
-					FROM sys_role_menu rm
-					INNER JOIN sys_org_role ore ON rm.role_id = ore.role_id
-					INNER JOIN sys_user_organization uo ON ore.org_id = uo.org_id
-					WHERE uo.user_id = ?
-				)
+				SELECT rm.menu_id
+				FROM sys_role_menu rm
+				INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+				WHERE ur.user_id = ?
 			)
 			ORDER BY m.sort_order ASC
 		`;
-		const result = await this.executeQuery<SysMenu>(sql, [userId, userId]);
+		const result = await this.executeQuery<SysMenu>(sql, [userId]);
 		return result.results;
 	}
 

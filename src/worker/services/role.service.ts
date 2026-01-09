@@ -65,9 +65,14 @@ export class RoleService {
 			throw new Error("角色不存在");
 		}
 
-		// 业务规则：不能修改超级管理员角色
-		if (role.is_admin === 1) {
-			throw new Error("不能修改超级管理员角色");
+		// 业务规则：ID=1 的超级管理员角色不能修改
+		if (id === 1 || role.is_admin === 1) {
+			throw new Error("系统管理员角色不能修改");
+		}
+
+		// 业务规则：不能修改超级管理员角色的 role_key
+		if (data.role_key && role.is_admin === 1) {
+			throw new Error("系统管理员角色的权限标识不能修改");
 		}
 
 		// 检查角色名称是否被其他角色占用
@@ -93,6 +98,11 @@ export class RoleService {
 	 * 删除角色
 	 */
 	async delete(id: number): Promise<void> {
+		// 业务规则：ID=1 的系统管理员角色不能删除
+		if (id === 1) {
+			throw new Error("系统管理员角色不能删除");
+		}
+
 		// 检查角色是否存在
 		const role = await this.roleRepo.findById(id);
 		if (!role) {
@@ -101,7 +111,7 @@ export class RoleService {
 
 		// 业务规则：不能删除超级管理员角色
 		if (role.is_admin === 1) {
-			throw new Error("不能删除超级管理员角色");
+			throw new Error("系统管理员角色不能删除");
 		}
 
 		// 删除角色菜单关联

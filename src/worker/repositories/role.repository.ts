@@ -9,7 +9,6 @@ import type { SysRole } from "../core/types/database";
 export interface CreateRoleDto {
 	role_name: string;
 	role_key: string;
-	sort_order?: number;
 	status?: number;
 	remark?: string | null;
 }
@@ -17,7 +16,6 @@ export interface CreateRoleDto {
 export interface UpdateRoleDto {
 	role_name: string;
 	role_key: string;
-	sort_order?: number;
 	status?: number;
 	permissions?: string | null;
 	remark?: string | null;
@@ -30,7 +28,7 @@ export class RoleRepository extends BaseRepository {
 	async findAll(): Promise<SysRole[]> {
 		const sql = `
 			SELECT * FROM sys_role
-			ORDER BY sort_order
+			ORDER BY id
 		`;
 		const result = await this.executeQuery<SysRole>(sql);
 		return result.results;
@@ -63,13 +61,12 @@ export class RoleRepository extends BaseRepository {
 	 */
 	async create(data: CreateRoleDto): Promise<number> {
 		const sql = `
-			INSERT INTO sys_role (role_name, role_key, sort_order, status, remark)
-			VALUES (?, ?, ?, ?, ?)
+			INSERT INTO sys_role (role_name, role_key, status, remark)
+			VALUES (?, ?, ?, ?)
 		`;
 		const result = await this.executeRun(sql, [
 			data.role_name,
 			data.role_key,
-			data.sort_order ?? 0,
 			data.status ?? 1,
 			data.remark || null
 		]);
@@ -82,13 +79,12 @@ export class RoleRepository extends BaseRepository {
 	async update(id: number, data: UpdateRoleDto): Promise<void> {
 		const sql = `
 			UPDATE sys_role
-			SET role_name = ?, role_key = ?, sort_order = ?, status = ?, permissions = ?, remark = ?, updated_at = CURRENT_TIMESTAMP
+			SET role_name = ?, role_key = ?, status = ?, permissions = ?, remark = ?, updated_at = CURRENT_TIMESTAMP
 			WHERE id = ?
 		`;
 		await this.executeRun(sql, [
 			data.role_name,
 			data.role_key,
-			data.sort_order ?? 0,
 			data.status ?? 1,
 			data.permissions || '[]',
 			data.remark || null,

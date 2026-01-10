@@ -1,0 +1,121 @@
+{
+  "_comment": "KV 存储数据定义文件 - 类似于 D1 的 schema.sql",
+  "_version": "1.0.0",
+  "_updated_at": "2026-01-10T13:00:00Z",
+
+  "namespaces": {
+    "frontend": {
+      "_comment": "前端页面配置数据",
+      "data": {
+        "bookmarks:config": {
+          "value": {
+            "游戏": {
+              "desc": "游戏相关内容",
+              "order": 1,
+              "items": [
+                {
+                  "content": "onlinefix中文站",
+                  "summary": "Steam破解补丁",
+                  "url": "https://www.onlinefix618.com/",
+                  "desc": "一个用来steam破解启动游戏的补丁网站",
+                  "newWindow": true,
+                  "orderM": 1
+                },
+                {
+                  "content": "蘑菇屋",
+                  "summary": "游戏资源站",
+                  "url": "https://www.xn--ogtt23ghrb.cn/",
+                  "desc": "游戏资源站",
+                  "newWindow": true,
+                  "orderM": 2
+                }
+              ]
+            },
+            "影视": {
+              "desc": "影视相关内容",
+              "order": 2,
+              "items": [
+                {
+                  "content": "一糖导航",
+                  "summary": "番剧导航站",
+                  "url": "https://iitang.com/favorites/zaixianfanju",
+                  "desc": "番剧导航站",
+                  "newWindow": true,
+                  "orderM": 1
+                }
+              ]
+            },
+            "程序环境类": {
+              "desc": "用来配置电脑环境 如Java等环境",
+              "order": 3,
+              "items": [
+                {
+                  "content": "Java环境配置",
+                  "summary": "多Java环境配置",
+                  "url": "https://blog.csdn.net/taiyang3285/article/details/135231807",
+                  "desc": "配置多Java环境",
+                  "newWindow": true,
+                  "orderM": 1
+                },
+                {
+                  "content": "Claude Code(GLM配置)",
+                  "summary": "GLM配置教程",
+                  "url": "https://www.kdocs.cn/l/cqljKZN8rzRc?openfrom=docs",
+                  "desc": "一个Claude Code(GLM配置)的教程",
+                  "newWindow": true,
+                  "orderM": 2
+                }
+              ]
+            },
+            "工具栏": {
+              "desc": "常用的各种工具",
+              "order": 4,
+              "items": [
+                {
+                  "content": "KDown解析",
+                  "summary": "网盘链接解析",
+                  "url": "https://kdown.moiu.cn/",
+                  "desc": "解析百度云和夸克网盘链接",
+                  "newWindow": true,
+                  "orderM": 1
+                },
+                {
+                  "content": "机场",
+                  "summary": "机场服务",
+                  "url": "https://xn--cp3a08l.com/",
+                  "desc": "机场",
+                  "newWindow": true,
+                  "orderM": 2
+                },
+                {
+                  "content": "免费去水印，处理文件格式",
+                  "summary": "去水印/转格式",
+                  "url": "https://lightpdf.cn/tools",
+                  "desc": "一个用来免费去除水印，处理文件格式的网页",
+                  "newWindow": true,
+                  "orderM": 3
+                }
+              ]
+            },
+            "测试": {
+              "desc": "",
+              "order": 5,
+              "items": [
+                {
+                  "content": "测试",
+                  "summary": "测试项",
+                  "url": "",
+                  "desc": "测试用",
+                  "newWindow": true,
+                  "orderM": 1
+                }
+              ]
+            }
+          },
+          "type": "json",
+          "description": "首页书签导航配置"
+        }
+      }
+    }
+  }
+}

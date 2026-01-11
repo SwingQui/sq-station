@@ -84,6 +84,13 @@ export const Permission = {
 	CONTENT_CATEGORY_UPDATE: 'content:category:update',
 	CONTENT_CATEGORY_DELETE: 'content:category:delete',
 
+	// ==================== 前台配置模块 ====================
+	// Bookmarks 管理
+	FRONTEND_BOOKMARKS_READ: 'frontend:bookmarks:read',
+	FRONTEND_BOOKMARKS_CREATE: 'frontend:bookmarks:create',
+	FRONTEND_BOOKMARKS_UPDATE: 'frontend:bookmarks:update',
+	FRONTEND_BOOKMARKS_DELETE: 'frontend:bookmarks:delete',
+
 	// ==================== 用户中心模块 ====================
 	// 个人信息
 	USER_PROFILE_READ: 'user:profile:read',
@@ -180,6 +187,12 @@ export const PermissionMeta: Record<PermissionKey, { name: string; module: strin
 	[Permission.CONTENT_CATEGORY_UPDATE]: { name: '编辑分类', module: '内容管理', description: '编辑分类信息' },
 	[Permission.CONTENT_CATEGORY_DELETE]: { name: '删除分类', module: '内容管理', description: '删除分类' },
 
+	// 前台配置 - Bookmarks 管理
+	[Permission.FRONTEND_BOOKMARKS_READ]: { name: '查看书签', module: '前台配置', description: '查看书签列表' },
+	[Permission.FRONTEND_BOOKMARKS_CREATE]: { name: '新增书签', module: '前台配置', description: '创建新书签模块或内容' },
+	[Permission.FRONTEND_BOOKMARKS_UPDATE]: { name: '编辑书签', module: '前台配置', description: '编辑书签模块或内容' },
+	[Permission.FRONTEND_BOOKMARKS_DELETE]: { name: '删除书签', module: '前台配置', description: '删除书签模块或内容' },
+
 	// 用户中心
 	[Permission.USER_PROFILE_READ]: { name: '查看个人信息', module: '用户中心', description: '查看个人资料' },
 	[Permission.USER_PROFILE_UPDATE]: { name: '编辑个人信息', module: '用户中心', description: '修改个人资料' },
@@ -253,6 +266,12 @@ export const PermissionGroups: Record<string, PermissionKey[]> = {
 		Permission.CONTENT_CATEGORY_CREATE,
 		Permission.CONTENT_CATEGORY_UPDATE,
 		Permission.CONTENT_CATEGORY_DELETE,
+	],
+	'前台配置': [
+		Permission.FRONTEND_BOOKMARKS_READ,
+		Permission.FRONTEND_BOOKMARKS_CREATE,
+		Permission.FRONTEND_BOOKMARKS_UPDATE,
+		Permission.FRONTEND_BOOKMARKS_DELETE,
 	],
 	'用户中心': [
 		Permission.USER_PROFILE_READ,

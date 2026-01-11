@@ -274,7 +274,7 @@ export default function OrganizationManage() {
 	];
 
 	return (
-		<div style={{ padding: "20px" }}>
+		<>
 			<Space style={{ marginBottom: 16 }}>
 				<PermissionButton permission="system:organization:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增组织
@@ -429,6 +429,6 @@ export default function OrganizationManage() {
 			>
 				<p>确定删除此组织吗？此操作无法撤销。</p>
 			</Modal>
-		</div>
+		</>
 	);
 }

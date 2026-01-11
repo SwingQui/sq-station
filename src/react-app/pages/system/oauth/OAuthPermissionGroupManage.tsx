@@ -118,7 +118,7 @@ export default function OAuthPermissionGroupManage() {
 	};
 
 	return (
-		<div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
+		<div style={{ maxWidth: "1400px", margin: "0 auto" }}>
 			<div style={{ marginBottom: "20px" }}>
 				<PermissionButton
 					permission="oauth:group:create"

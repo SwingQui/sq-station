@@ -463,7 +463,7 @@ export default function MenuManage() {
 	];
 
 	return (
-		<div style={{ padding: "24px" }}>
+		<>
 			<div style={{ marginBottom: "16px", display: "flex", gap: "8px" }}>
 				<PermissionButton permission="system:menu:create" onClick={() => handleAdd(0)} icon={<PlusOutlined />}>
 					新增根菜单
@@ -638,6 +638,6 @@ export default function MenuManage() {
 			>
 				<p>确定删除选中的 {selectedRowKeys.length} 个菜单吗？此操作无法撤销。</p>
 			</Modal>
-		</div>
+		</>
 	);
 }

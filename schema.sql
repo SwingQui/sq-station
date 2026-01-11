@@ -174,7 +174,7 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_pat
 
 -- 系统管理目录（根目录）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
-(0, '系统管理', 'M', NULL, 'setting', 2, 1, 1);
+(0, '系统管理', 'M', NULL, 'setting', 4, 1, 1);
 
 -- 系统管理子菜单
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
@@ -190,7 +190,15 @@ INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_pat
 
 -- 内容管理目录（根目录）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
-(0, '内容管理', 'M', NULL, 'content', 3, 1, 1);
+(0, '内容管理', 'M', NULL, 'content', 2, 1, 1);
+
+-- 前台配置目录（根目录）
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, icon, sort_order, menu_visible, menu_status) VALUES
+(0, '前台配置', 'M', NULL, 'frontend', 3, 1, 1);
+
+-- 前台配置子菜单
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '前台配置' AND menu_type = 'M' AND parent_id = 0), 'Bookmarks 管理', 'C', '/dashboard/frontend/bookmarks', 'frontend/bookmarks/BookmarksManage', 'bookmarks', 1, 'frontend:bookmarks:read', 1, 1);
 
 -- 内容管理子菜单（前台页面）
 INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
@@ -330,3 +338,11 @@ INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sor
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth-groups'), '新增权限组', 'F', 'oauth:group:create', 1, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth-groups'), '编辑权限组', 'F', 'oauth:group:update', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/system/oauth-groups'), '删除权限组', 'F', 'oauth:group:delete', 3, 0, 1);
+
+-- ====================================
+-- Bookmarks 管理按钮权限
+-- ====================================
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/bookmarks'), '新增模块', 'F', 'frontend:bookmarks:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/bookmarks'), '编辑模块', 'F', 'frontend:bookmarks:update', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/bookmarks'), '删除模块', 'F', 'frontend:bookmarks:delete', 3, 0, 1);

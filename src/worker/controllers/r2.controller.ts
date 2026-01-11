@@ -21,26 +21,42 @@ app.get("/folders", requirePermission(Permission.R2_FOLDER_VIEW), async (c) => {
 		const listed = await c.env.R2_BINDING.list({
 			prefix,
 			limit: 1000,
+			include: ["customMetadata", "httpMetadata"],
 		});
 
-		// 从对象的 key 中提取文件夹路径
+		// 从对象的 key 中提取文件夹路径（仅返回直接子文件夹）
 		const folderSet = new Set<string>();
 		const currentPrefix = prefix || "";
 
 		for (const obj of listed.objects) {
-			// 跳过文件夹标记文件本身
+			// 收集独立的文件夹标记对象（空文件夹）
 			if (obj.customMetadata?.isFolder === "true") {
+				const folderPath = obj.key.endsWith("/")
+					? obj.key.slice(0, -1)  // 移除末尾的 /
+					: obj.key;
+
+				// 只保留直接子文件夹（不包含 / 的，或只有一个 / 后是当前路径的）
+				const relativePath = folderPath.substring(currentPrefix.length);
+				const parts = relativePath.split("/").filter(p => p);
+
+				// 如果是直接子文件夹（只有一层），添加文件夹名
+				if (parts.length === 1) {
+					folderSet.add(parts[0]);
+				}
+				// 如果是更深的路径，添加第一层文件夹名
+				else if (parts.length > 1) {
+					folderSet.add(parts[0]);
+				}
 				continue;
 			}
 
-			// 提取路径中的文件夹
+			// 从普通文件的路径中提取直接子文件夹
 			const relativeKey = obj.key.substring(currentPrefix.length);
 			const parts = relativeKey.split("/").filter(p => p);
 
-			// 收集所有层级的文件夹
-			for (let i = 0; i < parts.length - 1; i++) {
-				const folderPath = currentPrefix + parts.slice(0, i + 1).join("/");
-				folderSet.add(folderPath);
+			// 只有当路径有多个部分时（文件在文件夹中），才提取第一层作为文件夹
+			if (parts.length > 1) {
+				folderSet.add(parts[0]);
 			}
 		}
 
@@ -86,7 +102,10 @@ app.delete("/folder/:path", requirePermission(Permission.R2_FOLDER_DELETE), asyn
 		const prefix = normalizedPath ? normalizedPath + "/" : "";
 
 		// 列出所有以该前缀开头的对象
-		const listed = await c.env.R2_BINDING.list({ prefix });
+		const listed = await c.env.R2_BINDING.list({
+			prefix,
+			include: ["customMetadata"],
+		});
 
 		// 收集所有要删除的 key
 		const keysToDelete = listed.objects.map(obj => obj.key);
@@ -117,6 +136,7 @@ app.get("/", requirePermission(Permission.R2_FILE_VIEW), async (c) => {
 			limit,
 			cursor,
 			prefix,
+			include: ["customMetadata", "httpMetadata"],
 		});
 
 		const result: any = {

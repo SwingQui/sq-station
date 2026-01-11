@@ -3,7 +3,8 @@
  * 根据用户权限显示/隐藏按钮，支持自动推断按钮类型
  */
 
-import React, { type CSSProperties, type ReactNode } from "react";
+import { forwardRef, type CSSProperties, type ReactNode } from "react";
+import { Button } from "antd";
 import { hasPermission } from "../utils/auth";
 
 type ButtonVariant = "create" | "delete" | "export" | "update" | "special";
@@ -41,95 +42,92 @@ function getVariant(permission: string, children?: ReactNode): ButtonVariant {
 }
 
 /**
+ * 按钮类型映射到 Ant Design Button
+ */
+const buttonTypeMap: Record<ButtonVariant, "primary" | "default" | undefined> = {
+	create: "primary",
+	delete: "primary",
+	export: undefined,
+	update: "primary",
+	special: "primary",
+};
+
+/**
+ * 按钮危险类型映射（delete 使用 danger）
+ */
+const buttonDangerMap: Record<ButtonVariant, boolean> = {
+	create: false,
+	delete: true,
+	export: false,
+	update: false,
+	special: false,
+};
+
+/**
  * 按钮样式配置
  */
 const buttonStyles: Record<ButtonVariant, CSSProperties> = {
 	create: {
 		background: "#1890ff",
-		color: "white",
 	},
 	delete: {
 		background: "#ff4d4f",
-		color: "white",
 	},
 	export: {
 		background: "#8c8c8c",
-		color: "white",
 	},
 	update: {
 		background: "#fa8c16",
-		color: "white",
 	},
 	special: {
 		background: "#13c2c2",
-		color: "white",
 	},
 };
 
 const baseStyle: CSSProperties = {
 	padding: "6px 16px",
-	border: "none",
-	borderRadius: "4px",
-	cursor: "pointer",
 	fontSize: "14px",
 	display: "inline-flex",
 	alignItems: "center",
 	gap: "6px",
-	transition: "opacity 0.2s, filter 0.2s",
 };
 
-export default function PermissionButton({
-	permission,
-	children,
-	style,
-	className,
-	onClick,
-	disabled,
-	icon,
-	variant,
-}: PermissionButtonProps) {
-	// 检查权限
-	if (!hasPermission(permission)) {
-		return null;
-	}
-
-	// 自动推断或使用指定的 variant
-	const buttonVariant = variant || getVariant(permission, children);
-
-	const computedStyle: CSSProperties = {
-		...baseStyle,
-		...buttonStyles[buttonVariant],
-		opacity: disabled ? 0.5 : 1,
-		cursor: disabled ? "not-allowed" : "pointer",
-		...style,
-	};
-
-	// 添加悬停效果
-	const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-		if (!disabled) {
-			e.currentTarget.style.filter = "brightness(1.1)";
+const PermissionButtonInner = forwardRef<HTMLButtonElement, PermissionButtonProps>(
+	({ permission, children, style, className, onClick, disabled, icon, variant }, ref) => {
+		// 检查权限
+		if (!hasPermission(permission)) {
+			return null;
 		}
-	};
 
-	const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-		e.currentTarget.style.filter = "none";
-	};
+		// 自动推断或使用指定的 variant
+		const buttonVariant = variant || getVariant(permission, children);
 
-	return (
-		<button
-			type="button"
-			style={computedStyle}
-			onClick={onClick}
-			disabled={disabled}
-			className={className}
-			onMouseEnter={handleMouseEnter}
-			onMouseLeave={handleMouseLeave}
-		>
-			{icon}
-			{children}
-		</button>
-	);
-}
+		const computedStyle: CSSProperties = {
+			...baseStyle,
+			...buttonStyles[buttonVariant],
+			...style,
+		};
+
+		return (
+			<Button
+				ref={ref}
+				type={buttonTypeMap[buttonVariant]}
+				danger={buttonDangerMap[buttonVariant]}
+				style={computedStyle}
+				className={className}
+				onClick={onClick}
+				disabled={disabled}
+				icon={icon}
+			>
+				{children}
+			</Button>
+		);
+	}
+);
+
+PermissionButtonInner.displayName = "PermissionButton";
+
+export default PermissionButtonInner;
 
 /**
  * 权限链接组件

@@ -396,7 +396,7 @@ export default function UserManage() {
 	const orgDataSource = allOrgs.map((org) => ({ ...org, key: org.id }));
 
 	return (
-		<div style={{ padding: "20px" }}>
+		<>
 			<Space style={{ marginBottom: 16 }}>
 				<PermissionButton permission="system:user:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增用户
@@ -630,6 +630,6 @@ export default function UserManage() {
 			>
 				<p>确定删除此用户吗？此操作无法撤销。</p>
 			</Modal>
-		</div>
+		</>
 	);
 }

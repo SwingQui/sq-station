@@ -297,7 +297,7 @@ export default function RoleManage() {
 	];
 
 	return (
-		<div style={{ padding: "20px" }}>
+		<>
 			<Space style={{ marginBottom: 16 }}>
 				<PermissionButton permission="system:role:create" onClick={handleAdd} icon={<PlusOutlined />}>
 					新增角色
@@ -441,6 +441,6 @@ export default function RoleManage() {
 			>
 				<p>确定删除此角色吗？此操作无法撤销。</p>
 			</Modal>
-		</div>
+		</>
 	);
 }

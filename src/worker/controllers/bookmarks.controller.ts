@@ -42,9 +42,9 @@ app.use("/config", authMiddleware);
 /**
  * PUT /api/frontend/bookmarks/config
  * 保存 Bookmarks 配置
- * 需要系统权限
+ * 需要前台配置权限
  */
-app.put("/config", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {
+app.put("/config", requirePermission(Permission.FRONTEND_BOOKMARKS_UPDATE), async (c) => {
 	try {
 		const { config } = await c.req.json();
 

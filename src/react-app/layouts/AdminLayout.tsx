@@ -39,7 +39,8 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 	const mainContentStyle: CSSProperties = {
 		width: `calc(100vw - ${sidebarCollapsed ? SIDEBAR.COLLAPSED_WIDTH : SIDEBAR.EXPANDED_WIDTH}px)`,
 		height: `calc(100vh - ${FIXED_HEADER_HEIGHT}px)`,
-		overflow: "auto",
+		overflowY: "auto",
+		overflowX: "hidden",
 		background: "#f5f5f5",
 	};
 
@@ -61,9 +62,9 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
 
 				{/* 主内容 */}
 				<div style={mainContentStyle}>
-					<div style={{ padding: "20px", height: "100%", boxSizing: "border-box" }}>
+					<div style={{ padding: "16px", boxSizing: "border-box" }}>
 						{title && (
-							<h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "20px", color: "#333" }}>
+							<h2 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "16px", color: "#333" }}>
 								{title}
 							</h2>
 						)}

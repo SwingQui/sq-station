@@ -13,7 +13,6 @@ import {
 	message,
 	Modal,
 	Space,
-	Tag,
 	Row,
 	Col,
 	Empty,
@@ -26,7 +25,7 @@ import {
 	KeyOutlined,
 	DeleteOutlined,
 } from "@ant-design/icons";
-import type { NamespaceGroup, KVItem } from "./utils/parser";
+import type { NamespaceGroup } from "./utils/parser";
 import { groupAndSortKVs } from "./utils/parser";
 import NamespaceCard from "./components/NamespaceCard";
 import "./KVManage.css";
@@ -239,7 +238,6 @@ export default function KVManage() {
 						<NamespaceCard
 							key={ns.namespace}
 							namespace={ns}
-							onEdit={() => {}}
 							onDelete={openDeleteModal}
 							onSave={handleSaveEdit}
 						/>

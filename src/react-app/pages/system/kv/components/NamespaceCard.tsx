@@ -10,12 +10,11 @@ const { Text } = Typography;
 
 interface NamespaceCardProps {
 	namespace: NamespaceGroup;
-	onEdit: (item: KVItem) => void;
 	onDelete: (key: string) => void;
 	onSave?: (key: string, value: string) => Promise<void>;
 }
 
-export default function NamespaceCard({ namespace, onEdit, onDelete, onSave }: NamespaceCardProps) {
+export default function NamespaceCard({ namespace, onDelete, onSave }: NamespaceCardProps) {
 	// 编辑状态
 	const [editingKey, setEditingKey] = useState<string | null>(null);
 	const [savingKey, setSavingKey] = useState<string | null>(null);

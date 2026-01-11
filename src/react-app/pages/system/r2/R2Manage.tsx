@@ -890,39 +890,6 @@ export default function R2Manage() {
 		return items;
 	}, [currentPath]);
 
-	// 获取树节点图标
-	const getTreeNodeIcon = (props: any): React.ReactNode => {
-		const treeNode = props.data as FolderTreeNode;
-
-		if (treeNode?.isFile) {
-			// 文件节点：根据文件类型显示不同图标
-			const contentType = treeNode.fileType || "";
-
-			if (contentType.startsWith("image/")) {
-				return <FileImageOutlined style={{ fontSize: 14, color: "#1890ff" }} />;
-			}
-			if (contentType.startsWith("video/")) {
-				return <VideoCameraOutlined style={{ fontSize: 14, color: "#52c41a" }} />;
-			}
-			if (contentType.startsWith("audio/")) {
-				return <AudioOutlined style={{ fontSize: 14, color: "#fa8c16" }} />;
-			}
-			if (
-				contentType.startsWith("text/") ||
-				contentType === "application/json" ||
-				contentType.includes("javascript") ||
-				contentType.includes("xml")
-			) {
-				return <FileTextOutlined style={{ fontSize: 14, color: "#13c2c2" }} />;
-			}
-			return <FileOutlined style={{ fontSize: 14, color: "#8c8c8c" }} />;
-		}
-
-		// 文件夹节点
-		const isExpanded = props.expanded;
-		return <FolderOutlined style={{ color: isExpanded ? "#1890ff" : "#faad14", fontSize: 14 }} />;
-	};
-
 	// ==================== 渲染 ====================
 
 	return (

@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Space, Typography, Button, message, Input } from "antd";
 import { LinkOutlined, CopyOutlined } from "@ant-design/icons";
 import type { KVItem } from "../utils/parser";
-import { formatJSON, detectValueType } from "../utils/parser";
+import { formatJSON } from "../utils/parser";
 import "./../KVManage.css";
 
 const { TextArea } = Input;

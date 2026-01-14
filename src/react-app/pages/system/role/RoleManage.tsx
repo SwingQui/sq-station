@@ -172,8 +172,8 @@ export default function RoleManage() {
 		}
 	};
 
-	const handleExport = () => {
-		exportToExcel({
+	const handleExport = async () => {
+		await exportToExcel({
 			sheetName: "角色列表",
 			filename: "roles",
 			columns: [

@@ -232,8 +232,8 @@ export default function UserManage() {
 		}
 	};
 
-	const handleExport = () => {
-		exportToExcel({
+	const handleExport = async () => {
+		await exportToExcel({
 			sheetName: "用户列表",
 			filename: "users",
 			columns: [

@@ -201,12 +201,12 @@ export default function MenuManage() {
 		}
 	};
 
-	const handleExport = () => {
+	const handleExport = async () => {
 		// 扁平化树形数据
 		const flatMenus = flattenTreeData(menus);
 
 		// 导出为 Excel
-		exportToExcel({
+		await exportToExcel({
 			sheetName: "菜单列表",
 			filename: "menus",
 			columns: [

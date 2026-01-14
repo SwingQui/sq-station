@@ -154,8 +154,8 @@ export default function OrganizationManage() {
 		}
 	};
 
-	const handleExport = () => {
-		exportToExcel({
+	const handleExport = async () => {
+		await exportToExcel({
 			sheetName: "组织列表",
 			filename: "organizations",
 			columns: [

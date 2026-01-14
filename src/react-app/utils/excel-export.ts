@@ -1,9 +1,10 @@
 /**
  * Excel 导出工具
- * 使用 xlsx 库将数据导出为 Excel 文件
+ * 使用 ExcelJS 库将数据导出为 Excel 文件
+ * ExcelJS 是更安全、更活跃维护的 Excel 处理库
  */
 
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
 
 /**
  * Excel 列定义
@@ -15,7 +16,7 @@ export interface ExcelColumn {
 	field: string;
 	/** 格式化函数 */
 	formatter?: (value: any, row: any) => string | number;
-	/** 列宽 */
+	/** 列宽（字符数） */
 	width?: number;
 }
 
@@ -37,40 +38,79 @@ export interface ExcelExportOptions {
  * 将数据导出为 Excel 文件
  * @param options 导出配置
  */
-export function exportToExcel(options: ExcelExportOptions): void {
+export async function exportToExcel(options: ExcelExportOptions): Promise<void> {
 	const { sheetName = "Sheet1", filename = "export", columns, data } = options;
 
-	// 生成表头和数据行
-	const headers = columns.map(col => col.header);
-	const rows = data.map(row =>
-		columns.map(col => {
-			const value = row[col.field];
-			return col.formatter ? col.formatter(value, row) : value ?? "";
-		})
-	);
-
-	// 合并表头和数据
-	const worksheetData = [headers, ...rows];
-
-	// 创建工作表
-	const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-
-	// 设置列宽
-	const colWidths = columns.map(col => ({
-		wch: col.width || 15
-	}));
-	worksheet["!cols"] = colWidths;
-
 	// 创建工作簿
-	const workbook = XLSX.utils.book_new();
-	XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+	const workbook = new ExcelJS.Workbook();
+	const worksheet = workbook.addWorksheet(sheetName);
+
+	// 定义边框样式
+	const borderStyle = {
+		style: 'thin' as const,
+		color: { argb: 'FF000000' },
+	};
+
+	const cellBorder = {
+		top: borderStyle,
+		left: borderStyle,
+		bottom: borderStyle,
+		right: borderStyle,
+	};
+
+	// 设置列定义（包括表头和宽度）
+	worksheet.columns = columns.map(col => ({
+		header: col.header,
+		key: col.field,
+		width: col.width || 15,
+	}));
+
+	// 添加数据行
+	data.forEach(row => {
+		const rowData: Record<string, any> = {};
+		columns.forEach(col => {
+			const value = row[col.field];
+			// 使用格式化函数或直接使用值
+			rowData[col.field] = col.formatter ? col.formatter(value, row) : (value ?? '');
+		});
+		const newRow = worksheet.addRow(rowData);
+		// 为数据行的每个单元格添加边框和对齐
+		newRow.eachCell({ includeEmpty: true }, (cell) => {
+			cell.border = cellBorder;
+			cell.alignment = { vertical: 'middle', horizontal: 'center' };
+		});
+	});
+
+	// 设置表头样式（只给有内容的单元格）
+	const headerRow = worksheet.getRow(1);
+	headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+		cell.border = cellBorder;
+		cell.font = { bold: true };
+		cell.alignment = { vertical: 'middle', horizontal: 'center' };
+	});
+
+	// 确保表头行高度适当
+	headerRow.height = 25;
 
 	// 生成文件名（添加时间戳）
 	const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
 	const fullFilename = `${filename}_${timestamp}.xlsx`;
 
-	// 导出文件
-	XLSX.writeFile(workbook, fullFilename);
+	// 导出文件（浏览器环境）
+	const buffer = await workbook.xlsx.writeBuffer();
+	const blob = new Blob([buffer], {
+		type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+	});
+
+	// 创建下载链接
+	const url = window.URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = fullFilename;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+	window.URL.revokeObjectURL(url);
 }
 
 /**
@@ -141,3 +181,95 @@ export const ExportEnumMaps = {
 		1: "是",
 	},
 };
+
+/**
+ * 从 Excel 文件读取数据（安全导入）
+ * @param file 文件对象
+ * @param options 读取选项
+ * @returns 解析后的数据
+ */
+export interface ImportOptions {
+	/** 工作表名称或索引（默认第一个工作表） */
+	sheet?: string | number;
+	/** 是否包含表头（默认 true） */
+	hasHeader?: boolean;
+	/** 起始行（从 1 开始，默认 1） */
+	startRow?: number;
+}
+
+export interface ImportResult<T = any> {
+	/** 数据行 */
+	data: T[];
+	/** 工作表名称 */
+	sheetName: string;
+	/** 总行数 */
+	totalRows: number;
+}
+
+/**
+ * 从 Excel 文件读取数据
+ * @param file 文件对象或 ArrayBuffer
+ * @param options 读取选项
+ * @returns 解析后的数据
+ */
+export async function importFromExcel<T = any>(
+	file: File | ArrayBuffer,
+	options: ImportOptions = {}
+): Promise<ImportResult<T>> {
+	const { sheet = 0, hasHeader = true, startRow = 1 } = options;
+
+	const workbook = new ExcelJS.Workbook();
+	let data: any[] = [];
+
+	// 处理不同的输入类型
+	if (file instanceof File) {
+		const arrayBuffer = await file.arrayBuffer();
+		await workbook.xlsx.load(arrayBuffer);
+	} else {
+		await workbook.xlsx.load(file);
+	}
+
+	// 获取工作表
+	const worksheet = typeof sheet === 'string'
+		? workbook.getWorksheet(sheet)
+		: workbook.worksheets[sheet];
+
+	if (!worksheet) {
+		throw new Error(`工作表 "${sheet}" 不存在`);
+	}
+
+	// 获取表头（如果有）
+	const headers: string[] = [];
+	if (hasHeader) {
+		const headerRow = worksheet.getRow(startRow);
+		headerRow.eachCell((cell, colNumber) => {
+			headers[colNumber - 1] = cell.text;
+		});
+	}
+
+	// 读取数据行
+	const startDataRow = hasHeader ? startRow + 1 : startRow;
+	let totalRows = 0;
+
+	worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+		if (rowNumber >= startDataRow) {
+			const rowData: any = {};
+			row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+				const value = cell.value;
+				if (hasHeader && headers[colNumber - 1]) {
+					rowData[headers[colNumber - 1]] = value;
+				} else {
+					rowData[`col${colNumber}`] = value;
+				}
+			});
+			data.push(rowData);
+			totalRows++;
+		}
+	});
+
+	return {
+		data: data as T[],
+		sheetName: worksheet.name,
+		totalRows,
+	};
+}

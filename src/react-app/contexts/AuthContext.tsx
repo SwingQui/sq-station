@@ -48,6 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	// 监听 401 事件，由 request 层触发
 	useEffect(() => {
 		const cleanup = addAuth401Listener(() => {
+			const currentPath = window.location.pathname;
+
+			// 如果已经在登录页，清除 isLoggingOut 标志
+			// 避免登录页自身的 API 请求导致卡住状态
+			if (currentPath === '/login') {
+				setIsLoggingOut(false);
+				return;  // 不重复执行登出逻辑
+			}
+
 			// 设置登出进行中标志
 			setIsLoggingOut(true);
 
@@ -56,7 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			setUser(null);
 
 			// 使用 SPA 导航跳转到登录页（带 redirect 参数）
-			const currentPath = window.location.pathname;
 			navigate(`/login?redirect=${encodeURIComponent(currentPath)}`, true);
 		});
 

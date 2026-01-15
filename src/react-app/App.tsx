@@ -137,13 +137,16 @@ function DynamicPage({ path, isLoggingOut }: { path: string; isLoggingOut: boole
  * 获取页面内容
  */
 function getPageContent(path: string, isLoggingOut: boolean) {
+	// 去除查询参数
+	const cleanPath = path.split('?')[0];
+
 	// 登录页特殊处理
-	if (path === "/login") {
+	if (cleanPath === "/login") {
 		return <Login />;
 	}
 
 	// 根路径：通过 DynamicPage 加载
-	if (path === "/") {
+	if (cleanPath === "/") {
 		return <DynamicPage path={path} isLoggingOut={isLoggingOut} />;
 	}
 

@@ -83,7 +83,7 @@ export async function exportToExcel(options: ExcelExportOptions): Promise<void> 
 
 	// 设置表头样式（只给有内容的单元格）
 	const headerRow = worksheet.getRow(1);
-	headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+	headerRow.eachCell({ includeEmpty: false }, (cell) => {
 		cell.border = cellBorder;
 		cell.font = { bold: true };
 		cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -219,7 +219,7 @@ export async function importFromExcel<T = any>(
 	const { sheet = 0, hasHeader = true, startRow = 1 } = options;
 
 	const workbook = new ExcelJS.Workbook();
-	let data: any[] = [];
+	const data: any[] = [];
 
 	// 处理不同的输入类型
 	if (file instanceof File) {

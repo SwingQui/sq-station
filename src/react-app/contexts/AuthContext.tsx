@@ -76,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	// 登录
 	const login = async (username: string, password: string) => {
 		try {
+			// 重置登出状态
+			setIsLoggingOut(false);
+
 			// 使用 API 函数获取 token 和用户信息
 			const result = await apiLogin(username, password);
 			const { token, user } = result;

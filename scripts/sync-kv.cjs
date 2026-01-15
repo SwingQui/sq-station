@@ -479,15 +479,12 @@ if (command === "import") {
 	importToLocal();
 } else if (command === "export") {
 	exportToRemote();
-} else if (command === "apply") {
+} else if (command === "migrate") {
+	// migrate 命令
 	if (subCommand === "local") {
 		applyToLocal();
-	} else if (subCommand === "remote") {
-		applyToRemote();
 	} else {
-		console.log("用法:");
-		console.log("  node scripts/sync-kv.cjs apply local    # 应用 schema 到本地");
-		console.log("  node scripts/sync-kv.cjs apply remote   # 应用 schema 到远程");
+		applyToRemote();
 	}
 } else if (command === "validate") {
 	validateSchema();
@@ -498,9 +495,9 @@ if (command === "import") {
 	console.log("  node scripts/sync-kv.cjs import        # 从远程导入到本地");
 	console.log("  node scripts/sync-kv.cjs export        # 从本地导出到远程（会先备份）");
 	console.log("");
-	console.log("Schema 应用:");
-	console.log("  node scripts/sync-kv.cjs apply local   # 应用 schema 到本地 KV");
-	console.log("  node scripts/sync-kv.cjs apply remote  # 应用 schema 到远程 KV（自动备份）");
+	console.log("Schema 迁移:");
+	console.log("  node scripts/sync-kv.cjs migrate        # 应用 schema 到远程 KV（自动备份）");
+	console.log("  node scripts/sync-kv.cjs migrate local   # 应用 schema 到本地 KV（自动备份）");
 	console.log("");
 	console.log("Schema 验证:");
 	console.log("  node scripts/sync-kv.cjs validate      # 验证 schema 文件格式");

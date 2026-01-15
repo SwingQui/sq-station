@@ -36,7 +36,7 @@ function getPageTitle(path: string): string {
 /**
  * 动态页面加载器
  */
-function DynamicPage({ path }: { path: string }) {
+function DynamicPage({ path, isLoggingOut }: { path: string; isLoggingOut: boolean }) {
 	// 去除查询参数
 	const cleanPath = path.split('?')[0];
 
@@ -46,6 +46,12 @@ function DynamicPage({ path }: { path: string }) {
 
 	useEffect(() => {
 		async function loadPage() {
+			// 如果正在处理 401 登出，跳过加载
+			if (isLoggingOut) {
+				setLoading(false);
+				return;
+			}
+
 			setLoading(true);
 			setError(null);
 
@@ -78,7 +84,23 @@ function DynamicPage({ path }: { path: string }) {
 		}
 
 		loadPage();
-	}, [cleanPath]);
+	}, [cleanPath, isLoggingOut]);
+
+	// 如果正在处理 401 登出，显示跳转中状态
+	if (isLoggingOut) {
+		return (
+			<div style={{
+				display: "flex",
+				justifyContent: "center",
+				alignItems: "center",
+				height: "100vh",
+				fontSize: "16px",
+				color: "#666",
+			}}>
+				跳转中...
+			</div>
+		);
+	}
 
 	if (loading) {
 		return (
@@ -114,7 +136,7 @@ function DynamicPage({ path }: { path: string }) {
 /**
  * 获取页面内容
  */
-function getPageContent(path: string) {
+function getPageContent(path: string, isLoggingOut: boolean) {
 	// 登录页特殊处理
 	if (path === "/login") {
 		return <Login />;
@@ -122,18 +144,18 @@ function getPageContent(path: string) {
 
 	// 根路径：通过 DynamicPage 加载
 	if (path === "/") {
-		return <DynamicPage path={path} />;
+		return <DynamicPage path={path} isLoggingOut={isLoggingOut} />;
 	}
 
 	// 其他路径动态加载
-	return <DynamicPage path={path} />;
+	return <DynamicPage path={path} isLoggingOut={isLoggingOut} />;
 }
 
 /**
  * 主应用内容
  */
 function AppContent() {
-	const { isAuthenticated, isLoading } = useAuth();
+	const { isAuthenticated, isLoading, isLoggingOut } = useAuth();
 	const { addTab, setActiveTab } = useTagsView();
 	const [path, setPath] = useState(window.location.pathname);
 
@@ -214,7 +236,7 @@ function AppContent() {
 
 	// 系统路由（/login、/）直接渲染，不需要认证检查
 	if (isSystemRoute(path)) {
-		const content = getPageContent(path);
+		const content = getPageContent(path, isLoggingOut);
 		return <Suspense fallback={<div style={{ padding: "20px" }}>加载中...</div>}>{content}</Suspense>;
 	}
 
@@ -227,7 +249,7 @@ function AppContent() {
 	}
 
 	// 获取页面内容
-	const content = getPageContent(path);
+	const content = getPageContent(path, isLoggingOut);
 
 	// 后台路由包裹 AdminLayout
 	if (path.startsWith("/dashboard") && path !== "/login") {

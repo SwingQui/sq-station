@@ -16,11 +16,13 @@ import { navigate } from "../utils/router";
 import { clearMenuIndexCache } from "../utils/core/route/matcher";
 import { login as apiLogin, getUserInfo } from "../api/auth";
 import { handleError } from "../utils/error-handler";
+import { addAuth401Listener } from "../utils/events";
 
 interface AuthContextType {
 	user: AuthUser | null;
 	isLoading: boolean;
 	isAuthenticated: boolean;
+	isLoggingOut: boolean;  // 是否正在处理 401 登出
 	login: (username: string, password: string) => Promise<void>;
 	logout: () => void;
 	refreshUser: () => Promise<void>;
@@ -38,6 +40,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		// 如果有用户数据，说明已从 localStorage 恢复，不需要 loading
 		return !getUser();
 	});
+
+	// 登出状态：用于在 401 错误处理期间阻止权限检查
+	// 通过事件驱动更新，无需轮询
+	const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+	// 监听 401 事件，由 request 层触发
+	useEffect(() => {
+		const cleanup = addAuth401Listener(() => {
+			// 设置登出进行中标志
+			setIsLoggingOut(true);
+
+			// 执行登出逻辑
+			authLogout();
+			setUser(null);
+
+			// 使用 SPA 导航跳转到登录页（带 redirect 参数）
+			const currentPath = window.location.pathname;
+			navigate(`/login?redirect=${encodeURIComponent(currentPath)}`, true);
+		});
+
+		return cleanup;
+	}, []);
 
 	// 检查 token 是否有效，无效则清除用户状态
 	useEffect(() => {
@@ -155,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		user,
 		isLoading,
 		isAuthenticated: !!user,
+		isLoggingOut,
 		login,
 		logout,
 		refreshUser,

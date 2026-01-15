@@ -5,9 +5,10 @@
  * 支持请求超时控制
  */
 
-import { getToken, logout } from "../../auth";
-import { navigate } from "../../router";
+import { getToken } from "../../auth";
 import { handleError } from "../../error-handler";
+import { dispatchAuth401 } from "../../events";
+import { AuthenticationError } from "../../errors";
 
 /**
  * 请求超时时间（毫秒）
@@ -101,10 +102,11 @@ export async function request<T = any>(url: string, options: RequestOptions = {}
 
 		// 处理 401 未授权
 		if (response.status === 401) {
-			logout();
-			// 使用 SPA 导航跳转到登录页
-			navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, true);
-			throw new Error("未登录或登录已过期");
+			// 触发自定义事件，让 AuthContext 处理登出逻辑
+			dispatchAuth401();
+
+			// 抛出标准化错误，中断请求链
+			throw new AuthenticationError("未登录或登录已过期");
 		}
 
 		// 解析响应

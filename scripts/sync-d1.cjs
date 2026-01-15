@@ -30,8 +30,9 @@ if (!fs.existsSync(BACKUP_DIR)) {
  * 执行 SQL 命令
  * @param {string} command - SQL 命令
  * @param {boolean} remote - 是否远程
+ * @param {boolean} silent - 是否静默失败（不抛异常）
  */
-function executeSQL(command, remote = true) {
+function executeSQL(command, remote = true, silent = false) {
 	const remoteFlag = remote ? "--remote" : "--local";
 	try {
 		execSync(
@@ -40,7 +41,14 @@ function executeSQL(command, remote = true) {
 		);
 		return true;
 	} catch (e) {
-		console.error(`SQL 失败: ${command.slice(0, 50)}...`);
+		const shortCmd = command.slice(0, 80);
+		console.error(`❌ SQL 失败 (${remote ? "remote" : "local"}): ${shortCmd}...`);
+		console.error(`   错误: ${e.message?.split("\n")[0] || e}`);
+
+		// 如果不是静默模式，抛出异常
+		if (!silent) {
+			throw new Error(`SQL 执行失败: ${command}`);
+		}
 		return false;
 	}
 }
@@ -97,6 +105,7 @@ function getTableSchema(table, remote = true) {
 		}
 		return [];
 	} catch (e) {
+		// 表可能不存在，返回空数组
 		return [];
 	}
 }
@@ -221,20 +230,50 @@ function exportToRemote() {
 function exportToLocal() {
 	console.log("\n🚀 导出远程数据到本地...");
 
-	// 1. 备份本地数据
-	backupData(false);
-
-	// 2. 导出远程数据
-	const remoteBackup = backupData(true);
-
-	// 3. 清空本地表
-	console.log("\n🗑️ 清空本地表...");
-	for (const table of TABLES) {
-		executeSQL(`DELETE FROM ${table}`, false);
+	// 1. 创建表结构
+	console.log("\n🔧 创建本地表结构...");
+	try {
+		const schemaFile = path.join(process.cwd(), "schema.sql");
+		if (fs.existsSync(schemaFile)) {
+			execSync(
+				`wrangler d1 execute ${DB_NAME} --local --file="${schemaFile}"`,
+				{ encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }
+			);
+			console.log("   ✓ 表结构已创建");
+		} else {
+			console.log("   ⚠️  schema.sql 不存在，跳过");
+		}
+	} catch (e) {
+		console.log("   ℹ️ 表结构已存在或创建失败，继续...");
 	}
 
-	// 4. 导入远程数据到本地
-	importData(remoteBackup, false);
+	// 2. 直接从远程导出数据到本地（不备份）
+	console.log("\n📥 从远程导入数据到本地...");
+	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
+	const tempFile = path.join(BACKUP_DIR, `temp-remote-${timestamp}.sql`);
+
+	const statements = [];
+	for (const table of TABLES) {
+		console.log(`  正在获取 ${table} 数据...`);
+		const columns = getTableSchema(table, true);
+		const rows = queryTable(table, true);
+
+		if (columns.length > 0 && rows.length > 0) {
+			console.log(`    ✓ ${rows.length} 条记录`);
+			const inserts = generateInserts(table, rows, columns);
+			statements.push(`-- Table: ${table} (${rows.length} rows)`);
+			statements.push(...inserts);
+			statements.push("");
+		} else {
+			console.log(`    ℹ️  表为空或不存在`);
+		}
+	}
+
+	fs.writeFileSync(tempFile, statements.join("\n"));
+	importData(tempFile, false);
+
+	// 删除临时文件
+	fs.unlinkSync(tempFile);
 
 	console.log("\n✅ 远程 -> 本地 同步完成!");
 }
@@ -249,6 +288,43 @@ switch (command) {
 	case "import":
 		exportToLocal();
 		break;
+	case "migrate":
+		// Schema 迁移（自动备份）
+		console.log("\n🔄 D1 Schema 迁移\n");
+		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+		console.log("1️⃣ 备份目标数据");
+		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+		// 检测是远程还是本地迁移
+		const isRemote = process.argv.includes("--remote");
+
+		try {
+			backupData(isRemote);
+		} catch (e) {
+			console.log("⚠️  备份失败（可能目标为空），继续迁移...\n");
+		}
+
+		console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+		console.log("2️⃣ 应用 schema.sql");
+		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+		const schemaFile = path.join(process.cwd(), "schema.sql");
+		if (!fs.existsSync(schemaFile)) {
+			console.error("❌ schema.sql 不存在");
+			process.exit(1);
+		}
+
+		try {
+			execSync(
+				`wrangler d1 execute ${DB_NAME} ${isRemote ? "--remote" : "--local"} --file="${schemaFile}"`,
+				{ encoding: "utf-8", stdio: "inherit" }
+			);
+			console.log("\n✅ 迁移完成!");
+		} catch (e) {
+			console.error("\n❌ 迁移失败");
+			process.exit(1);
+		}
+		break;
 	case "backup:remote":
 		backupData(true);
 		break;
@@ -262,6 +338,8 @@ D1 数据同步工具
 用法:
   npm run d1:export    # 本地 -> 远程 (导出本地数据到远程)
   npm run d1:import    # 远程 -> 本地 (导出远程数据到本地)
+  npm run d1:migrate   # Schema -> 远程 (自动备份)
+  npm run d1:migrate:local  # Schema -> 本地 (自动备份)
   npm run d1:backup:remote  # 备份远程数据
   npm run d1:backup:local   # 备份本地数据
 

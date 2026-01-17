@@ -22,7 +22,12 @@ export default function ContentGrid({
 		const modules: React.ReactNode[] = [];
 		let hasResults = false;
 
-		for (const [moduleName, moduleData] of Object.entries(config)) {
+		// 按 order 排序模块
+		const sortedModuleEntries = Object.entries(config).sort(
+			([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0)
+		);
+
+		for (const [moduleName, moduleData] of sortedModuleEntries) {
 			// 检查模块名称和描述是否匹配
 			const moduleTitleMatch = moduleName.toLowerCase().includes(searchLower);
 			const moduleDescMatch = moduleData.desc?.toLowerCase().includes(searchLower);
@@ -45,9 +50,12 @@ export default function ContentGrid({
 				}
 
 				// 决定显示哪些内容项
-				const itemsToShow = searchLower && !moduleTitleMatch && !moduleDescMatch
+				let itemsToShow = searchLower && !moduleTitleMatch && !moduleDescMatch
 					? matchedItems  // 只显示匹配的内容项
 					: moduleData.items;  // 显示所有内容项
+
+				// 按 orderM 排序内容项
+				itemsToShow = [...itemsToShow].sort((a, b) => (a.orderM ?? 0) - (b.orderM ?? 0));
 
 				modules.push(
 					<div

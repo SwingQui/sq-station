@@ -283,6 +283,11 @@ export default function BookmarksManage() {
 		},
 	];
 
+	// 按 order 排序模块
+	const sortedModuleEntries = Object.entries(bookmarks).sort(
+		([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0)
+	);
+
 	return (
 		<div style={{ padding: "20px" }}>
 			<Space style={{ marginBottom: 16 }}>
@@ -303,7 +308,8 @@ export default function BookmarksManage() {
 			</Space>
 
 			{/* 模块列表 */}
-			{Object.entries(bookmarks).map(([moduleName, module]) => (
+			{sortedModuleEntries.map(([moduleName, module]) => {
+				return (
 				<Card
 					key={moduleName}
 					style={{ marginBottom: 16 }}
@@ -349,14 +355,17 @@ export default function BookmarksManage() {
 				>
 					<Table
 						columns={itemColumns(moduleName)}
-						dataSource={module.items.map((item, index) => ({ ...item, key: index }))}
+						dataSource={module.items
+							.map((item, index) => ({ ...item, key: index }))
+							.sort((a, b) => (a.orderM ?? 0) - (b.orderM ?? 0))}
 						rowKey="key"
 						pagination={false}
 						size="small"
 						bordered
 					/>
 				</Card>
-			))}
+				);
+			})}
 
 			{Object.keys(bookmarks).length === 0 && !loading && (
 				<div style={{ textAlign: "center", padding: "40px", color: "#888" }}>

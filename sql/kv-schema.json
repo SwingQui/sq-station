@@ -1,7 +1,7 @@
 {
   "_comment": "KV 存储数据定义文件 - 类似于 D1 的 schema.sql",
   "_version": "1.0.0",
-  "_updated_at": "2026-01-20T12:46:29.839Z",
+  "_updated_at": "2026-01-20T13:16:50.623Z",
   "namespaces": {
     "frontend": {
       "_comment": "前端页面配置数据",
@@ -122,7 +122,7 @@
             }
           },
           "type": "json",
-          "description": "从远程同步于 2026/1/20 20:46:29"
+          "description": "从远程同步于 2026/1/20 21:16:50"
         }
       }
     }

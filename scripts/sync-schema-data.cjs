@@ -13,14 +13,19 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+// 引入共享模块
+const { ensureDir, timestamp } = require("./shared/utils.cjs");
+const { D1Helper } = require("./shared/wrangler.cjs");
+
 const DB_NAME = "sq_station";
 const SCHEMA_DATA_FILE = path.join(__dirname, "../sql/schema-data.json");
 const BACKUP_DIR = path.join(__dirname, "../sql/.backup/schema-data");
 
 // 确保备份目录存在
-if (!fs.existsSync(BACKUP_DIR)) {
-	fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
+ensureDir(BACKUP_DIR);
+
+// 创建 D1 helper 实例
+const d1Helper = new D1Helper(DB_NAME);
 
 /**
  * 备份 schema-data.json
@@ -30,8 +35,7 @@ function backupSchemaData() {
 		console.log("⏭️  schema-data.json 不存在，跳过备份");
 		return;
 	}
-	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
-	const backupFile = path.join(BACKUP_DIR, `schema-data-${timestamp}.json`);
+	const backupFile = path.join(BACKUP_DIR, `schema-data-${timestamp()}.json`);
 	fs.copyFileSync(SCHEMA_DATA_FILE, backupFile);
 	console.log(`✅ 已备份到: ${backupFile}`);
 }
@@ -52,7 +56,15 @@ function readSchemaData() {
  */
 function writeSchemaData(data) {
 	// 更新时间戳
-	data._updated_at = new Date().toISOString();
+	// 本地时间格式: 2026-01-20 21:26:48
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	const day = String(now.getDate()).padStart(2, "0");
+	const hours = String(now.getHours()).padStart(2, "0");
+	const minutes = String(now.getMinutes()).padStart(2, "0");
+	const seconds = String(now.getSeconds()).padStart(2, "0");
+	data._updated_at = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 	const content = JSON.stringify(data, null, 2);
 	fs.writeFileSync(SCHEMA_DATA_FILE, content, "utf-8");
 	console.log(`✅ 已更新: ${SCHEMA_DATA_FILE}`);
@@ -111,35 +123,105 @@ function clearTable(tableName, remote = true) {
 function insertData(tableName, data, remote = true) {
 	const remoteFlag = remote ? "--remote" : "--local";
 	const columns = Object.keys(data[0] || {});
-	const placeholders = columns.map(() => "?").join(", ");
 	const columnNames = columns.join(", ");
 
-	let successCount = 0;
-	let failCount = 0;
+	if (data.length === 0) {
+		console.log(`⏭️  跳过空表: ${tableName}`);
+		return 0;
+	}
 
-	for (const row of data) {
+	// 创建临时 SQL 文件
+	const tmpDir = path.join(process.cwd(), ".wrangler", "sql-tmp");
+	if (!fs.existsSync(tmpDir)) {
+		fs.mkdirSync(tmpDir, { recursive: true });
+	}
+
+	// 批量生成所有 INSERT 语句
+	const sqlStatements = data.map(row => {
 		const values = columns.map(col => {
 			const val = row[col];
 			if (val === null || val === undefined) return "NULL";
-			if (typeof val === "object") return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
-			if (typeof val === "string") return `"${val.replace(/"/g, '""')}"`;
-			return val;
+			if (typeof val === "boolean") return val ? "1" : "0";
+			if (typeof val === "number") return val.toString();
+			if (typeof val === "object") {
+				const jsonStr = JSON.stringify(val);
+				// JSON 字符串用单引号包裹，内部双引号转义为 ""
+				return `'${jsonStr.replace(/'/g, "''")}'`;
+			}
+			if (typeof val === "string") {
+				// 字符串用单引号包裹，内部单引号转义为 ''
+				return `'${val.replace(/'/g, "''")}'`;
+			}
+			return "NULL";
 		}).join(", ");
 
-		try {
-			execSync(
-				`npx wrangler d1 execute ${DB_NAME} ${remoteFlag} --command="INSERT INTO ${tableName} (${columnNames}) VALUES (${values})"`,
-				{ encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }
-			);
-			successCount++;
-		} catch (e) {
-			failCount++;
-			console.error(`❌ 插入失败: ${tableName} - ${JSON.stringify(row).slice(0, 80)}`);
+		return `INSERT INTO ${tableName} (${columnNames}) VALUES (${values});`;
+	}).join("\n");
+
+	const tmpFile = path.join(tmpDir, `temp_${tableName}_${Date.now()}.sql`);
+
+	try {
+		// 一次性写入所有 SQL 语句
+		fs.writeFileSync(tmpFile, sqlStatements, "utf-8");
+
+		// 一次性执行
+		execSync(
+			`npx wrangler d1 execute ${DB_NAME} ${remoteFlag} --file="${tmpFile}"`,
+			{ encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }
+		);
+
+		console.log(`✅ ${tableName}: ${data.length} 条成功`);
+		return data.length;
+	} catch (e) {
+		console.error(`❌ 插入失败: ${tableName}`);
+		console.error(`   错误: ${e.message?.split("\n")[0] || e}`);
+
+		// 如果批量失败，尝试逐条插入
+		console.log(`   尝试逐条插入...`);
+		let successCount = 0;
+		let failCount = 0;
+
+		for (const row of data) {
+			const values = columns.map(col => {
+				const val = row[col];
+				if (val === null || val === undefined) return "NULL";
+				if (typeof val === "boolean") return val ? "1" : "0";
+				if (typeof val === "number") return val.toString();
+				if (typeof val === "object") {
+					const jsonStr = JSON.stringify(val);
+					return `'${jsonStr.replace(/'/g, "''")}'`;
+				}
+				if (typeof val === "string") {
+					return `'${val.replace(/'/g, "''")}'`;
+				}
+				return "NULL";
+			}).join(", ");
+
+			const sql = `INSERT INTO ${tableName} (${columnNames}) VALUES (${values});`;
+			const singleTmpFile = path.join(tmpDir, `single_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.sql`);
+
+			try {
+				fs.writeFileSync(singleTmpFile, sql, "utf-8");
+				execSync(
+					`npx wrangler d1 execute ${DB_NAME} ${remoteFlag} --file="${singleTmpFile}"`,
+					{ encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }
+				);
+				fs.unlinkSync(singleTmpFile);
+				successCount++;
+			} catch (singleErr) {
+				failCount++;
+				console.error(`   ❌ 第 ${successCount + failCount} 条失败: ${JSON.stringify(row).slice(0, 50)}`);
+			}
+		}
+
+		console.log(`✅ ${tableName}: ${successCount} 条成功, ${failCount} 条失败`);
+		return successCount;
+	} finally {
+		// 清理临时文件
+		if (fs.existsSync(tmpFile)) {
+			fs.unlinkSync(tmpFile);
 		}
 	}
-
-	console.log(`✅ ${tableName}: ${successCount} 条成功, ${failCount} 条失败`);
-	return successCount;
 }
 
 /**
@@ -223,12 +305,20 @@ function main() {
 
 	switch (command) {
 		case "remote-to-schema":
-			backupSchemaData();
+			if (process.env.SKIP_BACKUP !== "1") {
+				backupSchemaData();
+			} else {
+				console.log("⏭️  跳过备份（SKIP_BACKUP=1）");
+			}
 			syncToSchemaData(true);
 			break;
 
 		case "local-to-schema":
-			backupSchemaData();
+			if (process.env.SKIP_BACKUP !== "1") {
+				backupSchemaData();
+			} else {
+				console.log("⏭️  跳过备份（SKIP_BACKUP=1）");
+			}
 			syncToSchemaData(false);
 			break;
 

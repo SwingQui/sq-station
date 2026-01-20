@@ -5,56 +5,33 @@
 // validate: 验证 kv-schema.json 文件格式
 // to-schema: 从远程/本地 KV 同步到 kv-schema.json
 
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+
+// 引入共享模块
+const { ensureDir, timestamp } = require("./shared/utils.cjs");
+const { KVHelper } = require("./shared/wrangler.cjs");
 
 const NAMESPACE_ID = "0db26ad794b242aea90aa08281a7dfa2";
 const BACKUP_DIR = path.join(process.cwd(), "sql", ".backup", "kv");
 const CACHE_FILE = path.join(process.cwd(), ".wrangler", "kv-cache.json");
 const SCHEMA_FILE = path.join(process.cwd(), "sql", "kv-schema.json");
 
-function exec(cmd, silent = false) {
-	try {
-		return execSync(cmd, { encoding: "utf-8", stdio: silent ? "pipe" : "inherit" });
-	} catch (e) {
-		return null;
-	}
-}
-
-function ensureDir(dir) {
-	if (!fs.existsSync(dir)) {
-		fs.mkdirSync(dir, { recursive: true });
-	}
-}
-
-// 获取时间戳
-function timestamp() {
-	return new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
-}
+// 创建 KV helper 实例
+const kvHelper = new KVHelper(NAMESPACE_ID);
 
 // 从本地 KV 读取所有数据（wrangler dev 的实际存储）
 function readLocalKV() {
 	console.log("   从本地 KV 读取数据...");
+	const keys = kvHelper.listKeys(false);
+	console.log(`   找到 ${keys.length} 个 keys`);
+
 	const data = {};
-	try {
-		const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID}`, true);
-		if (keysOutput) {
-			const keys = JSON.parse(keysOutput);
-			console.log(`   找到 ${keys.length} 个 keys`);
-			for (const key of keys) {
-				try {
-					const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --text`, true);
-					if (value !== null) {
-						data[key.name] = value.trim();
-					}
-				} catch (e) {
-					console.log(`   ✗ ${key.name} (读取失败)`);
-				}
-			}
+	for (const key of keys) {
+		const value = kvHelper.get(key.name, false);
+		if (value !== null) {
+			data[key.name] = value.trim();
 		}
-	} catch (e) {
-		console.log("   ⚠ 本地 KV 读取失败");
 	}
 	return data;
 }
@@ -62,20 +39,9 @@ function readLocalKV() {
 // 写入本地 KV
 function writeLocalKV(data) {
 	for (const [key, value] of Object.entries(data)) {
-		try {
-			// 使用临时文件处理特殊字符
-			const tmpFile = path.join(process.cwd(), ".wrangler", "kv-temp.txt");
-			fs.writeFileSync(tmpFile, String(value));
-			exec(`npx wrangler kv key put "${key}" --path="${tmpFile}" --namespace-id=${NAMESPACE_ID}`, true);
-			fs.unlinkSync(tmpFile);
-		} catch (e) {
-			// 回退到直接写入
-			try {
-				const safeValue = String(value).replace(/"/g, '\\"').replace(/\n/g, '\\n');
-				exec(`npx wrangler kv key put "${key}" "${safeValue}" --namespace-id=${NAMESPACE_ID}`, true);
-			} catch (e2) {
-				console.log(`   ✗ ${key} (写入失败)`);
-			}
+		const success = kvHelper.set(key, value, false);
+		if (!success) {
+			console.log(`   ✗ ${key} (写入失败)`);
 		}
 	}
 }
@@ -86,55 +52,31 @@ async function importToLocal() {
 
 	// 0️⃣ 先清理本地旧数据
 	console.log("0️⃣ 清理本地 KV 旧数据...");
-	try {
-		// 获取本地所有 keys
-		const localKeysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID}`, true);
-		if (localKeysOutput) {
-			const localKeys = JSON.parse(localKeysOutput);
-			if (localKeys.length > 0) {
-				// 删除本地所有 keys
-				for (const key of localKeys) {
-					try {
-						exec(`npx wrangler kv key delete "${key.name}" --namespace-id=${NAMESPACE_ID}`, true);
-					} catch (e) {}
-				}
-				console.log(`   ✓ 清理了 ${localKeys.length} 个旧 keys\n`);
-			} else {
-				console.log("   ✓ 本地无旧数据\n");
-			}
+	const localKeys = kvHelper.listKeys(false);
+	if (localKeys.length > 0) {
+		for (const key of localKeys) {
+			kvHelper.delete(key.name, false);
 		}
-	} catch (e) {
-		console.log("   ⚠ 清理失败，继续导入...\n");
+		console.log(`   ✓ 清理了 ${localKeys.length} 个旧 keys\n`);
+	} else {
+		console.log("   ✓ 本地无旧数据\n");
 	}
 
-	// 获取远程所有 keys
+	// 获取远程所有数据
 	console.log("1️⃣ 获取远程 keys 列表...");
-	const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID} --remote`, true);
-	if (!keysOutput) {
+	const keys = kvHelper.listKeys(true);
+	if (keys.length === 0) {
 		console.log("❌ 远程 KV 为空或获取失败");
 		return;
 	}
-
-	let keys = [];
-	try {
-		keys = JSON.parse(keysOutput);
-	} catch (e) {
-		console.log("❌ 解析 keys 失败:", keysOutput?.slice(0, 200));
-		return;
-	}
-
 	console.log(`   找到 ${keys.length} 个 keys\n`);
 
 	const data = {};
 	for (const key of keys) {
-		try {
-			const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --remote --text`, true);
-			if (value !== null) {
-				data[key.name] = value.trim();
-				console.log(`   ✓ ${key.name}`);
-			}
-		} catch (e) {
-			console.log(`   ✗ ${key.name} (跳过)`);
+		const value = kvHelper.get(key.name, true);
+		if (value !== null) {
+			data[key.name] = value.trim();
+			console.log(`   ✓ ${key.name}`);
 		}
 	}
 
@@ -158,32 +100,26 @@ async function importToLocal() {
 async function exportToRemote() {
 	console.log("\n📤 从本地导出到远程 KV...\n");
 
-	// 1. 先备份远程数据
-	console.log("1️⃣ 备份远程数据...");
-	ensureDir(BACKUP_DIR);
-	const backupFile = path.join(BACKUP_DIR, `backup-${timestamp()}.json`);
+	// 检查是否跳过备份
+	const skipBackup = process.env.SKIP_BACKUP === "1";
 
-	const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID} --remote`, true);
-	if (keysOutput) {
-		try {
-			const keys = JSON.parse(keysOutput);
-			const backupData = {};
-			for (const key of keys) {
-				try {
-					const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} --remote --text`, true);
-					if (value !== null) {
-						backupData[key.name] = value.trim();
-					}
-				} catch (e) {}
-			}
+	// 1. 先备份远程数据
+	if (!skipBackup) {
+		console.log("1️⃣ 备份远程数据...");
+		ensureDir(BACKUP_DIR);
+		const backupFile = path.join(BACKUP_DIR, `backup-${timestamp()}.json`);
+
+		const keys = kvHelper.listKeys(true);
+		if (keys.length > 0) {
+			const backupData = kvHelper.getAll(true);
 			fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
 			console.log(`   ✓ 备份已保存: ${backupFile}`);
 			console.log(`   ✓ 备份了 ${Object.keys(backupData).length} 条数据\n`);
-		} catch (e) {
-			console.log("   ⚠ 备份失败，继续导出...\n");
+		} else {
+			console.log("   ℹ 远程为空，无需备份\n");
 		}
 	} else {
-		console.log("   ℹ 远程为空，无需备份\n");
+		console.log("1️⃣ 跳过备份（SKIP_BACKUP=1）\n");
 	}
 
 	// 2. 读取本地数据（优先从本地 KV，这是 wrangler dev 的真实数据）
@@ -202,33 +138,16 @@ async function exportToRemote() {
 	}
 	console.log(`   共 ${Object.keys(data).length} 条数据\n`);
 
-	// 3. 写入远程（使用临时文件确保正确转义）
+	// 3. 写入远程（使用 kvHelper）
 	console.log("3️⃣ 写入远程 KV...");
-	const tmpDir = path.join(process.cwd(), ".wrangler", "kv-tmp");
-	ensureDir(tmpDir);
-
 	let successCount = 0;
 	for (const [key, value] of Object.entries(data)) {
-		try {
-			// 使用临时文件写入值（避免命令行转义问题）
-			const tmpFile = path.join(tmpDir, key.replace(/[^a-zA-Z0-9_-]/g, "_"));
-			fs.writeFileSync(tmpFile, String(value));
-
-			// 使用 --path 参数读取文件内容
-			exec(`npx wrangler kv key put "${key}" --path="${tmpFile}" --namespace-id=${NAMESPACE_ID} --remote`, true);
-			fs.unlinkSync(tmpFile);
+		const success = kvHelper.set(key, value, true);
+		if (success) {
 			console.log(`   ✓ ${key}`);
 			successCount++;
-		} catch (e) {
-			// 如果临时文件方式失败，尝试直接写入
-			try {
-				const safeValue = String(value).replace(/"/g, '\\"').replace(/\n/g, '\\n');
-				exec(`npx wrangler kv key put "${key}" "${safeValue}" --namespace-id=${NAMESPACE_ID} --remote`, true);
-				console.log(`   ✓ ${key} (直接写入)`);
-				successCount++;
-			} catch (e2) {
-				console.log(`   ✗ ${key} (失败: ${e.message})`);
-			}
+		} else {
+			console.log(`   ✗ ${key} (失败)`);
 		}
 	}
 	console.log(`\n✅ 导出完成，成功 ${successCount}/${Object.keys(data).length} 条\n`);
@@ -308,43 +227,18 @@ function backupKV(remote = false) {
 	ensureDir(BACKUP_DIR);
 	const backupFile = path.join(BACKUP_DIR, `backup-${target}-before-schema-${timestamp()}.json`);
 
-	try {
-		const remoteFlag = remote ? "--remote" : "";
-		const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID} ${remoteFlag}`, true);
+	const backupData = kvHelper.getAll(remote);
 
-		if (!keysOutput) {
-			console.log(`   ℹ ${target} KV 为空，无需备份`);
-			return null;
-		}
-
-		const keys = JSON.parse(keysOutput);
-		const backupData = {};
-
-		for (const key of keys) {
-			try {
-				const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} ${remoteFlag} --text`, true);
-				if (value !== null) {
-					backupData[key.name] = value.trim();
-				}
-			} catch (e) {
-				// 跳过读取失败的 key
-			}
-		}
-
-		if (Object.keys(backupData).length === 0) {
-			console.log(`   ℹ ${target} KV 为空，无需备份`);
-			return null;
-		}
-
-		fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
-		console.log(`   ✓ 备份完成: ${backupFile}`);
-		console.log(`   ✓ 备份了 ${Object.keys(backupData).length} 条数据`);
-
-		return backupFile;
-	} catch (e) {
-		console.log(`   ⚠ 备份失败: ${e.message}`);
+	if (Object.keys(backupData).length === 0) {
+		console.log(`   ℹ ${target} KV 为空，无需备份`);
 		return null;
 	}
+
+	fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
+	console.log(`   ✓ 备份完成: ${backupFile}`);
+	console.log(`   ✓ 备份了 ${Object.keys(backupData).length} 条数据`);
+
+	return backupFile;
 }
 
 // 写入 KV 数据
@@ -352,37 +246,17 @@ function applyKVData(entries, remote = false) {
 	const target = remote ? "remote" : "local";
 	console.log(`\n📝 应用数据到 ${target} KV...`);
 
-	const remoteFlag = remote ? "--remote" : "";
-	const tmpDir = path.join(process.cwd(), ".wrangler", "kv-tmp");
-	ensureDir(tmpDir);
-
 	let successCount = 0;
 	let failCount = 0;
 
 	for (const entry of entries) {
-		try {
-			// 使用临时文件写入值（避免命令行转义问题）
-			const safeKey = entry.key.replace(/[^a-zA-Z0-9_-]/g, "_");
-			const tmpFile = path.join(tmpDir, `${safeKey}.txt`);
-			fs.writeFileSync(tmpFile, entry.value);
-
-			// 使用 --path 参数读取文件内容
-			exec(`npx wrangler kv key put "${entry.key}" --path="${tmpFile}" --namespace-id=${NAMESPACE_ID} ${remoteFlag}`, true);
-			fs.unlinkSync(tmpFile);
-
+		const success = kvHelper.set(entry.key, entry.value, remote);
+		if (success) {
 			console.log(`   ✓ ${entry.key}`);
 			successCount++;
-		} catch (e) {
-			// 回退到直接写入
-			try {
-				const safeValue = entry.value.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-				exec(`npx wrangler kv key put "${entry.key}" "${safeValue}" --namespace-id=${NAMESPACE_ID} ${remoteFlag}`, true);
-				console.log(`   ✓ ${entry.key} (直接写入)`);
-				successCount++;
-			} catch (e2) {
-				console.log(`   ✗ ${entry.key} (失败)`);
-				failCount++;
-			}
+		} else {
+			console.log(`   ✗ ${entry.key} (失败)`);
+			failCount++;
 		}
 	}
 
@@ -405,7 +279,11 @@ async function applyToLocal() {
 	console.log(`\n   共 ${entries.length} 条数据待应用`);
 
 	// 3. 备份现有数据
-	backupKV(false);
+	if (process.env.SKIP_BACKUP !== "1") {
+		backupKV(false);
+	} else {
+		console.log("\n3️⃣ 跳过备份（SKIP_BACKUP=1）");
+	}
 
 	// 4. 应用数据
 	const result = applyKVData(entries, false);
@@ -437,8 +315,12 @@ async function applyToRemote() {
 	console.log(`\n   共 ${entries.length} 条数据待应用`);
 
 	// 3. 强制备份远程数据（安全考虑）
-	console.log("\n⚠️  即将覆盖远程 KV 数据，自动备份中...");
-	backupKV(true);
+	if (process.env.SKIP_BACKUP !== "1") {
+		console.log("\n⚠️  即将覆盖远程 KV 数据，自动备份中...");
+		backupKV(true);
+	} else {
+		console.log("\n3️⃣ 跳过备份（SKIP_BACKUP=1）");
+	}
 
 	// 4. 应用数据
 	const result = applyKVData(entries, true);
@@ -498,29 +380,18 @@ function detectTypeAndConvert(valueStr) {
 // 读取 KV 数据（远程或本地）
 function readKVData(remote) {
 	console.log(`   从${remote ? "远程" : "本地"} KV 读取数据...`);
-	const remoteFlag = remote ? "--remote" : "";
+	const keys = kvHelper.listKeys(remote);
+	console.log(`   找到 ${keys.length} 个 keys`);
+
 	const data = {};
-
-	try {
-		const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID} ${remoteFlag}`, true);
-		if (keysOutput) {
-			const keys = JSON.parse(keysOutput);
-			console.log(`   找到 ${keys.length} 个 keys`);
-
-			for (const key of keys) {
-				try {
-					const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} ${remoteFlag} --text`, true);
-					if (value !== null) {
-						data[key.name] = value.trim();
-						console.log(`   ✓ ${key.name}`);
-					}
-				} catch (e) {
-					console.log(`   ✗ ${key.name} (读取失败)`);
-				}
-			}
+	for (const key of keys) {
+		const value = kvHelper.get(key.name, remote);
+		if (value !== null) {
+			data[key.name] = value.trim();
+			console.log(`   ✓ ${key.name}`);
+		} else {
+			console.log(`   ✗ ${key.name} (读取失败)`);
 		}
-	} catch (e) {
-		console.log(`   ⚠ 读取失败: ${e.message}`);
 	}
 
 	return data;
@@ -546,7 +417,16 @@ async function toSchema(remote = false) {
 	const schemaData = {
 		_comment: "KV 存储数据定义文件 - 类似于 D1 的 schema.sql",
 		_version: "1.0.0",
-		_updated_at: new Date().toISOString(),
+		_updated_at: (() => {
+			const now = new Date();
+			const year = now.getFullYear();
+			const month = String(now.getMonth() + 1).padStart(2, "0");
+			const day = String(now.getDate()).padStart(2, "0");
+			const hours = String(now.getHours()).padStart(2, "0");
+			const minutes = String(now.getMinutes()).padStart(2, "0");
+			const seconds = String(now.getSeconds()).padStart(2, "0");
+			return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+		})(),
 		namespaces: {
 			frontend: {
 				_comment: "前端页面配置数据",
@@ -578,15 +458,19 @@ async function toSchema(remote = false) {
 	console.log(`\n   数据统计: json=${jsonCount}, text=${textCount}, base64=${base64Count}`);
 
 	// 3. 备份现有 schema 文件
-	console.log(`\n3️⃣ 备份现有 schema 文件...`);
-	if (fs.existsSync(SCHEMA_FILE)) {
-		const backupDir = path.join(process.cwd(), "sql", ".backup", "kv-schema");
-		ensureDir(backupDir);
-		const backupFile = path.join(backupDir, `kv-schema-${timestamp()}.json`);
-		fs.copyFileSync(SCHEMA_FILE, backupFile);
-		console.log(`   ✓ 已备份到: ${backupFile}`);
+	if (process.env.SKIP_BACKUP !== "1") {
+		console.log(`\n3️⃣ 备份现有 schema 文件...`);
+		if (fs.existsSync(SCHEMA_FILE)) {
+			const backupDir = path.join(process.cwd(), "sql", ".backup", "kv-schema");
+			ensureDir(backupDir);
+			const backupFile = path.join(backupDir, `kv-schema-${timestamp()}.json`);
+			fs.copyFileSync(SCHEMA_FILE, backupFile);
+			console.log(`   ✓ 已备份到: ${backupFile}`);
+		} else {
+			console.log("   ℹ schema 文件不存在，跳过备份");
+		}
 	} else {
-		console.log("   ℹ schema 文件不存在，跳过备份");
+		console.log(`\n3️⃣ 跳过备份（SKIP_BACKUP=1）`);
 	}
 
 	// 4. 写入新的 schema 文件

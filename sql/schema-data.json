@@ -1,7 +1,7 @@
 {
   "_comment": "D1 数据库初始数据定义文件 - 类似于 KV 的 kv-schema.json",
   "_version": "1.0.0",
-  "_updated_at": "2026-01-20T12:47:37.144Z",
+  "_updated_at": "2026-01-20T13:26:48.332Z",
   "_description": "此文件定义 D1 数据库的初始数据，支持双向同步：远程/本地 ↔ schema-data.json",
   "tables": {
     "sys_user": {

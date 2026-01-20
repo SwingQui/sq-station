@@ -113,7 +113,8 @@ async function mainLoop() {
 		if (selectedItem.cmd) {
 			console.log(`\n📋 ${selectedItem.desc || selectedItem.name}`);
 
-			const confirmed = await inquirer.prompt([
+			// 先确认是否执行
+			const confirm = await inquirer.prompt([
 				{
 					type: "confirm",
 					name: "confirm",
@@ -122,13 +123,50 @@ async function mainLoop() {
 				}
 			]);
 
-			if (confirmed.confirm) {
-				const success = executeCommand(selectedItem.cmd);
-				if (success) {
-					console.log("\n✅ 执行成功！");
-				}
-			} else {
+			if (!confirm.confirm) {
 				console.log("\n⏭️  已取消");
+				await inquirer.prompt([
+					{ type: "input", name: "continue", message: "按回车继续..." }
+				]);
+				continue;
+			}
+
+			// 再确认是否跳过备份
+			const skipBackupAnswer = await inquirer.prompt([
+				{
+					type: "confirm",
+					name: "skipBackup",
+					message: "跳过备份？(默认: N)",
+					default: false
+				}
+			]);
+
+			const skipBackup = skipBackupAnswer.skipBackup;
+
+			// 设置环境变量
+			const execOptions = {
+				stdio: "inherit",
+				stderr: "inherit",
+				cwd: process.cwd(),
+				shell: true,
+				env: {
+					...process.env,
+					SKIP_BACKUP: skipBackup ? "1" : "0"
+				}
+			};
+
+			console.log("\n" + "▶".repeat(25));
+			console.log(`执行: ${selectedItem.cmd}`);
+			if (skipBackup) {
+				console.log("⚠️  跳过备份模式");
+			}
+			console.log("▶".repeat(25) + "\n");
+
+			try {
+				execSync(selectedItem.cmd, execOptions);
+				console.log("\n✅ 执行成功！");
+			} catch (e) {
+				console.log(`\n❌ 执行失败: ${e.message}`);
 			}
 
 			// 等待用户确认继续

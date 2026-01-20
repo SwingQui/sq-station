@@ -7,6 +7,10 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+// 引入共享模块
+const { ensureDir, timestamp } = require("./shared/utils.cjs");
+const { D1Helper, parseD1Result } = require("./shared/wrangler.cjs");
+
 const DB_NAME = "sq_station";
 const TABLES = [
 	"sys_user",
@@ -22,9 +26,10 @@ const TABLES = [
 const BACKUP_DIR = path.join(__dirname, "../sql/.backup/d1");
 
 // 确保备份目录存在
-if (!fs.existsSync(BACKUP_DIR)) {
-	fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
+ensureDir(BACKUP_DIR);
+
+// 创建 D1 helper 实例
+const d1Helper = new D1Helper(DB_NAME);
 
 /**
  * 执行 SQL 命令
@@ -59,27 +64,7 @@ function executeSQL(command, remote = true, silent = false) {
  * @param {boolean} remote - 是否远程
  */
 function queryTable(table, remote = true) {
-	const remoteFlag = remote ? "--remote" : "--local";
-	try {
-		const result = execSync(
-			`wrangler d1 execute ${DB_NAME} ${remoteFlag} --command="SELECT * FROM ${table}" --json`,
-			{ encoding: "utf-8" }
-		);
-		// 解析 JSON 结果 (查找完整 JSON 数组)
-		const jsonStart = result.indexOf('[');
-		const jsonEnd = result.lastIndexOf(']');
-		if (jsonStart >= 0 && jsonEnd > jsonStart) {
-			const jsonStr = result.substring(jsonStart, jsonEnd + 1);
-			const data = JSON.parse(jsonStr);
-			if (data && data[0] && data[0].results) {
-				return data[0].results;
-			}
-		}
-		return [];
-	} catch (e) {
-		// 表可能不存在或为空
-		return [];
-	}
+	return d1Helper.query(table, remote);
 }
 
 /**
@@ -88,26 +73,7 @@ function queryTable(table, remote = true) {
  * @param {boolean} remote - 是否远程
  */
 function getTableSchema(table, remote = true) {
-	const remoteFlag = remote ? "--remote" : "--local";
-	try {
-		const result = execSync(
-			`wrangler d1 execute ${DB_NAME} ${remoteFlag} --command="PRAGMA table_info(${table})" --json`,
-			{ encoding: "utf-8" }
-		);
-		const jsonStart = result.indexOf('[');
-		const jsonEnd = result.lastIndexOf(']');
-		if (jsonStart >= 0 && jsonEnd > jsonStart) {
-			const jsonStr = result.substring(jsonStart, jsonEnd + 1);
-			const data = JSON.parse(jsonStr);
-			if (data && data[0] && data[0].results) {
-				return data[0].results;
-			}
-		}
-		return [];
-	} catch (e) {
-		// 表可能不存在，返回空数组
-		return [];
-	}
+	return d1Helper.getTableSchema(table, remote);
 }
 
 /**
@@ -147,8 +113,7 @@ function backupData(remote = true) {
 	const source = remote ? "remote" : "local";
 	console.log(`\n📦 备份 ${source} 数据...`);
 
-	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
-	const backupFile = path.join(BACKUP_DIR, `${source}-${timestamp}.sql`);
+	const backupFile = path.join(BACKUP_DIR, `${source}-${timestamp()}.sql`);
 
 	const statements = [`-- Backup from ${source} at ${new Date().toISOString()}`, ""];
 
@@ -206,8 +171,12 @@ function exportToRemote() {
 	console.log("\n🚀 导出本地数据到远程...");
 
 	// 1. 备份远程数据
-	console.log("\n⚠️  将要覆盖远程数据，确保已备份！");
-	backupData(true);
+	if (process.env.SKIP_BACKUP !== "1") {
+		console.log("\n⚠️  将要覆盖远程数据，确保已备份！");
+		backupData(true);
+	} else {
+		console.log("\n⚠️  跳过备份（SKIP_BACKUP=1）");
+	}
 
 	// 2. 导出本地数据
 	const localBackup = backupData(false);
@@ -249,8 +218,7 @@ function exportToLocal() {
 
 	// 2. 直接从远程导出数据到本地（不备份）
 	console.log("\n📥 从远程导入数据到本地...");
-	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, -5);
-	const tempFile = path.join(BACKUP_DIR, `temp-remote-${timestamp}.sql`);
+	const tempFile = path.join(BACKUP_DIR, `temp-remote-${timestamp()}.sql`);
 
 	const statements = [];
 	for (const table of TABLES) {
@@ -292,16 +260,22 @@ switch (command) {
 		// Schema 迁移（自动备份）
 		console.log("\n🔄 D1 Schema 迁移\n");
 		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-		console.log("1️⃣ 备份目标数据");
-		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
 		// 检测是远程还是本地迁移
 		const isRemote = process.argv.includes("--remote");
 
-		try {
-			backupData(isRemote);
-		} catch (e) {
-			console.log("⚠️  备份失败（可能目标为空），继续迁移...\n");
+		// 检查是否跳过备份
+		if (process.env.SKIP_BACKUP !== "1") {
+			console.log("1️⃣ 备份目标数据");
+			console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+			try {
+				backupData(isRemote);
+			} catch (e) {
+				console.log("⚠️  备份失败（可能目标为空），继续迁移...\n");
+			}
+		} else {
+			console.log("1️⃣ 跳过备份（SKIP_BACKUP=1）");
+			console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 		}
 
 		console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

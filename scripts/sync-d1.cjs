@@ -19,7 +19,7 @@ const TABLES = [
 	"sys_org_permission",
 	"sys_user_permission",
 ];
-const BACKUP_DIR = path.join(__dirname, "../.wrangler/d1-backup");
+const BACKUP_DIR = path.join(__dirname, "../sql/.backup/d1");
 
 // 确保备份目录存在
 if (!fs.existsSync(BACKUP_DIR)) {
@@ -233,7 +233,7 @@ function exportToLocal() {
 	// 1. 创建表结构
 	console.log("\n🔧 创建本地表结构...");
 	try {
-		const schemaFile = path.join(process.cwd(), "schema.sql");
+		const schemaFile = path.join(process.cwd(), "sql", "schema.sql");
 		if (fs.existsSync(schemaFile)) {
 			execSync(
 				`wrangler d1 execute ${DB_NAME} --local --file="${schemaFile}"`,
@@ -308,7 +308,7 @@ switch (command) {
 		console.log("2️⃣ 应用 schema.sql");
 		console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
-		const schemaFile = path.join(process.cwd(), "schema.sql");
+		const schemaFile = path.join(process.cwd(), "sql", "schema.sql");
 		if (!fs.existsSync(schemaFile)) {
 			console.error("❌ schema.sql 不存在");
 			process.exit(1);

@@ -1,8 +1,7 @@
 {
   "_comment": "KV 存储数据定义文件 - 类似于 D1 的 schema.sql",
   "_version": "1.0.0",
-  "_updated_at": "2026-01-10T13:00:00Z",
-
+  "_updated_at": "2026-01-20T12:46:29.839Z",
   "namespaces": {
     "frontend": {
       "_comment": "前端页面配置数据",
@@ -11,7 +10,7 @@
           "value": {
             "游戏": {
               "desc": "游戏相关内容",
-              "order": 1,
+              "order": 3,
               "items": [
                 {
                   "content": "onlinefix中文站",
@@ -47,7 +46,7 @@
             },
             "程序环境类": {
               "desc": "用来配置电脑环境 如Java等环境",
-              "order": 3,
+              "order": 4,
               "items": [
                 {
                   "content": "Java环境配置",
@@ -69,7 +68,7 @@
             },
             "工具栏": {
               "desc": "常用的各种工具",
-              "order": 4,
+              "order": 1,
               "items": [
                 {
                   "content": "KDown解析",
@@ -80,12 +79,12 @@
                   "orderM": 1
                 },
                 {
-                  "content": "机场",
+                  "content": "机场-赔钱机场",
                   "summary": "机场服务",
-                  "url": "https://xn--cp3a08l.com/",
                   "desc": "机场",
-                  "newWindow": true,
-                  "orderM": 2
+                  "url": "https://xn--cp3a08l.com/",
+                  "orderM": 2,
+                  "newWindow": true
                 },
                 {
                   "content": "免费去水印，处理文件格式",
@@ -94,26 +93,36 @@
                   "desc": "一个用来免费去除水印，处理文件格式的网页",
                   "newWindow": true,
                   "orderM": 3
-                }
-              ]
-            },
-            "测试": {
-              "desc": "",
-              "order": 5,
-              "items": [
+                },
                 {
-                  "content": "测试",
-                  "summary": "测试项",
-                  "url": "",
-                  "desc": "测试用",
-                  "newWindow": true,
-                  "orderM": 1
+                  "content": "Anki",
+                  "summary": "碎片化背单词软件官网",
+                  "desc": "一个提供碎片化背单词的软件",
+                  "url": "https://apps.ankiweb.net/",
+                  "orderM": 4,
+                  "newWindow": true
+                },
+                {
+                  "content": "md转换",
+                  "summary": "md文件转换成其他格式",
+                  "desc": "一个可以将md文件转换称其他格式的在线网站",
+                  "url": "https://mdtoword.org/zh",
+                  "orderM": 5,
+                  "newWindow": true
+                },
+                {
+                  "content": "下次一定综合站点",
+                  "summary": "一个提供多方面便利的站",
+                  "desc": "包括影视娱乐开发等多方面网页站点",
+                  "url": "https://www.iiice.cn/",
+                  "orderM": 6,
+                  "newWindow": true
                 }
               ]
             }
           },
           "type": "json",
-          "description": "首页书签导航配置"
+          "description": "从远程同步于 2026/1/20 20:46:29"
         }
       }
     }

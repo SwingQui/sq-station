@@ -3,15 +3,16 @@
 // export: 从本地导出到远程，导出前先备份
 // apply: 从 kv-schema.json 应用到本地/远程 KV
 // validate: 验证 kv-schema.json 文件格式
+// to-schema: 从远程/本地 KV 同步到 kv-schema.json
 
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const NAMESPACE_ID = "0db26ad794b242aea90aa08281a7dfa2";
-const BACKUP_DIR = path.join(process.cwd(), ".wrangler", "kv-backup");
+const BACKUP_DIR = path.join(process.cwd(), "sql", ".backup", "kv");
 const CACHE_FILE = path.join(process.cwd(), ".wrangler", "kv-cache.json");
-const SCHEMA_FILE = path.join(process.cwd(), "kv-schema.json");
+const SCHEMA_FILE = path.join(process.cwd(), "sql", "kv-schema.json");
 
 function exec(cmd, silent = false) {
 	try {
@@ -471,6 +472,133 @@ async function validateSchema() {
 	console.log();
 }
 
+// ==================== KV 到 Schema 反向同步功能 ====================
+
+// 检测数据类型并转换
+function detectTypeAndConvert(valueStr) {
+	// 1. 尝试解析为 JSON
+	try {
+		const parsed = JSON.parse(valueStr);
+		if (typeof parsed === "object" && parsed !== null) {
+			return { value: parsed, type: "json" };
+		}
+	} catch (e) {
+		// 不是 JSON，继续检查
+	}
+
+	// 2. 检测是否包含非 ASCII 字符（可能是二进制/base64）
+	if (/[^\x00-\x7F]/.test(valueStr)) {
+		return { value: valueStr, type: "base64" };
+	}
+
+	// 3. 默认为文本
+	return { value: valueStr, type: "text" };
+}
+
+// 读取 KV 数据（远程或本地）
+function readKVData(remote) {
+	console.log(`   从${remote ? "远程" : "本地"} KV 读取数据...`);
+	const remoteFlag = remote ? "--remote" : "";
+	const data = {};
+
+	try {
+		const keysOutput = exec(`npx wrangler kv key list --namespace-id=${NAMESPACE_ID} ${remoteFlag}`, true);
+		if (keysOutput) {
+			const keys = JSON.parse(keysOutput);
+			console.log(`   找到 ${keys.length} 个 keys`);
+
+			for (const key of keys) {
+				try {
+					const value = exec(`npx wrangler kv key get "${key.name}" --namespace-id=${NAMESPACE_ID} ${remoteFlag} --text`, true);
+					if (value !== null) {
+						data[key.name] = value.trim();
+						console.log(`   ✓ ${key.name}`);
+					}
+				} catch (e) {
+					console.log(`   ✗ ${key.name} (读取失败)`);
+				}
+			}
+		}
+	} catch (e) {
+		console.log(`   ⚠ 读取失败: ${e.message}`);
+	}
+
+	return data;
+}
+
+// 从 KV 同步到 Schema（远程或本地）
+async function toSchema(remote = false) {
+	const target = remote ? "远程" : "本地";
+	console.log(`\n🔄 从${target} KV 同步到 kv-schema.json...\n`);
+	console.log("=".repeat(60));
+
+	// 1. 读取 KV 数据
+	console.log(`\n1️⃣ 读取${target} KV 数据...`);
+	const kvData = readKVData(remote);
+
+	if (Object.keys(kvData).length === 0) {
+		console.log(`\n❌ ${target} KV 没有数据\n`);
+		return;
+	}
+
+	// 2. 转换为 Schema 格式
+	console.log(`\n2️⃣ 转换数据格式...`);
+	const schemaData = {
+		_comment: "KV 存储数据定义文件 - 类似于 D1 的 schema.sql",
+		_version: "1.0.0",
+		_updated_at: new Date().toISOString(),
+		namespaces: {
+			frontend: {
+				_comment: "前端页面配置数据",
+				data: {}
+			}
+		}
+	};
+
+	let jsonCount = 0;
+	let textCount = 0;
+	let base64Count = 0;
+
+	for (const [key, valueStr] of Object.entries(kvData)) {
+		const { value, type } = detectTypeAndConvert(valueStr);
+
+		schemaData.namespaces.frontend.data[key] = {
+			value: value,
+			type: type,
+			description: `从${target}同步于 ${new Date().toLocaleString("zh-CN")}`
+		};
+
+		if (type === "json") jsonCount++;
+		else if (type === "base64") base64Count++;
+		else textCount++;
+
+		console.log(`   • ${key}: ${type}`);
+	}
+
+	console.log(`\n   数据统计: json=${jsonCount}, text=${textCount}, base64=${base64Count}`);
+
+	// 3. 备份现有 schema 文件
+	console.log(`\n3️⃣ 备份现有 schema 文件...`);
+	if (fs.existsSync(SCHEMA_FILE)) {
+		const backupDir = path.join(process.cwd(), "sql", ".backup", "kv-schema");
+		ensureDir(backupDir);
+		const backupFile = path.join(backupDir, `kv-schema-${timestamp()}.json`);
+		fs.copyFileSync(SCHEMA_FILE, backupFile);
+		console.log(`   ✓ 已备份到: ${backupFile}`);
+	} else {
+		console.log("   ℹ schema 文件不存在，跳过备份");
+	}
+
+	// 4. 写入新的 schema 文件
+	console.log(`\n4️⃣ 更新 kv-schema.json...`);
+	fs.writeFileSync(SCHEMA_FILE, JSON.stringify(schemaData, null, 2));
+	console.log(`   ✓ 已更新: ${SCHEMA_FILE}`);
+
+	console.log("\n" + "=".repeat(60));
+	console.log(`✅ 从${target} KV 同步到 Schema 完成！`);
+	console.log(`   同步了 ${Object.keys(kvData).length} 条数据\n`);
+}
+
 
 const command = process.argv[2];
 const subCommand = process.argv[3];
@@ -488,6 +616,15 @@ if (command === "import") {
 	}
 } else if (command === "validate") {
 	validateSchema();
+} else if (command === "to-schema") {
+	// to-schema 命令
+	if (subCommand === "remote") {
+		toSchema(true);
+	} else if (subCommand === "local") {
+		toSchema(false);
+	} else {
+		console.log("用法: node scripts/sync-kv.cjs to-schema [remote|local]");
+	}
 } else {
 	console.log("KV 同步脚本");
 	console.log("");
@@ -495,10 +632,14 @@ if (command === "import") {
 	console.log("  node scripts/sync-kv.cjs import        # 从远程导入到本地");
 	console.log("  node scripts/sync-kv.cjs export        # 从本地导出到远程（会先备份）");
 	console.log("");
-	console.log("Schema 迁移:");
+		console.log("Schema 迁移:");
 	console.log("  node scripts/sync-kv.cjs migrate        # 应用 schema 到远程 KV（自动备份）");
-	console.log("  node scripts/sync-kv.cjs migrate local   # 应用 schema 到本地 KV（自动备份）");
+		console.log("  node scripts/sync-kv.cjs migrate local   # 应用 schema 到本地 KV（自动备份）");
 	console.log("");
-	console.log("Schema 验证:");
+		console.log("Schema 反向同步:");
+	console.log("  node scripts/sync-kv.cjs to-schema remote   # 从远程 KV 同步到 kv-schema.json");
+		console.log("  node scripts/sync-kv.cjs to-schema local    # 从本地 KV 同步到 kv-schema.json");
+	console.log("");
+		console.log("Schema 验证:");
 	console.log("  node scripts/sync-kv.cjs validate      # 验证 schema 文件格式");
 }

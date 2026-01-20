@@ -5,6 +5,7 @@
 
 import { handleError } from "../error-handler";
 import { getMenus as getMenusFromStorage } from "./storage";
+import { getPermissionsConfig } from "@/api/config";
 
 const PERMISSION_META_KEY = "permission_meta";
 
@@ -35,7 +36,7 @@ export function getMenus(): any[] {
 }
 
 /**
- * 权限元数据接口
+ * 权限元数据接口（兼容旧代码）
  */
 export interface PermissionMeta {
 	name: string;
@@ -43,6 +44,9 @@ export interface PermissionMeta {
 	description?: string;
 }
 
+/**
+ * 权限配置（兼容旧代码）
+ */
 export interface PermissionConfig {
 	permissions: Record<string, PermissionMeta>;
 	groups: Record<string, string[]>;
@@ -55,17 +59,39 @@ export interface PermissionConfig {
  */
 export async function fetchPermissionMeta(): Promise<PermissionConfig | null> {
 	try {
-		const response = await fetch("/api/config/permissions");
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-		}
-		const result = await response.json();
-		if (result.code === 200 && result.data) {
-			// 缓存到 localStorage
-			localStorage.setItem(PERMISSION_META_KEY, JSON.stringify(result.data));
-			return result.data;
-		}
-		throw new Error(result.msg || "获取权限配置失败");
+		const data = await getPermissionsConfig();
+
+		// 转换为旧代码期望的格式
+		const transformedData: PermissionConfig = {
+			permissions: {},
+			groups: {},
+			version: data.version,
+		};
+
+		// 转换 permissions 数组为对象（以 key 为索引）
+		data.permissions.forEach((p) => {
+			transformedData.permissions[p.key] = {
+				name: p.name,
+				module: "", // 暂时为空，下面会填充
+				description: p.description,
+			};
+		});
+
+		// 转换 groups 并填充 module 信息
+		data.groups.forEach((g) => {
+			transformedData.groups[g.name] = g.permissions.map((p) => p.key);
+
+			// 填充 module 信息
+			g.permissions.forEach((p) => {
+				if (transformedData.permissions[p.key]) {
+					transformedData.permissions[p.key].module = g.name;
+				}
+			});
+		});
+
+		// 缓存到 localStorage
+		localStorage.setItem(PERMISSION_META_KEY, JSON.stringify(transformedData));
+		return transformedData;
 	} catch (error) {
 		handleError(error, "获取权限配置失败");
 		return null;

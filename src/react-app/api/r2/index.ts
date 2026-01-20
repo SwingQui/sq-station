@@ -1,9 +1,12 @@
 /**
  * R2 对象存储 API
  * 路径前缀: /api/r2
+  *
+ * 架构分层：
+ * 组件 → 二次封装 (本文件) → 一次封装 (api/index.ts) → 底层 (utils/core/request)
  */
 
-import { apiRequest } from "../../utils/core/request";
+import { request } from "@/api";
 import { getToken } from "../../utils/auth";
 
 export interface R2Object {
@@ -60,14 +63,14 @@ export async function getR2List(limit = 100, cursor?: string, prefix?: string): 
 	if (prefix) params.set("prefix", prefix);
 
 	const query = params.toString();
-	return await apiRequest<R2ListResult>("GET", `/api/r2${query ? `?${query}` : ""}`);
+	return await request<R2ListResult>("GET", `/api/r2${query ? `?${query}` : ""}`);
 }
 
 /**
  * 获取对象元数据
  */
 export async function getR2Metadata(key: string): Promise<R2Metadata> {
-	return await apiRequest<R2Metadata>("GET", `/api/r2/${encodeURIComponent(key)}/metadata`);
+	return await request<R2Metadata>("GET", `/api/r2/${encodeURIComponent(key)}/metadata`);
 }
 
 /**
@@ -77,7 +80,7 @@ export async function uploadR2Value(key: string, value: string, options?: {
 	httpMetadata?: { contentType?: string };
 	customMetadata?: Record<string, string>;
 }): Promise<R2UploadResult> {
-	return await apiRequest<R2UploadResult>("PUT", `/api/r2/${encodeURIComponent(key)}`, {
+	return await request<R2UploadResult>("PUT", `/api/r2/${encodeURIComponent(key)}`, {
 		value,
 		...options,
 	});
@@ -128,14 +131,14 @@ export async function uploadR2File(key: string, file: File): Promise<R2UploadRes
  * 删除对象
  */
 export async function deleteR2Object(key: string): Promise<void> {
-	return await apiRequest("DELETE", `/api/r2/${encodeURIComponent(key)}`);
+	return await request("DELETE", `/api/r2/${encodeURIComponent(key)}`);
 }
 
 /**
  * 批量删除对象
  */
 export async function batchDeleteR2Objects(keys: string[]): Promise<void> {
-	return await apiRequest("POST", "/api/r2/delete", { keys });
+	return await request("POST", "/api/r2/delete", { keys });
 }
 
 /**
@@ -189,19 +192,19 @@ export interface R2FolderResult {
  */
 export async function getR2Folders(prefix?: string): Promise<R2FolderResult> {
 	const params = prefix ? `?prefix=${encodeURIComponent(prefix)}` : "";
-	return await apiRequest<R2FolderResult>("GET", `/api/r2/folders${params}`);
+	return await request<R2FolderResult>("GET", `/api/r2/folders${params}`);
 }
 
 /**
  * 创建文件夹
  */
 export async function createR2Folder(path: string): Promise<{ path: string }> {
-	return await apiRequest<{ path: string }>("PUT", `/api/r2/folder/${encodeURIComponent(path)}`);
+	return await request<{ path: string }>("PUT", `/api/r2/folder/${encodeURIComponent(path)}`);
 }
 
 /**
  * 删除文件夹（递归删除所有内容）
  */
 export async function deleteR2Folder(path: string): Promise<{ path: string; deletedCount: number }> {
-	return await apiRequest<{ path: string; deletedCount: number }>("DELETE", `/api/r2/folder/${encodeURIComponent(path)}`);
+	return await request<{ path: string; deletedCount: number }>("DELETE", `/api/r2/folder/${encodeURIComponent(path)}`);
 }

@@ -9,7 +9,7 @@ import { APP } from "@/config/app.config";
 import PageHeader from "../shared/PageHeader";
 import ContentGrid from "../shared/ContentGrid";
 import FloatingBall from "../shared/FloatingBall";
-import { get } from "@/utils/core/request";
+import { getBookmarksConfig } from "@api/bookmarks";
 
 export default function BookmarksPage({
 	styles: customStyles,
@@ -30,7 +30,7 @@ export default function BookmarksPage({
 		try {
 			setLoading(true);
 			// 从 API 获取 Bookmarks 配置
-			const data = await get<Record<string, any>>("/api/frontend/bookmarks/config");
+			const data = await getBookmarksConfig();
 			setConfig(data || {});
 		} catch (error) {
 			console.error("加载 Bookmarks 配置失败:", error);

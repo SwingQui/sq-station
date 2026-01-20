@@ -50,7 +50,7 @@ try {
 
 // 备份 KV（通过 wrangler 备份）
 console.log("\n📦 备份本地 KV 数据...");
-const kvBackupDir = path.join(process.cwd(), ".wrangler", "kv-backup");
+const kvBackupDir = path.join(process.cwd(), "sql", ".backup", "kv");
 if (!fs.existsSync(kvBackupDir)) {
 	fs.mkdirSync(kvBackupDir, { recursive: true });
 }
@@ -142,6 +142,6 @@ console.log("\n━━━━━━━━━━━━━━━━━━━━━�
 console.log("✨ 数据同步完成");
 console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 console.log("\n📁 备份位置:");
-console.log(`   D1: ${path.join(process.cwd(), ".wrangler", "d1-backup")}`);
+console.log(`   D1: ${path.join(process.cwd(), "sql", ".backup", "d1")}`);
 console.log(`   KV: ${kvBackupFile}`);
 console.log();

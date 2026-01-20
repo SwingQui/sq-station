@@ -1,9 +1,12 @@
 /**
  * 配置相关 API
  * 路径前缀: /api/config
+  *
+ * 架构分层：
+ * 组件 → 二次封装 (本文件) → 一次封装 (api/index.ts) → 底层 (utils/core/request)
  */
 
-import { apiRequest } from "../../utils/core/request";
+import { request } from "@/api";
 
 /**
  * 权限元数据接口
@@ -35,12 +38,12 @@ export interface PermissionsConfig {
  * 获取权限元数据
  */
 export async function getPermissionsConfig(): Promise<PermissionsConfig> {
-	return await apiRequest<PermissionsConfig>("GET", "/api/config/permissions");
+	return await request<PermissionsConfig>("GET", "/api/config/permissions");
 }
 
 /**
  * 获取权限常量映射
  */
 export async function getPermissionConstants(): Promise<{ constants: Record<string, string> }> {
-	return await apiRequest<{ constants: Record<string, string> }>("GET", "/api/config/permissions/constants");
+	return await request<{ constants: Record<string, string> }>("GET", "/api/config/permissions/constants");
 }

@@ -21,6 +21,7 @@
 			"@/*": ["./src/react-app/*"],
 			"@components/*": ["./src/react-app/components/*"],
 			"@pages/*": ["./src/react-app/pages/*"],
+			"@api": ["./src/react-app/api/index.ts"],
 			"@api/*": ["./src/react-app/api/*"],
 			"@utils/*": ["./src/react-app/utils/*"],
 			"@types": ["./src/react-app/types"]

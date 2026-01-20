@@ -1,9 +1,12 @@
 /**
  * OAuth 客户端管理 API
  * 路径前缀: /api/oauth
+  *
+ * 架构分层：
+ * 组件 → 二次封装 (本文件) → 一次封装 (api/index.ts) → 底层 (utils/core/request)
  */
 
-import { apiRequest } from "../../utils/core/request";
+import { request } from "@/api";
 
 /**
  * OAuth 客户端类型
@@ -48,33 +51,33 @@ export interface UpdateOAuthClientDto {
  * 获取客户端列表
  */
 export async function getOAuthClients(): Promise<OAuthClient[]> {
-	return await apiRequest<OAuthClient[]>("GET", "/api/oauth/clients");
+	return await request<OAuthClient[]>("GET", "/api/oauth/clients");
 }
 
 /**
  * 创建客户端
  */
 export async function createOAuthClient(data: CreateOAuthClientDto): Promise<OAuthClient> {
-	return await apiRequest<OAuthClient>("POST", "/api/oauth/clients", data);
+	return await request<OAuthClient>("POST", "/api/oauth/clients", data);
 }
 
 /**
  * 更新客户端
  */
 export async function updateOAuthClient(id: number, data: UpdateOAuthClientDto): Promise<void> {
-	return await apiRequest("PUT", `/api/oauth/clients/${id}`, data);
+	return await request("PUT", `/api/oauth/clients/${id}`, data);
 }
 
 /**
  * 删除客户端
  */
 export async function deleteOAuthClient(id: number): Promise<void> {
-	return await apiRequest("DELETE", `/api/oauth/clients/${id}`);
+	return await request("DELETE", `/api/oauth/clients/${id}`);
 }
 
 /**
  * 重置客户端密钥
  */
 export async function resetOAuthClientSecret(id: number): Promise<{ client_secret: string }> {
-	return await apiRequest<{ client_secret: string }>("POST", `/api/oauth/clients/${id}/reset-secret`);
+	return await request<{ client_secret: string }>("POST", `/api/oauth/clients/${id}/reset-secret`);
 }

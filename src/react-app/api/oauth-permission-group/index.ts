@@ -1,9 +1,12 @@
 /**
  * OAuth 权限组相关 API
  * 路径前缀: /api/oauth/permission-groups
+  *
+ * 架构分层：
+ * 组件 → 二次封装 (本文件) → 一次封装 (api/index.ts) → 底层 (utils/core/request)
  */
 
-import { apiRequest } from "../../utils/core/request";
+import { request } from "@/api";
 
 /**
  * OAuth 权限组类型
@@ -48,33 +51,33 @@ export interface UpdatePermissionGroupDto {
  * 获取权限组列表
  */
 export async function getPermissionGroups(): Promise<OAuthPermissionGroup[]> {
-	return await apiRequest<OAuthPermissionGroup[]>("GET", "/api/oauth/permission-groups");
+	return await request<OAuthPermissionGroup[]>("GET", "/api/oauth/permission-groups");
 }
 
 /**
  * 获取单个权限组
  */
 export async function getPermissionGroup(id: number): Promise<OAuthPermissionGroup> {
-	return await apiRequest<OAuthPermissionGroup>("GET", `/api/oauth/permission-groups/${id}`);
+	return await request<OAuthPermissionGroup>("GET", `/api/oauth/permission-groups/${id}`);
 }
 
 /**
  * 创建权限组
  */
 export async function createPermissionGroup(data: CreatePermissionGroupDto): Promise<{ id: number }> {
-	return await apiRequest<{ id: number }>("POST", "/api/oauth/permission-groups", data);
+	return await request<{ id: number }>("POST", "/api/oauth/permission-groups", data);
 }
 
 /**
  * 更新权限组
  */
 export async function updatePermissionGroup(id: number, data: UpdatePermissionGroupDto): Promise<void> {
-	return await apiRequest("PUT", `/api/oauth/permission-groups/${id}`, data);
+	return await request("PUT", `/api/oauth/permission-groups/${id}`, data);
 }
 
 /**
  * 删除权限组
  */
 export async function deletePermissionGroup(id: number): Promise<void> {
-	return await apiRequest("DELETE", `/api/oauth/permission-groups/${id}`);
+	return await request("DELETE", `/api/oauth/permission-groups/${id}`);
 }

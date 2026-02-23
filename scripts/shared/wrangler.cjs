@@ -3,6 +3,7 @@
  */
 
 const { execSync } = require("child_process");
+const path = require("path");
 
 /**
  * 执行命令（静默模式）

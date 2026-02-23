@@ -5,6 +5,29 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+// 加载 .dev.vars 环境变量
+function loadEnvVars() {
+	const devVarsPath = path.join(process.cwd(), ".dev.vars");
+	try {
+		if (fs.existsSync(devVarsPath)) {
+			const content = fs.readFileSync(devVarsPath, "utf-8");
+			for (const line of content.split("\n")) {
+				const trimmed = line.trim();
+				if (!trimmed || trimmed.startsWith("#")) continue;
+				const [key, ...valueParts] = trimmed.split("=");
+				if (key && valueParts.length > 0) {
+					process.env[key.trim()] = valueParts.join("=").trim();
+				}
+			}
+		}
+	} catch (e) {
+		console.warn("⚠️  加载 .dev.vars 失败:", e.message);
+	}
+}
+
+// 在执行任何操作前加载环境变量
+loadEnvVars();
+
 console.log("🚀 启动本地开发环境\n");
 
 // 1. 先同步远程 KV 到本地

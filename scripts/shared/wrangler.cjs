@@ -73,7 +73,7 @@ class D1Helper {
 	 */
 	execute(sql, remote = true) {
 		const remoteFlag = remote ? "--remote" : "--local";
-		const result = exec(`wrangler d1 execute ${this.dbName} ${remoteFlag} --command="${sql}" --json`);
+		const result = exec(`npx wrangler d1 execute ${this.dbName} ${remoteFlag} --command="${sql}" --json`);
 		return parseD1Result(result);
 	}
 
@@ -88,7 +88,7 @@ class D1Helper {
 		const remoteFlag = remote ? "--remote" : "--local";
 		const stdio = showOutput ? "inherit" : ["ignore", "pipe", "pipe"];
 		try {
-			execSync(`wrangler d1 execute ${this.dbName} ${remoteFlag} --file="${sqlFile}"`, {
+			execSync(`npx wrangler d1 execute ${this.dbName} ${remoteFlag} --file="${sqlFile}"`, {
 				encoding: "utf-8",
 				stdio
 			});
@@ -116,6 +116,17 @@ class D1Helper {
 	 */
 	getTableSchema(table, remote = true) {
 		return this.execute(`PRAGMA table_info(${table})`, remote);
+	}
+
+	/**
+	 * 获取所有表名（排除系统表和 Cloudflare 内部表）
+	 * @param {boolean} remote - 是否远程
+	 * @returns {Array<string>} 表名列表
+	 */
+	getAllTables(remote = true) {
+		const sql = `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name`;
+		const result = this.execute(sql, remote);
+		return result ? result.map(row => row.name) : [];
 	}
 }
 

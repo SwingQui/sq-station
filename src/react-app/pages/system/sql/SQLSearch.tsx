@@ -16,7 +16,7 @@ export default function SQLSearch() {
 		setError(null);
 		try {
 			const result = await querySQL(
-				"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+				"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name"
 			);
 			// 提取表名（result.rows 是二维数组，每个元素是一行数据）
 			const tableNames = result.rows.map((row) => row[0] as string);

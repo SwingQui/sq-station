@@ -6,11 +6,21 @@ import { useState, useCallback } from "react";
 import type { PageHeaderProps } from "@/types/frontend/bookmarks";
 import { defaultStyles } from "@/config/frontend/bookmarks.config";
 
+// 扩展 Props 支持切换按钮
+interface ExtendedPageHeaderProps extends PageHeaderProps {
+	activeTab?: "bookmarks" | "tools";
+	onTabChange?: (tab: "bookmarks" | "tools") => void;
+	showTabSwitch?: boolean;
+}
+
 export default function PageHeader({
 	title,
 	onSearch,
 	styles: customStyles,
-}: PageHeaderProps) {
+	activeTab = "bookmarks",
+	onTabChange,
+	showTabSwitch = false,
+}: ExtendedPageHeaderProps) {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isFocused, setIsFocused] = useState(false);
 
@@ -73,6 +83,55 @@ export default function PageHeader({
 				>
 					{title}
 				</h1>
+
+				{/* SwitchButton 切换按钮 */}
+				{showTabSwitch && (
+					<div
+						style={{
+							display: "flex",
+							background: "rgba(255, 255, 255, 0.1)",
+							borderRadius: "6px",
+							padding: "4px",
+						}}
+					>
+						<button
+							onClick={() => onTabChange?.("bookmarks")}
+							style={{
+								padding: "6px 16px",
+								border: "none",
+								borderRadius: "4px",
+								background:
+									activeTab === "bookmarks"
+										? "rgba(255, 255, 255, 0.2)"
+										: "transparent",
+								color: styles.headerTextColor,
+								cursor: "pointer",
+								fontSize: "0.9rem",
+								transition: "all 0.3s ease",
+							}}
+						>
+							书签
+						</button>
+						<button
+							onClick={() => onTabChange?.("tools")}
+							style={{
+								padding: "6px 16px",
+								border: "none",
+								borderRadius: "4px",
+								background:
+									activeTab === "tools"
+										? "rgba(255, 255, 255, 0.2)"
+										: "transparent",
+								color: styles.headerTextColor,
+								cursor: "pointer",
+								fontSize: "0.9rem",
+								transition: "all 0.3s ease",
+							}}
+						>
+							站点工具
+						</button>
+					</div>
+				)}
 
 				<div
 					style={{

@@ -9,10 +9,13 @@ import type { StyleConfig, BreakpointConfig } from "@/types/frontend/bookmarks";
  */
 export const defaultStyles: StyleConfig = {
 	primaryColor: "#667eea",
+	accentColor: "#667eea",
 	backgroundColor: "#f5f5f5",
 	headerBackgroundColor: "#2c3e50",
 	headerTextColor: "#ffffff",
+	secondaryTextColor: "#666666",
 	cardBackgroundColor: "#ffffff",
+	borderColor: "#e8e8e8",
 	searchBorderColor: "rgba(255, 255, 255, 0.3)",
 	searchHighlightColor: "#ffd700",
 };

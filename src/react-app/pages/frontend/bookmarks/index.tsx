@@ -11,9 +11,20 @@ import ContentGrid from "../shared/ContentGrid";
 import FloatingBall from "../shared/FloatingBall";
 import { getBookmarksConfig } from "@api/bookmarks";
 
+interface BookmarksPageProps extends PageProps {
+	hideHeader?: boolean;
+	hideFooter?: boolean;
+	activeTab?: "bookmarks" | "tools";
+	onTabChange?: (tab: "bookmarks" | "tools") => void;
+}
+
 export default function BookmarksPage({
 	styles: customStyles,
-}: PageProps) {
+	hideHeader = false,
+	hideFooter = false,
+	activeTab = "bookmarks",
+	onTabChange,
+}: BookmarksPageProps) {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [config, setConfig] = useState<Record<string, any>>({});
 	const [loading, setLoading] = useState(true);
@@ -71,25 +82,30 @@ export default function BookmarksPage({
 	return (
 		<div
 			style={{
-				minHeight: "100vh",
+				minHeight: hideHeader ? "auto" : "100vh",
 				display: "flex",
 				flexDirection: "column",
 				background: styles.backgroundColor,
 			}}
 		>
 			{/* 顶部导航栏 */}
-			<PageHeader
-				title={APP.NAME}
-				onSearch={handleSearch}
-				styles={styles}
-			/>
+			{!hideHeader && (
+				<PageHeader
+					title={APP.NAME}
+					onSearch={handleSearch}
+					styles={styles}
+					activeTab={activeTab}
+					onTabChange={onTabChange}
+					showTabSwitch={!!onTabChange}
+				/>
+			)}
 
 			{/* 主内容区域 */}
 			<main
 				style={{
 					width: "calc(100vw * 5 / 7)",
 					maxWidth: "calc(100vw * 5 / 7)",
-					margin: "2rem auto",
+					margin: hideHeader ? "0 auto" : "2rem auto",
 					padding: "0 1rem",
 					flex: 1,
 				}}
@@ -102,25 +118,29 @@ export default function BookmarksPage({
 			</main>
 
 			{/* 页脚 */}
-			<footer
-				style={{
-					background: styles.headerBackgroundColor,
-					color: styles.headerTextColor,
-					textAlign: "center",
-					padding: "2rem 0",
-					marginTop: "3rem",
-				}}
-			>
-				<p style={{ fontSize: "0.9rem", margin: 0 }}>
-					&copy; {new Date().getFullYear()} {APP.NAME}. 版权所有.
-				</p>
-			</footer>
+			{!hideFooter && (
+				<footer
+					style={{
+						background: styles.headerBackgroundColor,
+						color: styles.headerTextColor,
+						textAlign: "center",
+						padding: "2rem 0",
+						marginTop: "3rem",
+					}}
+				>
+					<p style={{ fontSize: "0.9rem", margin: 0 }}>
+						&copy; {new Date().getFullYear()} {APP.NAME}. 版权所有.
+					</p>
+				</footer>
+			)}
 
 			{/* 悬浮球 */}
-			<FloatingBall
-				onClick={handleFloatingBallClick}
-				styles={styles}
-			/>
+			{!hideHeader && (
+				<FloatingBall
+					onClick={handleFloatingBallClick}
+					styles={styles}
+				/>
+			)}
 		</div>
 	);
 }

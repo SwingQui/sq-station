@@ -18,6 +18,7 @@ import oauthController from "./controllers/oauth.controller";
 import oauthClientController from "./controllers/oauth-client.controller";
 import oauthPermissionGroupController from "./controllers/oauth-permission-group.controller";
 import bookmarksController from "./controllers/bookmarks.controller";
+import toolsController from "./controllers/tools.controller";
 import { success, fail, badRequest, unauthorized, notFound, handleError } from "./utils/response";
 import { requirePermission } from "./middleware/permission";
 import { Permission } from "./constants/permissions";
@@ -210,6 +211,10 @@ app.route("/oauth", oauthController);
 // ==================== Bookmarks 书签数据路由 ====================
 // 前台页面直接访问（GET 不需要认证，PUT 需要认证）
 app.route("/api/frontend/bookmarks", bookmarksController);
+
+// ==================== 站点工具路由 ====================
+// GET 列表和下载公开访问，管理操作需要认证
+app.route("/api/frontend/tools", toolsController);
 
 // SQL 执行工具 API (支持所有 SQL 操作) - 需要超级管理员权限
 protectedApiRouter.post("/sql/query", requirePermission(Permission.SYSTEM_SQL_QUERY), async (c) => {

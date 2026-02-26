@@ -4,6 +4,7 @@
 
 -- 删除旧表（重新创建时使用）
 -- 注意：按依赖关系倒序删除
+DROP TABLE IF EXISTS sq_tools;
 DROP TABLE IF EXISTS sys_org_permission;
 DROP TABLE IF EXISTS sys_user_organization;
 DROP TABLE IF EXISTS sys_oauth_permission_group;
@@ -346,3 +347,46 @@ INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sor
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/bookmarks'), '新增模块', 'F', 'frontend:bookmarks:create', 1, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/bookmarks'), '编辑模块', 'F', 'frontend:bookmarks:update', 2, 0, 1),
 ((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/bookmarks'), '删除模块', 'F', 'frontend:bookmarks:delete', 3, 0, 1);
+
+-- ====================================
+-- 站点工具表
+-- 设计说明：
+-- - 上传时：原文件名 test.txt → R2保存为 SQTools/windows/test-{timestamp}.txt
+-- - 下载时：/api/frontend/tools/download/windows?name=test.txt
+-- - 数据库存储原始文件名（不含时间戳），用于下载查询
+-- ====================================
+CREATE TABLE IF NOT EXISTS sq_tools (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tool_name TEXT NOT NULL,              -- 工具名称
+  description TEXT,                     -- 工具描述
+  icon TEXT,                            -- 工具图标URL
+  -- Windows 版本信息
+  windows_file_key TEXT,                -- Windows R2 文件路径（带时间戳）
+  windows_file_name TEXT,               -- Windows 原始文件名（用于下载查询）
+  windows_file_size INTEGER,            -- Windows 文件大小
+  -- Android 版本信息
+  android_file_key TEXT,                -- Android R2 文件路径（带时间戳）
+  android_file_name TEXT,               -- Android 原始文件名（用于下载查询）
+  android_file_size INTEGER,            -- Android 文件大小
+  -- 通用字段
+  sort_order INTEGER DEFAULT 0,         -- 排序
+  status INTEGER DEFAULT 1,             -- 状态：0=下架 1=上架
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 站点工具表索引
+CREATE INDEX IF NOT EXISTS idx_sq_tools_status ON sq_tools(status);
+
+-- ====================================
+-- 站点工具管理菜单
+-- ====================================
+INSERT INTO sys_menu (parent_id, menu_name, menu_type, route_path, component_path, icon, sort_order, permission, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE menu_name = '前台配置' AND menu_type = 'M' AND parent_id = 0), '站点工具管理', 'C', '/dashboard/frontend/tools', 'frontend/tools/ToolsManage', 'tool', 2, 'frontend:tools:read', 1, 1);
+
+-- 站点工具管理按钮权限
+INSERT OR IGNORE INTO sys_menu (parent_id, menu_name, menu_type, permission, sort_order, menu_visible, menu_status) VALUES
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/tools'), '新增工具', 'F', 'frontend:tools:create', 1, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/tools'), '编辑工具', 'F', 'frontend:tools:update', 2, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/tools'), '删除工具', 'F', 'frontend:tools:delete', 3, 0, 1),
+((SELECT id FROM sys_menu WHERE route_path = '/dashboard/frontend/tools'), '上传文件', 'F', 'frontend:tools:upload', 4, 0, 1);

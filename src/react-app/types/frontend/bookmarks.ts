@@ -48,14 +48,20 @@ export interface BookmarksConfig {
 export interface StyleConfig {
 	/** 主色调 */
 	primaryColor: string;
+	/** 强调色 */
+	accentColor: string;
 	/** 背景色 */
 	backgroundColor: string;
 	/** 顶部栏背景色 */
 	headerBackgroundColor: string;
 	/** 顶部栏文字色 */
 	headerTextColor: string;
+	/** 次要文字色 */
+	secondaryTextColor: string;
 	/** 卡片背景色 */
 	cardBackgroundColor: string;
+	/** 边框色 */
+	borderColor: string;
 	/** 搜索框边框色 */
 	searchBorderColor: string;
 	/** 搜索高亮色 */

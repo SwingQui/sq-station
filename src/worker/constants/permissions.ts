@@ -91,6 +91,13 @@ export const Permission = {
 	FRONTEND_BOOKMARKS_UPDATE: 'frontend:bookmarks:update',
 	FRONTEND_BOOKMARKS_DELETE: 'frontend:bookmarks:delete',
 
+	// 站点工具管理
+	FRONTEND_TOOLS_READ: 'frontend:tools:read',
+	FRONTEND_TOOLS_CREATE: 'frontend:tools:create',
+	FRONTEND_TOOLS_UPDATE: 'frontend:tools:update',
+	FRONTEND_TOOLS_DELETE: 'frontend:tools:delete',
+	FRONTEND_TOOLS_UPLOAD: 'frontend:tools:upload',
+
 	// ==================== 用户中心模块 ====================
 	// 个人信息
 	USER_PROFILE_READ: 'user:profile:read',
@@ -193,6 +200,13 @@ export const PermissionMeta: Record<PermissionKey, { name: string; module: strin
 	[Permission.FRONTEND_BOOKMARKS_UPDATE]: { name: '编辑书签', module: '前台配置', description: '编辑书签模块或内容' },
 	[Permission.FRONTEND_BOOKMARKS_DELETE]: { name: '删除书签', module: '前台配置', description: '删除书签模块或内容' },
 
+	// 前台配置 - 站点工具管理
+	[Permission.FRONTEND_TOOLS_READ]: { name: '查看工具', module: '前台配置', description: '查看站点工具列表' },
+	[Permission.FRONTEND_TOOLS_CREATE]: { name: '新增工具', module: '前台配置', description: '创建新站点工具' },
+	[Permission.FRONTEND_TOOLS_UPDATE]: { name: '编辑工具', module: '前台配置', description: '编辑站点工具信息' },
+	[Permission.FRONTEND_TOOLS_DELETE]: { name: '删除工具', module: '前台配置', description: '删除站点工具' },
+	[Permission.FRONTEND_TOOLS_UPLOAD]: { name: '上传文件', module: '前台配置', description: '上传工具文件到 R2' },
+
 	// 用户中心
 	[Permission.USER_PROFILE_READ]: { name: '查看个人信息', module: '用户中心', description: '查看个人资料' },
 	[Permission.USER_PROFILE_UPDATE]: { name: '编辑个人信息', module: '用户中心', description: '修改个人资料' },
@@ -272,6 +286,11 @@ export const PermissionGroups: Record<string, PermissionKey[]> = {
 		Permission.FRONTEND_BOOKMARKS_CREATE,
 		Permission.FRONTEND_BOOKMARKS_UPDATE,
 		Permission.FRONTEND_BOOKMARKS_DELETE,
+		Permission.FRONTEND_TOOLS_READ,
+		Permission.FRONTEND_TOOLS_CREATE,
+		Permission.FRONTEND_TOOLS_UPDATE,
+		Permission.FRONTEND_TOOLS_DELETE,
+		Permission.FRONTEND_TOOLS_UPLOAD,
 	],
 	'用户中心': [
 		Permission.USER_PROFILE_READ,

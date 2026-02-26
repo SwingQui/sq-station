@@ -152,6 +152,25 @@ export default function R2Manage() {
 		});
 	};
 
+	// ==================== 辅助函数：过滤直接子级 ====================
+
+	/**
+	 * 过滤对象列表，只返回指定文件夹的直接子文件（不包括子文件夹中的文件）
+	 * @param objects 所有对象列表
+	 * @param folderPath 文件夹路径，空字符串表示根目录
+	 */
+	const getDirectChildFiles = (objects: R2Object[], folderPath: string): R2Object[] => {
+		const prefix = folderPath ? `${folderPath}/` : "";
+		return objects.filter(obj => {
+			// 必须以 prefix 开头
+			if (prefix && !obj.key.startsWith(prefix)) return false;
+			// 获取相对路径
+			const relativePath = prefix ? obj.key.substring(prefix.length) : obj.key;
+			// 相对路径中不能包含 "/"，说明是直接子文件
+			return !relativePath.includes("/");
+		});
+	};
+
 	// ==================== 数据加载 ====================
 
 	const loadContent = async (path: string, forceRefresh = false) => {
@@ -224,9 +243,13 @@ export default function R2Manage() {
 				getR2List(1000, undefined, undefined),
 			]);
 
-			const filteredObjects = (objectsData.objects || []).filter(
+			// 过滤掉文件夹标记对象
+			const allObjects = (objectsData.objects || []).filter(
 				obj => !obj.customMetadata?.isFolder && !obj.key.endsWith("/")
 			);
+
+			// 只获取根目录下的直接子文件
+			const rootFiles = getDirectChildFiles(allObjects, "");
 
 			// 构建子节点：文件夹 + 文件
 			const children: FolderTreeNode[] = [
@@ -241,8 +264,8 @@ export default function R2Manage() {
 					};
 					return node;
 				}),
-				// 文件节点
-				...filteredObjects.map(obj => {
+				// 文件节点（只有根目录下的直接子文件）
+				...rootFiles.map(obj => {
 					const fileName = obj.key.split("/").pop() || obj.key;
 					const node: FolderTreeNode = {
 						key: obj.key,
@@ -298,9 +321,13 @@ export default function R2Manage() {
 				getR2List(1000, undefined, prefix),
 			]);
 
-			const filteredObjects = (objectsData.objects || []).filter(
+			// 过滤掉文件夹标记对象
+			const allObjects = (objectsData.objects || []).filter(
 				obj => !obj.customMetadata?.isFolder && !obj.key.endsWith("/")
 			);
+
+			// 只获取当前文件夹下的直接子文件
+			const directChildFiles = getDirectChildFiles(allObjects, key);
 
 			// 构建子节点：文件夹 + 文件
 			const childNodes: FolderTreeNode[] = [
@@ -315,8 +342,8 @@ export default function R2Manage() {
 						isFile: false,
 					};
 				}),
-				// 文件节点
-				...filteredObjects.map(obj => {
+				// 文件节点（只有当前文件夹下的直接子文件）
+				...directChildFiles.map(obj => {
 					const fileName = obj.key.split("/").pop() || obj.key;
 					return {
 						key: obj.key,
@@ -511,24 +538,37 @@ export default function R2Manage() {
 		});
 	};
 
-	const handleDeleteFolder = (folder: string) => {
-		const fullPath = currentPath ? `${currentPath}/${folder}` : folder;
+	const handleDeleteFolder = (folder: string, fullPathOverride?: string) => {
+		// 如果提供了完整路径，直接使用；否则根据当前路径拼接
+		const fullPath = fullPathOverride || (currentPath ? `${currentPath}/${folder}` : folder);
+		// 计算父路径（用于更新缓存）
+		const parentPath = fullPath.includes("/") ? fullPath.substring(0, fullPath.lastIndexOf("/")) : "";
+		// 获取文件夹名称（用于显示）
+		const folderName = fullPath.split("/").pop() || fullPath;
+
 		Modal.confirm({
 			title: "确认删除文件夹",
-			content: `确定要删除文件夹 "${folder}" 吗？此操作将递归删除文件夹内的所有内容，不可恢复！`,
+			content: `确定要删除文件夹 "${folderName}" 吗？此操作将递归删除文件夹内的所有内容，不可恢复！`,
 			okText: "确定删除",
 			cancelText: "取消",
 			okButtonProps: { danger: true },
 			onOk: async () => {
 				try {
 					await deleteR2Folder(fullPath);
-					message.success(`文件夹 "${folder}" 删除成功`);
+					message.success(`文件夹 "${folderName}" 删除成功`);
 
 					// 更新缓存（不重新加载）
-					const currentFolders = cache.folders.get(currentPath) || [];
-					const newFolders = currentFolders.filter(f => f !== folder);
-					updateCache(currentPath, undefined, newFolders);
-					setFolders(newFolders);
+					const currentFolders = cache.folders.get(parentPath) || [];
+					const newFolders = currentFolders.filter(f => f !== folderName);
+					updateCache(parentPath, undefined, newFolders);
+
+					// 如果删除的是当前显示的文件夹，更新 folders 状态
+					if (parentPath === currentPath) {
+						setFolders(newFolders);
+					}
+
+					// 刷新树
+					handleRefresh();
 				} catch (e) {
 					handleError(e, "删除文件夹失败");
 				}
@@ -753,8 +793,7 @@ export default function R2Manage() {
 				key: "add-folder",
 				label: "新增文件夹",
 				icon: <FileAddOutlined />,
-				onClick: (e: any) => {
-					e.domStop();
+				onClick: () => {
 					handleAddSubFolder(node.path);
 				},
 			},
@@ -762,8 +801,7 @@ export default function R2Manage() {
 				key: "rename",
 				label: "重命名",
 				icon: <EditOutlined />,
-				onClick: (e: any) => {
-					e.domStop();
+				onClick: () => {
 					handleRename(node.path, name, "folder");
 				},
 			},
@@ -772,13 +810,9 @@ export default function R2Manage() {
 				label: "删除",
 				icon: <DeleteOutlined />,
 				danger: true,
-				onClick: (e: any) => {
-					e.domStop();
-					// 删除文件夹
-					const folderName = node.path.split("/").pop() || node.path;
-					const parentPath = node.path.substring(0, node.path.lastIndexOf("/"));
-					setCurrentPath(parentPath || "");
-					handleDeleteFolder(folderName);
+				onClick: () => {
+					// 直接传递完整路径删除文件夹
+					handleDeleteFolder("", node.path);
 				},
 			},
 		];
@@ -789,8 +823,7 @@ export default function R2Manage() {
 				key: "preview",
 				label: "预览",
 				icon: <EyeOutlined />,
-				onClick: (e: any) => {
-					e.domStop();
+				onClick: () => {
 					const obj = objects.find(o => o.key === node.path);
 					if (obj) handlePreview(obj);
 				},
@@ -799,8 +832,7 @@ export default function R2Manage() {
 				key: "rename",
 				label: "重命名",
 				icon: <EditOutlined />,
-				onClick: (e: any) => {
-					e.domStop();
+				onClick: () => {
 					handleRename(node.path, name, "file");
 				},
 			},
@@ -808,8 +840,7 @@ export default function R2Manage() {
 				key: "download",
 				label: "下载",
 				icon: <DownloadOutlined />,
-				onClick: (e: any) => {
-					e.domStop();
+				onClick: () => {
 					handleDownload(node.path);
 				},
 			},
@@ -818,8 +849,7 @@ export default function R2Manage() {
 				label: "删除",
 				icon: <DeleteOutlined />,
 				danger: true,
-				onClick: (e: any) => {
-					e.domStop();
+				onClick: () => {
 					const obj = objects.find(o => o.key === node.path);
 					if (obj) handleDeleteObject(obj);
 				},

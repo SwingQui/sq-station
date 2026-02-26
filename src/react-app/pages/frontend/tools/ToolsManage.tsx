@@ -17,6 +17,7 @@ import {
 	Upload,
 	Select,
 	message,
+	Progress,
 } from "antd";
 import {
 	PlusOutlined,
@@ -48,6 +49,7 @@ export default function ToolsManage() {
 	const [loading, setLoading] = useState(true);
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editingTool, setEditingTool] = useState<Tool | null>(null);
+	const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
 	useEffect(() => {
 		fetchTools();
@@ -99,13 +101,22 @@ export default function ToolsManage() {
 	};
 
 	const handleUpload = async (toolId: number, file: File, platform: "windows" | "android") => {
+		const uploadKey = `${toolId}-${platform}`;
 		try {
-			message.loading({ content: "上传中...", key: "upload" });
-			await uploadToolFile(toolId, file, platform);
-			message.success({ content: "上传成功", key: "upload" });
+			setUploadProgress(prev => ({ ...prev, [uploadKey]: 0 }));
+			await uploadToolFile(toolId, file, platform, (percent) => {
+				setUploadProgress(prev => ({ ...prev, [uploadKey]: percent }));
+			});
+			message.success("上传成功");
 			fetchTools();
 		} catch (e) {
 			handleError(e, "上传失败");
+		} finally {
+			setUploadProgress(prev => {
+				const newProgress = { ...prev };
+				delete newProgress[uploadKey];
+				return newProgress;
+			});
 		}
 	};
 
@@ -162,106 +173,128 @@ export default function ToolsManage() {
 			key: "windows",
 			width: 200,
 			align: "center" as const,
-			render: (_: any, record: Tool) => (
-				<Space direction="vertical" size="small">
-					{record.windows_file_name ? (
-						<>
-							<Tag icon={<WindowsOutlined />} color="blue">
-								{record.windows_file_name}
-							</Tag>
-							<div style={{ fontSize: 12, color: "#888" }}>
-								{formatFileSize(record.windows_file_size)}
-							</div>
-							<Space size="small">
-								<Upload
-									beforeUpload={(file) => {
-										handleUpload(record.id, file, "windows");
-										return false;
-									}}
-									showUploadList={false}
-									accept=".exe,.msi,.zip"
-								>
-									<Button size="small" icon={<UploadOutlined />}>
-										更新
-									</Button>
-								</Upload>
-								<Popconfirm
-									title="确定删除 Windows 版本？"
-									onConfirm={() => handleDeleteFile(record.id, "windows")}
-								>
-									<Button size="small" danger icon={<DeleteOutlined />} />
-								</Popconfirm>
-							</Space>
-						</>
-					) : (
-						<Upload
-							beforeUpload={(file) => {
-								handleUpload(record.id, file, "windows");
-								return false;
-							}}
-							showUploadList={false}
-							accept=".exe,.msi,.zip"
-						>
-							<Button size="small" icon={<UploadOutlined />}>
-								上传
-							</Button>
-						</Upload>
-					)}
-				</Space>
-			),
+			render: (_: any, record: Tool) => {
+				const uploadKey = `${record.id}-windows`;
+				const progress = uploadProgress[uploadKey];
+				const isUploading = progress !== undefined;
+
+				return (
+					<Space direction="vertical" size="small" style={{ width: "100%" }}>
+						{isUploading ? (
+							<>
+								<div style={{ fontSize: 12, color: "#1890ff" }}>上传中...</div>
+								<Progress percent={progress} size="small" status="active" />
+							</>
+						) : record.windows_file_name ? (
+							<>
+								<Tag icon={<WindowsOutlined />} color="blue">
+									{record.windows_file_name}
+								</Tag>
+								<div style={{ fontSize: 12, color: "#888" }}>
+									{formatFileSize(record.windows_file_size)}
+								</div>
+								<Space size="small">
+									<Upload
+										beforeUpload={(file) => {
+											handleUpload(record.id, file, "windows");
+											return false;
+										}}
+										showUploadList={false}
+										accept=".exe,.msi,.zip"
+									>
+										<Button size="small" icon={<UploadOutlined />}>
+											更新
+										</Button>
+									</Upload>
+									<Popconfirm
+										title="确定删除 Windows 版本？"
+										onConfirm={() => handleDeleteFile(record.id, "windows")}
+									>
+										<Button size="small" danger icon={<DeleteOutlined />} />
+									</Popconfirm>
+								</Space>
+							</>
+						) : (
+							<Upload
+								beforeUpload={(file) => {
+									handleUpload(record.id, file, "windows");
+									return false;
+								}}
+								showUploadList={false}
+								accept=".exe,.msi,.zip"
+							>
+								<Button size="small" icon={<UploadOutlined />}>
+									上传
+								</Button>
+							</Upload>
+						)}
+					</Space>
+				);
+			},
 		},
 		{
 			title: "Android 版",
 			key: "android",
 			width: 200,
 			align: "center" as const,
-			render: (_: any, record: Tool) => (
-				<Space direction="vertical" size="small">
-					{record.android_file_name ? (
-						<>
-							<Tag icon={<AndroidOutlined />} color="green">
-								{record.android_file_name}
-							</Tag>
-							<div style={{ fontSize: 12, color: "#888" }}>
-								{formatFileSize(record.android_file_size)}
-							</div>
-							<Space size="small">
-								<Upload
-									beforeUpload={(file) => {
-										handleUpload(record.id, file, "android");
-										return false;
-									}}
-									showUploadList={false}
-									accept=".apk"
-								>
-									<Button size="small" icon={<UploadOutlined />}>
-										更新
-									</Button>
-								</Upload>
-								<Popconfirm
-									title="确定删除 Android 版本？"
-									onConfirm={() => handleDeleteFile(record.id, "android")}
-								>
-									<Button size="small" danger icon={<DeleteOutlined />} />
-								</Popconfirm>
-							</Space>
-						</>
-					) : (
-						<Upload
-							beforeUpload={(file) => {
-								handleUpload(record.id, file, "android");
-								return false;
-							}}
-							showUploadList={false}
-							accept=".apk"
-						>
-							<Button size="small" icon={<UploadOutlined />}>
-								上传
-							</Button>
-						</Upload>
-					)}
-				</Space>
-			),
+			render: (_: any, record: Tool) => {
+				const uploadKey = `${record.id}-android`;
+				const progress = uploadProgress[uploadKey];
+				const isUploading = progress !== undefined;
+
+				return (
+					<Space direction="vertical" size="small" style={{ width: "100%" }}>
+						{isUploading ? (
+							<>
+								<div style={{ fontSize: 12, color: "#1890ff" }}>上传中...</div>
+								<Progress percent={progress} size="small" status="active" />
+							</>
+						) : record.android_file_name ? (
+							<>
+								<Tag icon={<AndroidOutlined />} color="green">
+									{record.android_file_name}
+								</Tag>
+								<div style={{ fontSize: 12, color: "#888" }}>
+									{formatFileSize(record.android_file_size)}
+								</div>
+								<Space size="small">
+									<Upload
+										beforeUpload={(file) => {
+											handleUpload(record.id, file, "android");
+											return false;
+										}}
+										showUploadList={false}
+										accept=".apk"
+									>
+										<Button size="small" icon={<UploadOutlined />}>
+											更新
+										</Button>
+									</Upload>
+									<Popconfirm
+										title="确定删除 Android 版本？"
+										onConfirm={() => handleDeleteFile(record.id, "android")}
+									>
+										<Button size="small" danger icon={<DeleteOutlined />} />
+									</Popconfirm>
+								</Space>
+							</>
+						) : (
+							<Upload
+								beforeUpload={(file) => {
+									handleUpload(record.id, file, "android");
+									return false;
+								}}
+								showUploadList={false}
+								accept=".apk"
+							>
+								<Button size="small" icon={<UploadOutlined />}>
+									上传
+								</Button>
+							</Upload>
+						)}
+					</Space>
+				);
+			},
 		},
 		{
 			title: "操作",

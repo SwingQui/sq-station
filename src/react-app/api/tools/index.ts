@@ -118,33 +118,66 @@ export async function deleteTool(id: number): Promise<void> {
 }
 
 /**
- * 上传工具文件
+ * 上传工具文件（支持进度回调）
+ * 使用 XMLHttpRequest 以支持上传进度跟踪
  */
-export async function uploadToolFile(
+export function uploadToolFile(
 	toolId: number,
 	file: File,
-	platform: "windows" | "android"
+	platform: "windows" | "android",
+	onProgress?: (percent: number) => void
 ): Promise<UploadResult> {
-	const formData = new FormData();
-	formData.append("file", file);
-	formData.append("platform", platform);
+	return new Promise((resolve, reject) => {
+		const formData = new FormData();
+		formData.append("file", file);
+		formData.append("platform", platform);
 
-	const token = getToken();
-	const response = await fetch(`/api/frontend/tools/${toolId}/upload`, {
-		method: "POST",
-		headers: {
-			...(token ? { Authorization: `Bearer ${token}` } : {}),
-		},
-		body: formData,
+		const token = getToken();
+		const xhr = new XMLHttpRequest();
+
+		// 监听上传进度
+		xhr.upload.addEventListener("progress", (event) => {
+			if (event.lengthComputable && onProgress) {
+				const percent = Math.round((event.loaded / event.total) * 100);
+				onProgress(percent);
+			}
+		});
+
+		// 监听请求完成
+		xhr.addEventListener("load", () => {
+			if (xhr.status >= 200 && xhr.status < 300) {
+				try {
+					const response = JSON.parse(xhr.responseText);
+					resolve(response.data);
+				} catch {
+					reject(new Error("响应解析失败"));
+				}
+			} else {
+				try {
+					const errData = JSON.parse(xhr.responseText);
+					reject(new Error(errData.msg || "上传失败"));
+				} catch {
+					reject(new Error("上传失败"));
+				}
+			}
+		});
+
+		// 监听请求错误
+		xhr.addEventListener("error", () => {
+			reject(new Error("网络错误，上传失败"));
+		});
+
+		// 监听请求取消
+		xhr.addEventListener("abort", () => {
+			reject(new Error("上传已取消"));
+		});
+
+		xhr.open("POST", `/api/frontend/tools/${toolId}/upload`);
+		if (token) {
+			xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+		}
+		xhr.send(formData);
 	});
-
-	if (!response.ok) {
-		const errData = await response.json();
-		throw new Error(errData.msg || "上传失败");
-	}
-
-	const result = await response.json();
-	return result.data;
 }
 
 /**

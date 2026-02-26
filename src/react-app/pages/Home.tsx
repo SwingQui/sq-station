@@ -82,8 +82,9 @@ export default function Home() {
 		>
 			{/* 顶部导航栏 */}
 			<PageHeader
+				key={activeTab}
 				title={APP.NAME}
-				onSearch={activeTab === "bookmarks" ? handleSearch : undefined}
+				onSearch={handleSearch}
 				styles={styles}
 				activeTab={activeTab}
 				onTabChange={handleTabChange}
@@ -109,7 +110,7 @@ export default function Home() {
 						/>
 					</div>
 				) : (
-					<ToolsPage />
+					<ToolsPage searchTerm={searchTerm} />
 				)}
 			</main>
 

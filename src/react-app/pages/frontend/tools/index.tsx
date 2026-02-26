@@ -23,7 +23,11 @@ function getToolColor(name: string): string {
 	return iconColors[index];
 }
 
-export default function ToolsPage() {
+interface ToolsPageProps {
+	searchTerm?: string;
+}
+
+export default function ToolsPage({ searchTerm = "" }: ToolsPageProps) {
 	const [tools, setTools] = useState<Tool[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -89,6 +93,16 @@ export default function ToolsPage() {
 		return options;
 	};
 
+	// 过滤工具列表
+	const filteredTools = tools.filter((tool) => {
+		if (!searchTerm) return true;
+		const term = searchTerm.toLowerCase();
+		return (
+			tool.tool_name.toLowerCase().includes(term) ||
+			(tool.description && tool.description.toLowerCase().includes(term))
+		);
+	});
+
 	if (loading) {
 		return (
 			<div style={loadingContainerStyle}>
@@ -101,11 +115,11 @@ export default function ToolsPage() {
 		<div style={{ marginTop: "1.5rem" }}>
 			<h2 style={titleStyle}>站点工具</h2>
 
-			{tools.length === 0 ? (
-				<Empty description="暂无工具" style={{ padding: "60px 0" }} />
+			{filteredTools.length === 0 ? (
+				<Empty description={searchTerm ? "未找到匹配的工具" : "暂无工具"} style={{ padding: "60px 0" }} />
 			) : (
 				<div style={gridStyle}>
-					{tools.map((tool) => {
+					{filteredTools.map((tool) => {
 						const iconColor = getToolColor(tool.tool_name);
 						const isHovered = hoveredId === tool.id;
 						const hasDownload = tool.windows_file_name || tool.android_file_name;

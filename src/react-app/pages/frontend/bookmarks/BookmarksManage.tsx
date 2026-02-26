@@ -13,12 +13,13 @@ import {
 	Switch,
 	Typography,
 	Popconfirm,
+	Button,
 } from "antd";
 import {
 	PlusOutlined,
 	EditOutlined,
 	DeleteOutlined,
-	SaveOutlined,
+	ReloadOutlined,
 	AppstoreAddOutlined,
 	LinkOutlined,
 } from "@ant-design/icons";
@@ -298,13 +299,9 @@ export default function BookmarksManage() {
 				>
 					新增模块
 				</PermissionButton>
-				<PermissionButton
-					permission="frontend:bookmarks:read"
-					onClick={fetchBookmarks}
-					icon={<SaveOutlined />}
-				>
+				<Button icon={<ReloadOutlined />} onClick={fetchBookmarks}>
 					刷新
-				</PermissionButton>
+				</Button>
 			</Space>
 
 			{/* 模块列表 */}

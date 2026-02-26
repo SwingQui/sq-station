@@ -11,7 +11,6 @@ import {
 	Input,
 	Button,
 	Space,
-	Card,
 	InputNumber,
 	Tag,
 	Popconfirm,
@@ -125,33 +124,35 @@ export default function ToolsManage() {
 			title: "ID",
 			dataIndex: "id",
 			width: 60,
-			align: "center",
+			align: "center" as const,
 		},
 		{
 			title: "工具名称",
 			dataIndex: "tool_name",
 			width: 150,
+			align: "center" as const,
 		},
 		{
 			title: "描述",
 			dataIndex: "description",
 			ellipsis: true,
 			width: 200,
-			render: (text) => text || "-",
+			align: "center" as const,
+			render: (text: string) => text || "-",
 		},
 		{
 			title: "排序",
 			dataIndex: "sort_order",
 			width: 80,
-			align: "center",
+			align: "center" as const,
 		},
 		{
 			title: "状态",
 			dataIndex: "status",
 			width: 80,
-			align: "center",
+			align: "center" as const,
 			render: (status: number) => (
-				<Tag color={status === 1 ? "green" : "red"}>
+				<Tag color={status === 1 ? "success" : "error"} style={{ display: "inline-flex", alignItems: "center" }}>
 					{status === 1 ? "上架" : "下架"}
 				</Tag>
 			),
@@ -160,6 +161,7 @@ export default function ToolsManage() {
 			title: "Windows 版",
 			key: "windows",
 			width: 200,
+			align: "center" as const,
 			render: (_: any, record: Tool) => (
 				<Space direction="vertical" size="small">
 					{record.windows_file_name ? (
@@ -212,6 +214,7 @@ export default function ToolsManage() {
 			title: "Android 版",
 			key: "android",
 			width: 200,
+			align: "center" as const,
 			render: (_: any, record: Tool) => (
 				<Space direction="vertical" size="small">
 					{record.android_file_name ? (
@@ -263,35 +266,48 @@ export default function ToolsManage() {
 		{
 			title: "操作",
 			key: "action",
-			width: 120,
-			align: "center",
-			render: (_: any, record: Tool) => (
-				<Space>
-					<PermissionButton
-						permission="frontend:tools:update"
-						icon={<EditOutlined />}
-						onClick={() => {
-							setEditingTool(record);
-							form.setFieldsValue(record);
-							setModalVisible(true);
-						}}
-					/>
-					<Popconfirm
-						title="确定删除此工具？相关文件也将被删除"
-						onConfirm={() => handleDeleteTool(record.id)}
-					>
+			width: 100,
+			align: "center" as const,
+			render: (_: any, record: Tool) => {
+				// 操作按钮统一样式：圆角正方形
+				const actionButtonStyle: React.CSSProperties = {
+					padding: "8px",
+					minWidth: "36px",
+					height: "36px",
+					borderRadius: "8px",
+					justifyContent: "center",
+				};
+
+				return (
+					<Space size="small">
 						<PermissionButton
-							permission="frontend:tools:delete"
-							icon={<DeleteOutlined />}
+							permission="frontend:tools:update"
+							icon={<EditOutlined />}
+							style={actionButtonStyle}
+							onClick={() => {
+								setEditingTool(record);
+								form.setFieldsValue(record);
+								setModalVisible(true);
+							}}
 						/>
-					</Popconfirm>
-				</Space>
-			),
+						<Popconfirm
+							title="确定删除此工具？相关文件也将被删除"
+							onConfirm={() => handleDeleteTool(record.id)}
+						>
+							<PermissionButton
+								permission="frontend:tools:delete"
+								icon={<DeleteOutlined />}
+								style={actionButtonStyle}
+							/>
+						</Popconfirm>
+					</Space>
+				);
+			},
 		},
 	];
 
 	return (
-		<div style={{ padding: "20px" }}>
+		<>
 			<Space style={{ marginBottom: 16 }}>
 				<PermissionButton
 					permission="frontend:tools:create"
@@ -309,16 +325,15 @@ export default function ToolsManage() {
 				</Button>
 			</Space>
 
-			<Card>
-				<Table
-					columns={columns}
-					dataSource={tools}
-					rowKey="id"
-					loading={loading}
-					pagination={{ pageSize: 10 }}
-					scroll={{ x: 1100 }}
-				/>
-			</Card>
+			<Table
+				columns={columns}
+				dataSource={tools}
+				rowKey="id"
+				loading={loading}
+				bordered
+				pagination={{ pageSize: 10 }}
+				size="small"
+			/>
 
 			{/* 工具编辑弹窗 */}
 			<Modal
@@ -362,6 +377,6 @@ export default function ToolsManage() {
 					</Form.Item>
 				</Form>
 			</Modal>
-		</div>
+		</>
 	);
 }

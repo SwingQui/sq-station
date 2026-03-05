@@ -132,8 +132,8 @@ app.get("/download/:platform", async (c) => {
 		// 添加 CORS 头，确保跨域下载正常工作
 		headers.set("Access-Control-Allow-Origin", "*");
 
-		const data = await object.arrayBuffer();
-		return new Response(data, { headers });
+		// 直接返回流式响应，避免大文件内存问题和超时
+		return new Response(object.body, { headers });
 	} catch (e: any) {
 		console.error("[Tools] 下载失败:", e);
 		return c.json(fail(500, e.message || "下载失败"));

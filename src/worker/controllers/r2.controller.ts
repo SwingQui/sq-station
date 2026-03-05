@@ -220,9 +220,8 @@ app.get("/:key", requirePermission(Permission.R2_FILE_VIEW), async (c) => {
 		// 添加 CORS 头，确保跨域下载正常工作
 		headers.set("Access-Control-Allow-Origin", "*");
 
-		// 读取并返回文件内容
-		const data = await object.arrayBuffer();
-		return new Response(data, { headers });
+		// 直接返回流式响应，避免大文件内存问题和超时
+		return new Response(object.body, { headers });
 	} catch (e: any) {
 		return c.json(fail(500, e.message));
 	}

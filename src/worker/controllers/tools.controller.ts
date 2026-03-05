@@ -263,10 +263,10 @@ app.post("/:id/upload", authMiddleware, requirePermission(Permission.FRONTEND_TO
 	try {
 		const id = c.req.param("id");
 
-		// 获取工具信息
+		// 获取工具信息（包含旧文件 key）
 		const tool = await c.env.DB.prepare(`
-			SELECT id FROM sq_tools WHERE id = ?
-		`).bind(id).first();
+			SELECT id, windows_file_key, android_file_key FROM sq_tools WHERE id = ?
+		`).bind(id).first<Pick<ToolRecord, "id" | "windows_file_key" | "android_file_key">>();
 
 		if (!tool) {
 			return c.json(fail(404, "工具不存在"), 404);
@@ -283,6 +283,11 @@ app.post("/:id/upload", authMiddleware, requirePermission(Permission.FRONTEND_TO
 		if (!["windows", "android"].includes(platform)) {
 			return c.json(fail(400, "无效的平台参数"), 400);
 		}
+
+		// 在更新前获取旧文件 key
+		const oldFileKey = platform === "windows"
+			? tool.windows_file_key
+			: tool.android_file_key;
 
 		// 生成带时间戳的文件名，防止同名文件冲突
 		const timestampedName = generateTimestampedFileName(file.name);
@@ -309,16 +314,7 @@ app.post("/:id/upload", authMiddleware, requirePermission(Permission.FRONTEND_TO
 			UPDATE sq_tools SET ${updateField}, updated_at = CURRENT_TIMESTAMP WHERE id = ?
 		`).bind(fileKey, file.name, file.size, id).run();
 
-		// 删除旧文件（如果存在）
-		const oldTool = await c.env.DB.prepare(`
-			SELECT windows_file_key, android_file_key FROM sq_tools WHERE id = ?
-		`).bind(id).first<Pick<ToolRecord, "windows_file_key" | "android_file_key">>();
-
-		const oldFileKey = platform === "windows"
-			? oldTool?.windows_file_key
-			: oldTool?.android_file_key;
-
-		// 重新查询获取旧文件key（因为上面已经更新了）
+		// 删除旧文件（如果存在且与新文件不同）
 		if (oldFileKey && oldFileKey !== fileKey) {
 			try {
 				await c.env.R2_BINDING.delete(oldFileKey);

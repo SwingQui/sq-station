@@ -125,8 +125,12 @@ app.get("/download/:platform", async (c) => {
 		// 返回文件流，使用原始文件名
 		const headers = new Headers();
 		headers.set("Content-Type", "application/octet-stream");
-		headers.set("Content-Disposition", `attachment; filename="${fileName}"`);
+		// 使用 RFC 5987 编码文件名，支持中文和特殊字符
+		const encodedFileName = encodeURIComponent(fileName);
+		headers.set("Content-Disposition", `attachment; filename="${fileName}"; filename*=UTF-8''${encodedFileName}`);
 		headers.set("Content-Length", String(object.size));
+		// 添加 CORS 头，确保跨域下载正常工作
+		headers.set("Access-Control-Allow-Origin", "*");
 
 		const data = await object.arrayBuffer();
 		return new Response(data, { headers });

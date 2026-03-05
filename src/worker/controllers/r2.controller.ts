@@ -217,6 +217,8 @@ app.get("/:key", requirePermission(Permission.R2_FILE_VIEW), async (c) => {
 				headers.set("Content-Encoding", object.httpMetadata.contentEncoding);
 			}
 		}
+		// 添加 CORS 头，确保跨域下载正常工作
+		headers.set("Access-Control-Allow-Origin", "*");
 
 		// 读取并返回文件内容
 		const data = await object.arrayBuffer();

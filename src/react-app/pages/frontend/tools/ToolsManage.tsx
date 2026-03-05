@@ -18,6 +18,7 @@ import {
 	Select,
 	message,
 	Progress,
+	Tooltip,
 } from "antd";
 import {
 	PlusOutlined,
@@ -27,6 +28,7 @@ import {
 	WindowsOutlined,
 	AndroidOutlined,
 	ReloadOutlined,
+	ClearOutlined,
 } from "@ant-design/icons";
 import {
 	getToolsManageList,
@@ -36,7 +38,10 @@ import {
 	uploadToolFile,
 	deleteToolFile,
 	formatFileSize,
+	getOrphanFiles,
+	cleanOrphanFiles,
 	type Tool,
+	type OrphanFile,
 } from "@api/tools";
 import PermissionButton from "@components/PermissionButton";
 import { handleError, handleSuccess } from "@utils/error-handler";
@@ -50,6 +55,12 @@ export default function ToolsManage() {
 	const [modalVisible, setModalVisible] = useState(false);
 	const [editingTool, setEditingTool] = useState<Tool | null>(null);
 	const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+	// 孤儿文件相关状态
+	const [orphansModalVisible, setOrphansModalVisible] = useState(false);
+	const [orphansLoading, setOrphansLoading] = useState(false);
+	const [orphans, setOrphans] = useState<OrphanFile[]>([]);
+	const [orphansTotalSize, setOrphansTotalSize] = useState(0);
+	const [cleaning, setCleaning] = useState(false);
 
 	useEffect(() => {
 		fetchTools();
@@ -127,6 +138,37 @@ export default function ToolsManage() {
 			fetchTools();
 		} catch (e) {
 			handleError(e, "删除失败");
+		}
+	};
+
+	// 孤儿文件处理
+	const handleCheckOrphans = async () => {
+		try {
+			setOrphansLoading(true);
+			setOrphansModalVisible(true);
+			const result = await getOrphanFiles();
+			setOrphans(result.orphans);
+			setOrphansTotalSize(result.totalSize);
+		} catch (e) {
+			handleError(e, "检查孤儿文件失败");
+			setOrphansModalVisible(false);
+		} finally {
+			setOrphansLoading(false);
+		}
+	};
+
+	const handleCleanOrphans = async () => {
+		try {
+			setCleaning(true);
+			const result = await cleanOrphanFiles();
+			message.success(`已清理 ${result.deletedCount} 个孤儿文件`);
+			setOrphansModalVisible(false);
+			setOrphans([]);
+			setOrphansTotalSize(0);
+		} catch (e) {
+			handleError(e, "清理孤儿文件失败");
+		} finally {
+			setCleaning(false);
 		}
 	};
 
@@ -356,6 +398,15 @@ export default function ToolsManage() {
 				<Button icon={<ReloadOutlined />} onClick={fetchTools}>
 					刷新
 				</Button>
+				<Tooltip title="清理 R2 中无主文件（SQTools/windows 和 SQTools/android 目录下）">
+					<PermissionButton
+						permission="frontend:tools:delete"
+						icon={<ClearOutlined />}
+						onClick={handleCheckOrphans}
+					>
+						清理孤儿文件
+					</PermissionButton>
+				</Tooltip>
 			</Space>
 
 			<Table
@@ -409,6 +460,91 @@ export default function ToolsManage() {
 						</Select>
 					</Form.Item>
 				</Form>
+			</Modal>
+
+			{/* 孤儿文件清理弹窗 */}
+			<Modal
+				title="孤儿文件清理"
+				open={orphansModalVisible}
+				onCancel={() => {
+					setOrphansModalVisible(false);
+					setOrphans([]);
+					setOrphansTotalSize(0);
+				}}
+				footer={
+					orphans.length > 0 ? [
+						<Button key="cancel" onClick={() => setOrphansModalVisible(false)}>
+							取消
+						</Button>,
+						<Popconfirm
+							key="clean"
+							title={`确定清理 ${orphans.length} 个孤儿文件？`}
+							onConfirm={handleCleanOrphans}
+						>
+							<Button type="primary" danger loading={cleaning}>
+								一键清理
+							</Button>
+						</Popconfirm>,
+					] : [
+						<Button key="close" onClick={() => setOrphansModalVisible(false)}>
+							关闭
+						</Button>,
+					]
+				}
+				width={700}
+			>
+				{orphansLoading ? (
+					<div style={{ textAlign: "center", padding: "40px 0" }}>
+						<Tag>正在扫描...</Tag>
+					</div>
+				) : orphans.length === 0 ? (
+					<div style={{ textAlign: "center", padding: "40px 0", color: "#52c41a" }}>
+						<ClearOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+						<div style={{ fontSize: 16 }}>没有发现孤儿文件</div>
+					</div>
+				) : (
+					<>
+						<div style={{ marginBottom: 16 }}>
+							<Tag color="orange">
+								共 {orphans.length} 个孤儿文件，总大小 {formatFileSize(orphansTotalSize)}
+							</Tag>
+						</div>
+						<Table
+							dataSource={orphans}
+							rowKey="key"
+							size="small"
+							pagination={{ pageSize: 5 }}
+							columns={[
+								{
+									title: "平台",
+									dataIndex: "platform",
+									width: 80,
+									render: (platform: string) => (
+										<Tag color={platform === "windows" ? "blue" : "green"}>
+											{platform === "windows" ? <WindowsOutlined /> : <AndroidOutlined />} {platform}
+										</Tag>
+									),
+								},
+								{
+									title: "文件路径",
+									dataIndex: "key",
+									ellipsis: true,
+									render: (key: string) => (
+										<Tooltip title={key}>
+											<span style={{ fontSize: 12 }}>{key}</span>
+										</Tooltip>
+									),
+								},
+								{
+									title: "大小",
+									dataIndex: "size",
+									width: 100,
+									render: (size: number) => formatFileSize(size),
+								},
+							]}
+						/>
+					</>
+				)}
 			</Modal>
 		</>
 	);

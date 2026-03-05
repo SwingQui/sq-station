@@ -200,3 +200,37 @@ export function formatFileSize(bytes: number | null): string {
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
+
+// ==================== 孤儿文件管理 ====================
+
+export interface OrphanFile {
+	key: string;
+	size: number;
+	platform: "windows" | "android";
+	uploadedAt?: string;
+}
+
+export interface OrphansResult {
+	orphans: OrphanFile[];
+	totalCount: number;
+	totalSize: number;
+}
+
+export interface CleanOrphansResult {
+	deletedCount: number;
+	deletedKeys: string[];
+}
+
+/**
+ * 获取孤儿文件列表
+ */
+export async function getOrphanFiles(): Promise<OrphansResult> {
+	return await request<OrphansResult>("GET", "/api/frontend/tools/orphans");
+}
+
+/**
+ * 清理孤儿文件
+ */
+export async function cleanOrphanFiles(): Promise<CleanOrphansResult> {
+	return await request<CleanOrphansResult>("DELETE", "/api/frontend/tools/orphans");
+}

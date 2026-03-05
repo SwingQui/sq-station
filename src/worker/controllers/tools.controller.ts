@@ -221,12 +221,13 @@ app.put("/:id", authMiddleware, requirePermission(Permission.FRONTEND_TOOLS_UPDA
 /**
  * DELETE /api/frontend/tools/:id
  * 删除工具（同时删除 R2 文件）
+ * 采用"先删数据库，后删 R2"策略，避免孤儿记录
  */
 app.delete("/:id", authMiddleware, requirePermission(Permission.FRONTEND_TOOLS_DELETE), async (c) => {
 	try {
 		const id = c.req.param("id");
 
-		// 获取工具信息
+		// 获取工具信息（用于后续删除 R2 文件）
 		const tool = await c.env.DB.prepare(`
 			SELECT windows_file_key, android_file_key FROM sq_tools WHERE id = ?
 		`).bind(id).first<Pick<ToolRecord, "windows_file_key" | "android_file_key">>();
@@ -235,17 +236,23 @@ app.delete("/:id", authMiddleware, requirePermission(Permission.FRONTEND_TOOLS_D
 			return c.json(fail(404, "工具不存在"), 404);
 		}
 
-		// 删除 R2 文件
+		// 收集需要删除的 R2 文件 key
 		const keysToDelete: string[] = [];
 		if (tool.windows_file_key) keysToDelete.push(tool.windows_file_key);
 		if (tool.android_file_key) keysToDelete.push(tool.android_file_key);
 
-		if (keysToDelete.length > 0) {
-			await c.env.R2_BINDING.delete(keysToDelete);
-		}
-
-		// 删除数据库记录
+		// 步骤1：先删除数据库记录（关键操作）
 		await c.env.DB.prepare(`DELETE FROM sq_tools WHERE id = ?`).bind(id).run();
+
+		// 步骤2：再删除 R2 文件（失败不影响数据一致性，只产生孤儿文件）
+		if (keysToDelete.length > 0) {
+			try {
+				await c.env.R2_BINDING.delete(keysToDelete);
+			} catch (r2Error) {
+				// R2 删除失败只记录日志，不回滚（数据库已删除，文件成为孤儿）
+				console.warn("[Tools] R2文件删除失败，将成为孤儿文件:", keysToDelete, r2Error);
+			}
+		}
 
 		return c.json(success(null, "删除成功"));
 	} catch (e: any) {
@@ -378,6 +385,125 @@ app.delete("/:id/file/:platform", authMiddleware, requirePermission(Permission.F
 	} catch (e: any) {
 		console.error("[Tools] 删除文件失败:", e);
 		return c.json(fail(500, e.message || "删除失败"));
+	}
+});
+
+// ==================== 孤儿文件清理 ====================
+
+/**
+ * GET /api/frontend/tools/orphans
+ * 获取孤儿文件列表
+ * 孤儿文件：R2 中存在但数据库中无对应记录的文件
+ */
+app.get("/orphans", authMiddleware, requirePermission(Permission.FRONTEND_TOOLS_DELETE), async (c) => {
+	try {
+		// 获取数据库中所有的文件 key
+		const result = await c.env.DB.prepare(`
+			SELECT windows_file_key, android_file_key FROM sq_tools
+		`).all();
+
+		const validKeys = new Set<string>();
+		for (const row of result.results as any[]) {
+			if (row.windows_file_key) validKeys.add(row.windows_file_key);
+			if (row.android_file_key) validKeys.add(row.android_file_key);
+		}
+
+		// 获取 R2 中 SQTools 目录下的所有文件
+		const orphans: { key: string; size: number; platform: string; uploadedAt?: string }[] = [];
+
+		// 检查 Windows 目录
+		const windowsList = await c.env.R2_BINDING.list({
+			prefix: "SQTools/windows/",
+			include: ["customMetadata"],
+		});
+
+		for (const obj of windowsList.objects) {
+			if (!validKeys.has(obj.key)) {
+				orphans.push({
+					key: obj.key,
+					size: obj.size,
+					platform: "windows",
+					uploadedAt: obj.customMetadata?.uploadedAt,
+				});
+			}
+		}
+
+		// 检查 Android 目录
+		const androidList = await c.env.R2_BINDING.list({
+			prefix: "SQTools/android/",
+			include: ["customMetadata"],
+		});
+
+		for (const obj of androidList.objects) {
+			if (!validKeys.has(obj.key)) {
+				orphans.push({
+					key: obj.key,
+					size: obj.size,
+					platform: "android",
+					uploadedAt: obj.customMetadata?.uploadedAt,
+				});
+			}
+		}
+
+		return c.json(success({
+			orphans,
+			totalCount: orphans.length,
+			totalSize: orphans.reduce((sum, o) => sum + o.size, 0),
+		}));
+	} catch (e: any) {
+		console.error("[Tools] 获取孤儿文件失败:", e);
+		return c.json(fail(500, e.message || "获取孤儿文件失败"));
+	}
+});
+
+/**
+ * DELETE /api/frontend/tools/orphans
+ * 清理孤儿文件
+ */
+app.delete("/orphans", authMiddleware, requirePermission(Permission.FRONTEND_TOOLS_DELETE), async (c) => {
+	try {
+		// 获取数据库中所有的文件 key
+		const result = await c.env.DB.prepare(`
+			SELECT windows_file_key, android_file_key FROM sq_tools
+		`).all();
+
+		const validKeys = new Set<string>();
+		for (const row of result.results as any[]) {
+			if (row.windows_file_key) validKeys.add(row.windows_file_key);
+			if (row.android_file_key) validKeys.add(row.android_file_key);
+		}
+
+		// 收集需要删除的孤儿文件
+		const keysToDelete: string[] = [];
+
+		// 检查 Windows 目录
+		const windowsList = await c.env.R2_BINDING.list({ prefix: "SQTools/windows/" });
+		for (const obj of windowsList.objects) {
+			if (!validKeys.has(obj.key)) {
+				keysToDelete.push(obj.key);
+			}
+		}
+
+		// 检查 Android 目录
+		const androidList = await c.env.R2_BINDING.list({ prefix: "SQTools/android/" });
+		for (const obj of androidList.objects) {
+			if (!validKeys.has(obj.key)) {
+				keysToDelete.push(obj.key);
+			}
+		}
+
+		// 批量删除孤儿文件
+		if (keysToDelete.length > 0) {
+			await c.env.R2_BINDING.delete(keysToDelete);
+		}
+
+		return c.json(success({
+			deletedCount: keysToDelete.length,
+			deletedKeys: keysToDelete,
+		}, "清理完成"));
+	} catch (e: any) {
+		console.error("[Tools] 清理孤儿文件失败:", e);
+		return c.json(fail(500, e.message || "清理孤儿文件失败"));
 	}
 });
 

@@ -11,6 +11,8 @@
 	"upload_source_maps": true,
 	"assets": {
 		"directory": "./dist/client",
+		"binding": "ASSETS",
+		"html_handling": "auto-trailing-slash",
 		"not_found_handling": "single-page-application"
 	},
 	"kv_namespaces": [

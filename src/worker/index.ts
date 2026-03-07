@@ -286,7 +286,7 @@ protectedApiRouter.get("/cache/test", (c) => {
 // 将受保护路由挂载到 /api（应用 authMiddleware）
 app.route("/api", protectedApiRouter);
 
-// ==================== 本地开发支持 ====================
+// ==================== 根路径健康检查 ====================
 
 // 根路径健康检查（用于测试 Worker 是否正常运行）
 app.get("/", (c) => {
@@ -296,7 +296,5 @@ app.get("/", (c) => {
 		worker: "sq-station",
 	}));
 });
-
-// ==================== 开发环境支持结束 ====================
 
 export default app;

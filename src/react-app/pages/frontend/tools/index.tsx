@@ -48,11 +48,11 @@ export default function ToolsPage({ searchTerm = "" }: ToolsPageProps) {
 		}
 	};
 
-	const handleDownload = async (platform: "windows" | "android", fileName: string) => {
+	const handleDownload = (platform: "windows" | "android", fileName: string) => {
+		message.loading({ content: "正在下载...", key: "download", duration: 2 });
 		try {
-			message.loading({ content: "正在下载...", key: "download" });
-			await downloadToolFile(platform, fileName);
-			message.success({ content: "下载完成", key: "download" });
+			downloadToolFile(platform, fileName);
+			message.success({ content: "下载已开始", key: "download" });
 		} catch (error: any) {
 			console.error("下载失败:", error);
 			message.error({ content: error.message || "下载失败", key: "download" });

@@ -55,34 +55,21 @@ export async function getToolsManageList(): Promise<Tool[]> {
 /**
  * 下载工具文件
  * 通过原始文件名下载
+ * 使用浏览器原生下载，避免大文件内存问题
  * @param platform 平台：windows 或 android
  * @param fileName 原始文件名（如 test.txt）
  */
-export async function downloadToolFile(
+export function downloadToolFile(
 	platform: "windows" | "android",
 	fileName: string
-): Promise<void> {
-	const response = await fetch(`/api/frontend/tools/download/${platform}?name=${encodeURIComponent(fileName)}`);
-
-	if (!response.ok) {
-		const errData = await response.json().catch(() => ({ msg: "下载失败" }));
-		throw new Error(errData.msg || "下载失败");
-	}
-
-	// 获取文件内容
-	const blob = await response.blob();
-
-	// 创建下载链接
-	const url = window.URL.createObjectURL(blob);
+): void {
+	// 直接使用浏览器原生下载，避免 fetch + blob 的内存问题
 	const link = document.createElement("a");
-	link.href = url;
+	link.href = `/api/frontend/tools/download/${platform}?name=${encodeURIComponent(fileName)}`;
 	link.download = fileName;
 	document.body.appendChild(link);
 	link.click();
-
-	// 清理
 	document.body.removeChild(link);
-	window.URL.revokeObjectURL(url);
 }
 
 /**
